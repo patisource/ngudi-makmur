@@ -6,6 +6,9 @@ export type AppRole = "admin_kelompok" | "operator_produksi" | "ketua" | "admin_
 export type AppPermission = "production.confirm";
 export type ProductCategory = "mentah" | "olahan";
 export type CustomerType = "perorangan" | "usaha";
+export type StockDirection = "in" | "out";
+export type MovementType = "receipt_in" | "production_out" | "production_in" | "sale_out" | "return_in" | "opname_adjust" | "correction" | "reversal";
+export type ReservationStatus = "active" | "released" | "fulfilled";
 
 // numeric(…) dari PostgREST datang sebagai number; kita ubah ke gram lewat lib/qty sebelum dihitung.
 type Ts = string;
@@ -64,8 +67,48 @@ export type Database = {
       >;
       sales_channels: Table<Master & { code: string; name: string; is_digital: boolean; sort_order: number }>;
       batch_type_rules: Table<{ batch_type: string; name: string; input_product_id: string; output_product_id: string }>;
+      stock_balances: Table<{ product_id: string; on_hand_kg: number; value_rp: number; updated_at: Ts }>;
+      stock_movements: Table<
+        {
+          id: number;
+          product_id: string;
+          movement_type: MovementType;
+          direction: StockDirection;
+          qty_kg: number;
+          value_rp: number;
+          balance_after_kg: number;
+          source_type: string;
+          source_id: string;
+          source_line: string;
+          doc_number: string | null;
+          business_date: string;
+          note: string | null;
+          created_by: string | null;
+          created_at: Ts;
+        },
+        [Fk<"stock_movements", "product_id", "products">]
+      >;
+      stock_reservations: Table<{ id: string; order_id: string; product_id: string; qty_kg: number; status: ReservationStatus; created_at: Ts; updated_at: Ts }>;
     };
-    Views: { [_ in never]: never };
+    Views: {
+      v_stock_balance: {
+        Row: {
+          product_id: string;
+          code: string;
+          name: string;
+          category: ProductCategory;
+          min_stock_kg: number;
+          archived_at: Ts | null;
+          on_hand_kg: number;
+          reserved_kg: number;
+          available_kg: number;
+          value_rp: number;
+          avg_cost_per_kg: number | null;
+          below_min: boolean;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       has_role: { Args: { r: AppRole }; Returns: boolean };
       has_permission: { Args: { perm: AppPermission }; Returns: boolean };
@@ -77,8 +120,19 @@ export type Database = {
       admin_note_password_reset: { Args: { p_user: string; p_reason?: string }; Returns: undefined };
       product_on_hand: { Args: { p_product: string }; Returns: number };
       packaging_qty_kg: { Args: { p_product_packaging: string; p_qty: number }; Returns: number };
+      idem_begin: { Args: { p_key: string; p_endpoint: string; p_hash: string }; Returns: Json };
+      idem_finish: { Args: { p_key: string; p_response: Json }; Returns: undefined };
+      idem_abort: { Args: { p_key: string }; Returns: undefined };
     };
-    Enums: { app_role: AppRole; app_permission: AppPermission; product_category: ProductCategory; customer_type: CustomerType };
+    Enums: {
+      app_role: AppRole;
+      app_permission: AppPermission;
+      product_category: ProductCategory;
+      customer_type: CustomerType;
+      stock_direction: StockDirection;
+      movement_type: MovementType;
+      reservation_status: ReservationStatus;
+    };
     CompositeTypes: { [_ in never]: never };
   };
 };

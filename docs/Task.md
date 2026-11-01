@@ -62,20 +62,20 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 - [x] **T2.3** Produk: daftar, form, kategori `mentah`/`olahan`, satuan dasar kg (terkunci), tab konversi kemasan (isi kg, harga default), stok minimum, harga default per kg. Test: konversi 0 ditolak; 2 kemasan @0,5 kg = 1 kg.
 - [x] **T2.4** Jenis kemasan & saluran penjualan (`langsung`, `whatsapp`, `media_sosial`, `marketplace`, `lainnya`): CRUD sederhana.
 - [x] **T2.5** Pelanggan: daftar & form (dipakai di M6), mis. IRT Sekar Arum sebagai pelanggan usaha.
-- [~] **T2.6** Aturan: produk dengan stok > 0 tidak bisa diarsip; kode unik. _Status: kode unik & trigger arsip aktif; `product_on_hand()` masih 0 sampai buku stok M3._
+- [x] **T2.6** Aturan: produk dengan stok > 0 tidak bisa diarsip; kode unik. _Status: kode unik & trigger arsip aktif; `product_on_hand()` masih 0 sampai buku stok M3._
 - [~] **T2.7** Seed dasar (`supabase/seed.sql`): 3 produk sesuai PRD §4.0 (`TK`, `PP`, `TP`, semua kg) beserta kemasan penjualan (Tepung pak 0,5 kg & 1 kg, Pipilan karung 50 kg), aturan jenis batch (pemipilan TK→PP, penepungan PP→TP), saluran penjualan, akun kas awal, kategori pengeluaran & pemasukan lain. **Seed DEMO** terpisah sesuai PRD §9.1 (Petani A, 100 kg pipilan, batch 60→50 kg tepung, pesanan 5 kg @Rp10.000, bayar Rp30.000 + Rp20.000) — tidak pernah dimuat ke data nyata.
 
 ## M3 — Inti Stok & Penomoran (Sprint B) · FR-STK-01/02/05
 
 > Milestone paling kritis. Modul transaksi lain bergantung padanya.
 
-- [ ] **T3.1** `document_sequences` + fungsi `next_doc_number(type, date)` dengan row lock.
-- [ ] **T3.2** `stock_movements` (FK `product_id`, `source_type`, `source_id`, `direction`, `qty_kg`; append-only: trigger menolak UPDATE/DELETE), `stock_reservations` (`order_id`, `product_id`, `qty_kg`, status).
-- [ ] **T3.3** View `v_stock_balance` (on_hand = masuk − keluar, reserved, available, avg_cost, nilai).
-- [ ] **T3.4** Fungsi internal `_post_movement()` yang menolak saldo negatif dan memperbarui `avg_cost`.
-- [ ] **T3.5** Tabel `idempotency_keys` + helper server `withIdempotency()`.
-- [ ] **T3.6** Halaman Stok: daftar (fisik, reservasi, tersedia) + kartu stok per produk.
-- [ ] **T3.7** Test DB (pgTAP atau test integrasi): konkurensi dua posting bersamaan tidak menghasilkan stok negatif atau nomor ganda.
+- [x] **T3.1** `document_sequences` + fungsi `next_doc_number(type, date)` dengan row lock.
+- [x] **T3.2** `stock_movements` (FK `product_id`, `source_type`, `source_id`, `direction`, `qty_kg`; append-only: trigger menolak UPDATE/DELETE), `stock_reservations` (`order_id`, `product_id`, `qty_kg`, status).
+- [x] **T3.3** View `v_stock_balance` (on_hand = masuk − keluar, reserved, available, avg_cost, nilai).
+- [x] **T3.4** Fungsi internal `_post_movement()` yang menolak saldo negatif dan memperbarui `avg_cost`.
+- [x] **T3.5** Tabel `idempotency_keys` + helper server `withIdempotency()`.
+- [x] **T3.6** Halaman Stok: daftar (fisik, reservasi, tersedia) + kartu stok per produk.
+- [~] **T3.7** Test DB (pgTAP atau test integrasi): konkurensi dua posting bersamaan tidak menghasilkan stok negatif atau nomor ganda. _Status: logika kunci & penolakan diuji berurutan (`supabase/tests/stock_check.sql` 28/28). Uji dua sesi bersamaan sungguhan perlu database DEMO/lokal (buku mutasi append-only, jadi tidak dijalankan di proyek data nyata)._
 
 ## M4 — Jagung Masuk (Sprint B) · FR-RCV-*
 
