@@ -32,7 +32,7 @@ export type IconName = "dashboard" | "inbox" | "factory" | "box" | "cart" | "wal
 // Urutan = urutan di sidebar. Peran = siapa yang boleh membuka (L atau K pada matriks PRD §3.1).
 export const NAV: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Ringkasan", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
-  { href: "/jagung-masuk", label: "Jagung masuk", icon: "inbox", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M4" },
+  { href: "/jagung-masuk", label: "Jagung masuk", icon: "inbox", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/produksi", label: "Produksi", icon: "factory", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M5" },
   { href: "/stok", label: "Stok", icon: "box", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: "M6" },
@@ -50,6 +50,8 @@ export const ACTIONS = {
   "master.kelola": ["admin_kelompok"],
   "pelanggan.lihat": ["admin_kelompok", "ketua"],
   "kontak.lihat": ["admin_kelompok", "ketua"], // NIK & no. HP anggota tanpa samaran (Security.md §7)
+  // Jagung masuk (PRD §3.1): draft, konfirmasi, void, bukti = admin_kelompok; operator & ketua hanya lihat.
+  "penerimaan.kelola": ["admin_kelompok"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;

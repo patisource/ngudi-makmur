@@ -79,12 +79,12 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M4 — Jagung Masuk (Sprint B) · FR-RCV-*
 
-- [ ] **T4.1** Migrasi `receipts` (`member_id` nullable, `source_type` anggota/luar, `product_id`, `weight_kg > 0`, `acquisition_cost`), `attachments`; bucket Storage privat `proofs`.
-- [ ] **T4.2** Form jagung masuk (terbaca di ponsel): sumber anggota/luar, jenis (TK/PP), berat kg, biaya perolehan, bukti (unggah + pratinjau); simpan draft.
-- [ ] **T4.3** Fungsi `confirm_receipt(id, idem_key)`: nomor RCV, mutasi `receipt_in` tepat satu kali, kunci dokumen. **Tidak** membuat kas (pembayaran ke pemasok lewat pengeluaran, FR-RCV-04).
-- [ ] **T4.4** Daftar & detail penerimaan; cetak bukti penerimaan (80 mm).
-- [ ] **T4.5** `void_receipt` dengan alasan (P1).
-- [ ] **T4.6** Test (uji wajib SRS §11): konfirmasi penerimaan dua kali → hanya satu mutasi stok; draft tidak mengubah stok; berat ≤ 0 ditolak; edit setelah konfirmasi ditolak.
+- [x] **T4.1** Migrasi `receipts` (`member_id` nullable, `source_type` anggota/luar, `product_id`, `weight_kg > 0`, `acquisition_cost`), `attachments`; bucket Storage privat `proofs`.
+- [~] **T4.2** Form jagung masuk (terbaca di ponsel): sumber anggota/luar, jenis (TK/PP), berat kg, biaya perolehan, bukti (unggah + pratinjau); simpan draft.
+- [x] **T4.3** Fungsi `confirm_receipt(id, idem_key)`: nomor RCV, mutasi `receipt_in` tepat satu kali, kunci dokumen. **Tidak** membuat kas (pembayaran ke pemasok lewat pengeluaran, FR-RCV-04).
+- [~] **T4.4** Daftar & detail penerimaan; cetak bukti penerimaan (80 mm). _Status T4.2 & T4.4: kode, build, dan uji unit selesai; belum diuji tampilan sebagai admin kelompok (360/768/1280 px, terang/gelap) dan belum dicoba di printer thermal nyata._
+- [x] **T4.5** `void_receipt` dengan alasan (P1).
+- [x] **T4.6** Test (uji wajib SRS §11): konfirmasi penerimaan dua kali → hanya satu mutasi stok; draft tidak mengubah stok; berat ≤ 0 ditolak; edit setelah konfirmasi ditolak. _Status: `supabase/tests/receipt_check.sql` 39/39 lulus di proyek asli (transaksi dibatalkan); validasi & berkas bukti di `lib/receipt.test.ts`._
 
 ## M5 — Produksi (Sprint B) · FR-PRD-*
 

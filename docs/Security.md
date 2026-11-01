@@ -146,7 +146,7 @@ Error dikembalikan sebagai kode stabil + pesan Indonesia, tanpa detail SQL/stack
 
 - Bucket `proofs` **privat**. Path: `{tabel}/{yyyy}/{mm}/{uuid}.{ext}`, tidak memakai nama file asli.
 - Tipe diizinkan: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`. Cek MIME **dan** magic bytes di server. Maks 5 MB.
-- Gambar dikompres/di-*re-encode* di server (menghapus EXIF/GPS).
+- Gambar dikompres/di-*re-encode* (menghapus EXIF/GPS). _Implementasi M4:_ peramban me-*re-encode* foto lewat kanvas (JPEG, sisi terpanjang ≤ 2000 px) lalu mengunggah langsung ke Storage (policy: `admin_kelompok`, path uuid); server kemudian mengunduh file, memeriksa magic bytes + ukuran, dan **menolak** gambar yang masih membawa EXIF (file dihapus, tidak dicatat). Alasan: batas body fungsi Vercel 4,5 MB tidak muat untuk PDF 5 MB, dan re-encode di server butuh dependensi baru (`sharp`).
 - Akses via **signed URL** berumur 5 menit, dibuat setelah cek hak akses dokumen induk.
 - Policy Storage: hanya peran yang boleh mengelola modul terkait yang boleh upload; tidak ada delete untuk file milik dokumen terposting.
 

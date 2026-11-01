@@ -1,0 +1,49 @@
+// Unggah bukti dari peramban (Security.md §8). Foto di-encode ulang lewat kanvas → JPEG tanpa EXIF/GPS dan
+// lebih kecil; PDF dikirim apa adanya. Setelah unggah, server memverifikasi isi file sebelum mencatatnya.
+import { registerProof } from "@/features/receipts/actions";
+import { PROOF_MAX_BYTES, proofPath } from "@/lib/files";
+import { createClient } from "@/lib/supabase/client";
+import type { ProofMime } from "@/lib/supabase/types";
+import { todayWib } from "@/lib/validation/common";
+
+export const PROOF_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+const MAX_SIDE = 2000;
+
+async function reencode(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("Foto tidak dapat diproses");
+  return blob;
+}
+
+/** Siapkan & unggah satu bukti untuk penerimaan draft. Mengembalikan pesan galat, atau null bila berhasil. */
+export async function uploadReceiptProof(receiptId: string, file: File): Promise<string | null> {
+  let blob: Blob;
+  let mime: ProofMime;
+  try {
+    if (file.type === "application/pdf") {
+      blob = file;
+      mime = "application/pdf";
+    } else if (file.type.startsWith("image/")) {
+      blob = await reencode(file);
+      mime = "image/jpeg";
+    } else {
+      return "Bukti harus foto (JPG, PNG, WebP) atau PDF.";
+    }
+  } catch {
+    return "Foto tidak dapat dibaca. Coba format JPG atau PNG.";
+  }
+  if (blob.size > PROOF_MAX_BYTES) return "Ukuran bukti maksimal 5 MB.";
+
+  const path = proofPath("receipts", todayWib(), crypto.randomUUID(), mime);
+  const { error } = await createClient().storage.from("proofs").upload(path, blob, { contentType: mime, upsert: false });
+  if (error) return "Bukti gagal diunggah. Periksa koneksi lalu coba lagi.";
+  const res = await registerProof(receiptId, path);
+  return res.error ?? null;
+}

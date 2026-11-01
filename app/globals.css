@@ -115,3 +115,41 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Struk thermal (StyleGuide §8.4 jalur A): kertas selalu putih & tinta hitam, juga di mode gelap (ini pratinjau kertas). */
+.thermal-paper {
+  width: 72mm;
+  padding: 4mm 0;
+  background: #fff;
+  color: #000;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 7.2pt;
+  line-height: 1.25;
+  white-space: pre;
+  box-shadow: var(--shadow-pop);
+}
+.thermal-paper .thermal-big {
+  font-size: 14.4pt;
+  line-height: 1.3;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #fff;
+  }
+  .thermal-paper {
+    box-shadow: none;
+    margin: 0 4mm;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

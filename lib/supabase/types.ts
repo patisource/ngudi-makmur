@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi 20261101120000_auth_rbac.sql.
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261101150000_receipts.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -9,6 +9,11 @@ export type CustomerType = "perorangan" | "usaha";
 export type StockDirection = "in" | "out";
 export type MovementType = "receipt_in" | "production_out" | "production_in" | "sale_out" | "return_in" | "opname_adjust" | "correction" | "reversal";
 export type ReservationStatus = "active" | "released" | "fulfilled";
+export type ReceiptStatus = "draft" | "confirmed" | "void";
+export type ReceiptSource = "anggota" | "luar";
+export type ProofMime = "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+/** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
+export type PostingResult = { id: string; doc_number: string | null; status: string; already: boolean };
 
 // numeric(…) dari PostgREST datang sebagai number; kita ubah ke gram lewat lib/qty sebelum dihitung.
 type Ts = string;
@@ -89,6 +94,35 @@ export type Database = {
         [Fk<"stock_movements", "product_id", "products">]
       >;
       stock_reservations: Table<{ id: string; order_id: string; product_id: string; qty_kg: number; status: ReservationStatus; created_at: Ts; updated_at: Ts }>;
+      receipts: Table<
+        {
+          id: string;
+          doc_number: string | null;
+          status: ReceiptStatus;
+          business_date: string;
+          source_type: ReceiptSource;
+          member_id: string | null;
+          supplier_name: string | null;
+          product_id: string;
+          weight_kg: number;
+          moisture_pct: number | null;
+          acquisition_cost: number;
+          note: string | null;
+          created_by: string | null;
+          confirmed_at: Ts | null;
+          confirmed_by: string | null;
+          voided_at: Ts | null;
+          voided_by: string | null;
+          void_reason: string | null;
+          created_at: Ts;
+          updated_at: Ts;
+        },
+        [Fk<"receipts", "member_id", "members">, Fk<"receipts", "product_id", "products">]
+      >;
+      attachments: Table<
+        { id: string; receipt_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
+        [Fk<"attachments", "receipt_id", "receipts">]
+      >;
     };
     Views: {
       v_stock_balance: {
@@ -123,6 +157,8 @@ export type Database = {
       idem_begin: { Args: { p_key: string; p_endpoint: string; p_hash: string }; Returns: Json };
       idem_finish: { Args: { p_key: string; p_response: Json }; Returns: undefined };
       idem_abort: { Args: { p_key: string }; Returns: undefined };
+      confirm_receipt: { Args: { p_id: string }; Returns: Json };
+      void_receipt: { Args: { p_id: string; p_reason: string }; Returns: Json };
     };
     Enums: {
       app_role: AppRole;
@@ -132,6 +168,8 @@ export type Database = {
       stock_direction: StockDirection;
       movement_type: MovementType;
       reservation_status: ReservationStatus;
+      receipt_status: ReceiptStatus;
+      receipt_source: ReceiptSource;
     };
     CompositeTypes: { [_ in never]: never };
   };
