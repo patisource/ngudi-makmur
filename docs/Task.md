@@ -57,13 +57,13 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M2 — Master Data (Sprint A) · FR-MST-*
 
-- [ ] **T2.1** Migrasi `members`, `products`, `packagings`, `product_packagings` (`isi_kg > 0`), `customers`, `sales_channels`, `batch_type_rules` + RLS.
-- [ ] **T2.2** Anggota: daftar (cari, filter, paginasi server), form tambah/ubah, arsip/pulihkan.
-- [ ] **T2.3** Produk: daftar, form, kategori `mentah`/`olahan`, satuan dasar kg (terkunci), tab konversi kemasan (isi kg, harga default), stok minimum, harga default per kg. Test: konversi 0 ditolak; 2 kemasan @0,5 kg = 1 kg.
-- [ ] **T2.4** Jenis kemasan & saluran penjualan (`langsung`, `whatsapp`, `media_sosial`, `marketplace`, `lainnya`): CRUD sederhana.
-- [ ] **T2.5** Pelanggan: daftar & form (dipakai di M6), mis. IRT Sekar Arum sebagai pelanggan usaha.
-- [ ] **T2.6** Aturan: produk dengan stok > 0 tidak bisa diarsip; kode unik.
-- [ ] **T2.7** Seed dasar (`supabase/seed.sql`): 3 produk sesuai PRD §4.0 (`TK`, `PP`, `TP`, semua kg) beserta kemasan penjualan (Tepung pak 0,5 kg & 1 kg, Pipilan karung 50 kg), aturan jenis batch (pemipilan TK→PP, penepungan PP→TP), saluran penjualan, akun kas awal, kategori pengeluaran & pemasukan lain. **Seed DEMO** terpisah sesuai PRD §9.1 (Petani A, 100 kg pipilan, batch 60→50 kg tepung, pesanan 5 kg @Rp10.000, bayar Rp30.000 + Rp20.000) — tidak pernah dimuat ke data nyata.
+- [x] **T2.1** Migrasi `members`, `products`, `packagings`, `product_packagings` (`isi_kg > 0`), `customers`, `sales_channels`, `batch_type_rules` + RLS.
+- [x] **T2.2** Anggota: daftar (cari, filter, paginasi server), form tambah/ubah, arsip/pulihkan.
+- [x] **T2.3** Produk: daftar, form, kategori `mentah`/`olahan`, satuan dasar kg (terkunci), tab konversi kemasan (isi kg, harga default), stok minimum, harga default per kg. Test: konversi 0 ditolak; 2 kemasan @0,5 kg = 1 kg.
+- [x] **T2.4** Jenis kemasan & saluran penjualan (`langsung`, `whatsapp`, `media_sosial`, `marketplace`, `lainnya`): CRUD sederhana.
+- [x] **T2.5** Pelanggan: daftar & form (dipakai di M6), mis. IRT Sekar Arum sebagai pelanggan usaha.
+- [~] **T2.6** Aturan: produk dengan stok > 0 tidak bisa diarsip; kode unik. _Status: kode unik & trigger arsip aktif; `product_on_hand()` masih 0 sampai buku stok M3._
+- [~] **T2.7** Seed dasar (`supabase/seed.sql`): 3 produk sesuai PRD §4.0 (`TK`, `PP`, `TP`, semua kg) beserta kemasan penjualan (Tepung pak 0,5 kg & 1 kg, Pipilan karung 50 kg), aturan jenis batch (pemipilan TK→PP, penepungan PP→TP), saluran penjualan, akun kas awal, kategori pengeluaran & pemasukan lain. **Seed DEMO** terpisah sesuai PRD §9.1 (Petani A, 100 kg pipilan, batch 60→50 kg tepung, pesanan 5 kg @Rp10.000, bayar Rp30.000 + Rp20.000) — tidak pernah dimuat ke data nyata.
 
 ## M3 — Inti Stok & Penomoran (Sprint B) · FR-STK-01/02/05
 

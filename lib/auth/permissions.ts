@@ -38,7 +38,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: "M6" },
   { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: "M7" },
   { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M8" },
-  { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M2" },
+  { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/pengaturan/akun", label: "Akun & izin", icon: "shield", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
   { href: "/audit", label: "Log audit", icon: "history", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
 ];
@@ -46,6 +46,10 @@ export const NAV: readonly NavItem[] = [
 // Aksi tulis yang dijaga di server (selain hak buka halaman di atas).
 export const ACTIONS = {
   "akun.kelola": ["admin_teknis"],
+  // Master data (PRD §3.1): kelola = admin_kelompok; pelanggan & saluran hanya terlihat admin_kelompok & ketua.
+  "master.kelola": ["admin_kelompok"],
+  "pelanggan.lihat": ["admin_kelompok", "ketua"],
+  "kontak.lihat": ["admin_kelompok", "ketua"], // NIK & no. HP anggota tanpa samaran (Security.md §7)
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;

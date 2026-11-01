@@ -16,6 +16,23 @@ const ACTION_LABEL: Record<string, string> = {
   "user.password_reset": "Atur ulang kata sandi",
 };
 
+// Aksi master data: "<tabel>.<kata kerja>" dari trigger audit_master_row.
+const ENTITY_LABEL: Record<string, string> = {
+  members: "anggota",
+  products: "produk",
+  packagings: "jenis kemasan",
+  product_packagings: "konversi kemasan",
+  customers: "pelanggan",
+  sales_channels: "saluran",
+};
+const VERB_LABEL: Record<string, string> = { created: "Tambah", updated: "Ubah", archived: "Arsipkan", restored: "Pulihkan" };
+const actionLabel = (a: string) => {
+  if (ACTION_LABEL[a]) return ACTION_LABEL[a];
+  const [entity, verb] = a.split(".");
+  return ENTITY_LABEL[entity] && VERB_LABEL[verb] ? `${VERB_LABEL[verb]} ${ENTITY_LABEL[entity]}` : a;
+};
+const afterName = (after: unknown) => (after && typeof after === "object" && "name" in after ? String(after.name) : after && typeof after === "object" && "full_name" in after ? String(after.full_name) : null);
+
 const fmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" });
 
 // Log audit (Security.md §10): hanya ketua & admin_teknis; RLS di database menegakkan hal yang sama.
@@ -52,8 +69,8 @@ export default async function AuditPage() {
                   <tr key={row.id} className="border-t border-border align-top">
                     <td className="whitespace-nowrap px-5 py-3 text-text-muted">{fmt.format(new Date(row.at))}</td>
                     <td className="px-3.5 py-3">{row.actor_name ?? "Sistem"}</td>
-                    <td className="px-3.5 py-3">{ACTION_LABEL[row.action] ?? row.action}</td>
-                    <td className="px-5 py-3 text-text-muted">{row.reason ?? (typeof row.after === "object" && row.after && "full_name" in row.after ? String(row.after.full_name) : "—")}</td>
+                    <td className="px-3.5 py-3">{actionLabel(row.action)}</td>
+                    <td className="px-5 py-3 text-text-muted">{row.reason ?? afterName(row.after) ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
