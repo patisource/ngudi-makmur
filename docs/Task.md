@@ -47,13 +47,13 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M1 — Autentikasi & RBAC (Sprint A) · FR-AUTH-*
 
-- [ ] **T1.1** Migrasi `profiles`, `user_roles`, `user_permissions`, enum `app_role` (`admin_kelompok`, `operator_produksi`, `ketua`, `admin_teknis`), fungsi `has_role()` dan `has_permission()` (izin `production.confirm`).
-- [ ] **T1.2** Halaman login (StyleGuide §8.1), logout, middleware sesi Supabase SSR.
-- [ ] **T1.3** `requireRole()` / `requirePermission()` untuk Server Actions & Route Handlers; halaman 403.
-- [ ] **T1.4** Sidebar dibangun dari satu konfigurasi navigasi + peran (menu sesuai peran).
-- [ ] **T1.5** Admin teknis: daftar pengguna, buat akun, ubah peran/izin, nonaktifkan (cabut sesi). Pelanggan & anggota tidak dibuatkan akun.
-- [ ] **T1.6** Tabel `audit_logs` (pelaku, aksi, objek, sebelum/sesudah, alasan, waktu) + helper pencatat.
-- [ ] **T1.7** Test: tiap peran hanya melihat menu & endpoint yang diizinkan (matriks PRD §3.1), termasuk **uji wajib SRS §11: `operator_produksi` tidak dapat mengubah pembayaran/kas** (UI 403 + API 403 + RPC ditolak), dan `admin_teknis` tidak dapat mencatat transaksi usaha.
+- [~] **T1.1** Migrasi `profiles`, `user_roles`, `user_permissions`, enum `app_role` (`admin_kelompok`, `operator_produksi`, `ketua`, `admin_teknis`), fungsi `has_role()` dan `has_permission()` (izin `production.confirm`).
+- [~] **T1.2** Halaman login (StyleGuide §8.1), logout, middleware sesi Supabase SSR.
+- [~] **T1.3** `requireRole()` / `requirePermission()` untuk Server Actions & Route Handlers; halaman 403.
+- [~] **T1.4** Sidebar dibangun dari satu konfigurasi navigasi + peran (menu sesuai peran).
+- [~] **T1.5** Admin teknis: daftar pengguna, buat akun, ubah peran/izin, nonaktifkan (cabut sesi). Pelanggan & anggota tidak dibuatkan akun.
+- [~] **T1.6** Tabel `audit_logs` (pelaku, aksi, objek, sebelum/sesudah, alasan, waktu) + helper pencatat.
+- [~] **T1.7** Test: tiap peran hanya melihat menu & endpoint yang diizinkan (matriks PRD §3.1), termasuk **uji wajib SRS §11: `operator_produksi` tidak dapat mengubah pembayaran/kas** (UI 403 + API 403 + RPC ditolak), dan `admin_teknis` tidak dapat mencatat transaksi usaha.
 
 ## M2 — Master Data (Sprint A) · FR-MST-*
 

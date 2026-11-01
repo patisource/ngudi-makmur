@@ -4,13 +4,14 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { publicEnv } from "@/lib/env";
 import { serverEnv } from "@/lib/env.server";
+import type { Database } from "@/lib/supabase/types";
 
 // Klien per permintaan untuk Server Component, Server Action, dan Route Handler (sesi dari cookie).
 // Jangan disimpan di variabel global: tiap permintaan punya cookie pengguna sendiri.
 export async function createClient() {
   const env = publicEnv();
   const cookieStore = await cookies();
-  return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+  return createServerClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {
@@ -27,7 +28,7 @@ export async function createClient() {
 // Klien dengan kunci rahasia: melewati RLS. HANYA untuk tugas admin teknis (membuat akun)
 // setelah requireRole(["admin_teknis"]); jangan dipakai untuk melayani permintaan pengguna biasa.
 export function createAdminClient() {
-  return createSupabaseClient(publicEnv().NEXT_PUBLIC_SUPABASE_URL, serverEnv().SUPABASE_SECRET_KEY, {
+  return createSupabaseClient<Database>(publicEnv().NEXT_PUBLIC_SUPABASE_URL, serverEnv().SUPABASE_SECRET_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

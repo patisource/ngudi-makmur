@@ -1,0 +1,68 @@
+import { describe, expect, it } from "vitest";
+import { canDo, canOpen, homeFor, navFor, navItemFor } from "./permissions";
+import type { AppRole } from "@/lib/supabase/types";
+
+// Matriks PRD §3.1 (kolom L/K = boleh membuka halaman). Diuji per peran agar perubahan konfigurasi
+// yang tidak sengaja membuka akses langsung ketahuan.
+const MATRIX: Record<string, Record<AppRole, boolean>> = {
+  "/dashboard": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
+  "/jagung-masuk": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
+  "/produksi": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
+  "/stok": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
+  "/penjualan": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false },
+  "/kas": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false },
+  "/laporan": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
+  "/master": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
+  "/audit": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true },
+  "/pengaturan/akun": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true },
+};
+
+describe("matriks hak akses halaman (PRD §3.1)", () => {
+  for (const [path, byRole] of Object.entries(MATRIX)) {
+    for (const [role, allowed] of Object.entries(byRole) as [AppRole, boolean][]) {
+      it(`${role} ${allowed ? "boleh" : "tidak boleh"} membuka ${path}`, () => {
+        expect(canOpen([role], path)).toBe(allowed);
+      });
+    }
+  }
+});
+
+describe("uji wajib SRS §11 — sisi aplikasi", () => {
+  it("operator_produksi tidak bisa membuka pembayaran/kas maupun penjualan", () => {
+    for (const p of ["/kas", "/kas/pembayaran", "/penjualan", "/penjualan/INV-1"]) expect(canOpen(["operator_produksi"], p)).toBe(false);
+  });
+  it("admin_teknis tidak mendapat menu transaksi usaha", () => {
+    const hrefs = navFor(["admin_teknis"]).map((n) => n.href);
+    expect(hrefs).toEqual(["/pengaturan/akun", "/audit"]);
+  });
+});
+
+describe("aksi kelola akun", () => {
+  it("hanya admin_teknis", () => {
+    expect(canDo(["admin_teknis"], "akun.kelola")).toBe(true);
+    for (const r of ["admin_kelompok", "operator_produksi", "ketua"] as AppRole[]) expect(canDo([r], "akun.kelola")).toBe(false);
+  });
+});
+
+describe("peran rangkap = gabungan hak", () => {
+  it("ketua merangkap admin kelompok bisa membuka kas dan akun", () => {
+    expect(canOpen(["ketua", "admin_kelompok"], "/kas")).toBe(true);
+    expect(canOpen(["ketua", "admin_kelompok"], "/pengaturan/akun")).toBe(true);
+  });
+  it("tanpa peran tidak bisa membuka apa pun", () => {
+    expect(navFor([])).toEqual([]);
+    expect(homeFor([])).toBe("/403");
+  });
+});
+
+describe("navItemFor", () => {
+  it("mencocokkan prefix terpanjang dan menolak path tak dikenal", () => {
+    expect(navItemFor("/pengaturan/akun/123")?.href).toBe("/pengaturan/akun");
+    expect(navItemFor("/kasir")).toBeUndefined();
+    expect(navItemFor("/rahasia")).toBeUndefined();
+  });
+  it("halaman awal: admin_teknis ke Akun & izin, lainnya ke dashboard", () => {
+    expect(homeFor(["admin_teknis"])).toBe("/pengaturan/akun");
+    expect(homeFor(["operator_produksi"])).toBe("/dashboard");
+  });
+});

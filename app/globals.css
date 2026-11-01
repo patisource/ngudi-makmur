@@ -1,42 +1,117 @@
 @import "tailwindcss";
 
-/* Token dasar dari prototipe (StyleGuide §2). Token lengkap — warna status, radius, spacing, motion — menyusul di T0.4. */
+/* Token desain (StyleGuide §2–§4), sama dengan prototipe. Pakai lewat utilitas Tailwind
+   (bg-surface, text-text-muted, rounded-md, ease-expo, …), bukan warna Tailwind mentah. */
 :root {
   --bg: #f4f4f5;
   --surface: #ffffff;
-  --border: #e4e4e7;
+  --surface-muted: #f7f7f8;
+  --border: #e8e8ea;
+  --border-strong: #d4d4d8;
   --text: #111113;
-  --text-muted: #63636b;
-  --accent: #16a34a;
-  --warning: #b45309;
+  --text-muted: #6b6b73;
+  --text-subtle: #9a9aa2;
+  --primary: #111113;
+  --primary-fg: #ffffff;
+  --accent: #2fa84f;
+  --accent-soft: #e8f6ec;
+  --danger: #e5484d;
+  --danger-soft: #fdecec;
+  --warning: #b9770e;
+  --warning-soft: #fdf3e1;
+  --info: #3e7bfa;
+  --info-soft: #eaf1ff;
+  --scrim: rgb(17 17 19 / 0.36);
+  --shadow-pop: 0 8px 24px -8px rgb(17 17 19 / 0.14), 0 2px 4px rgb(17 17 19 / 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e0e10;
     --surface: #18181b;
+    --surface-muted: #1f1f23;
     --border: #27272a;
+    --border-strong: #3f3f46;
     --text: #f4f4f5;
     --text-muted: #a1a1aa;
-    --accent: #22c55e;
-    --warning: #f59e0b;
+    --text-subtle: #71717a;
+    --primary: #f4f4f5;
+    --primary-fg: #111113;
+    --accent: #3dbe60;
+    --accent-soft: #163a22;
+    --danger: #f2555a;
+    --danger-soft: #3b1a1b;
+    --warning: #f0a830;
+    --warning-soft: #3a2c12;
+    --info: #6b9bff;
+    --info-soft: #16233f;
+    --scrim: rgb(0 0 0 / 0.6);
+    --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
   }
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-scrim: var(--scrim);
+  --shadow-pop: var(--shadow-pop);
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, Consolas, monospace;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Masuk halaman (StyleGuide §6.3): satu koreografi, maksimal 4 langkah, hanya transform/opacity. */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+.enter > * {
+  animation: enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.enter > :nth-child(2) { animation-delay: 40ms; }
+.enter > :nth-child(3) { animation-delay: 80ms; }
+.enter > :nth-child(n + 4) { animation-delay: 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
