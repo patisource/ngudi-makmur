@@ -66,7 +66,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/jagung-
           <label className="flex flex-col gap-1 text-label">
             Sumber
             <select name="sumber" defaultValue={f.source ?? ""} className={inputCls}>
-              <option value="">Semua sumber</option>
+              <option value="">Semua</option>
               <option value="anggota">Anggota</option>
               <option value="luar">Pemasok luar</option>
             </select>
@@ -74,7 +74,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/jagung-
           <label className="flex flex-col gap-1 text-label">
             Anggota
             <select name="anggota" defaultValue={f.memberId ?? ""} className={inputCls}>
-              <option value="">Semua anggota</option>
+              <option value="">Semua</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -85,7 +85,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/jagung-
           <label className="flex flex-col gap-1 text-label">
             Jenis
             <select name="jenis" defaultValue={f.productId ?? ""} className={inputCls}>
-              <option value="">Semua jenis</option>
+              <option value="">Semua</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -96,7 +96,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/jagung-
           <label className="flex flex-col gap-1 text-label">
             Status
             <select name="status" defaultValue={f.status ?? ""} className={inputCls}>
-              <option value="">Semua status</option>
+              <option value="">Semua</option>
               {(Object.keys(RECEIPT_STATUS_LABEL) as ReceiptStatus[]).map((s) => (
                 <option key={s} value={s}>
                   {RECEIPT_STATUS_LABEL[s]}
