@@ -35,25 +35,25 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 - [~] **T0.1** Inisialisasi Next.js (App Router, TS strict), Tailwind, ESLint, Prettier, pnpm.
 - [ ] **T0.2** Struktur folder sesuai [CLAUDE.md](../CLAUDE.md#struktur-folder).
 - [~] **T0.3** Supabase lokal (`supabase init`, `supabase start`), file `.env.example`, generator tipe (`pnpm db:types`).
-- [ ] **T0.4** Design tokens (warna, tipografi, radius, spacing, motion) di `globals.css` + `tailwind` theme sesuai StyleGuide §2–§4.
-- [ ] **T0.5** Komponen dasar: Button, Input, Select, Combobox, DatePicker, Textarea, Badge, Card, Dialog, Sheet, Tabs, Toast, Skeleton, EmptyState, DataTable (TanStack Table), MoneyInput, QtyInput (dengan satuan).
-- [ ] **T0.6** App shell: sidebar (bisa diciutkan), topbar (pencarian, profil), breadcrumb, layout responsif.
+- [~] **T0.4** Design tokens (warna, tipografi, radius, spacing, motion) di `globals.css` + `tailwind` theme sesuai StyleGuide §2–§4.
+- [~] **T0.5** Komponen dasar: Button, Input, Select, Combobox, DatePicker, Textarea, Badge, Card, Dialog, Sheet, Tabs, Toast, Skeleton, EmptyState, DataTable (TanStack Table), MoneyInput, QtyInput (dengan satuan).
+- [~] **T0.6** App shell: sidebar (bisa diciutkan), topbar (pencarian, profil), breadcrumb, layout responsif.
 - [ ] **T0.7** Primitif animasi (`motion/`): `FadeIn`, `Stagger`, `CountUp`, `PresenceSwap`, hook `useReducedMotion` (StyleGuide §6).
-- [ ] **T0.8** Utilitas: format rupiah/qty/tanggal WIB, `apiResponse`, error code, `requireRole`, `withIdempotency`.
+- [~] **T0.8** Utilitas: format rupiah/qty/tanggal WIB, `apiResponse`, error code, `requireRole`, `withIdempotency`.
 - [ ] **T0.9** CI (GitHub Actions): lint, typecheck, test, `supabase db lint`.
-- [ ] **T0.10** Vitest + Playwright terpasang dengan satu test contoh.
+- [~] **T0.10** Vitest + Playwright terpasang dengan satu test contoh.
 
 **Keluaran:** halaman kosong ber-shell yang bisa dijalankan; Storybook-ringan halaman `/dev/ui` (hanya di development) menampilkan semua komponen.
 
 ## M1 — Autentikasi & RBAC (Sprint A) · FR-AUTH-*
 
-- [~] **T1.1** Migrasi `profiles`, `user_roles`, `user_permissions`, enum `app_role` (`admin_kelompok`, `operator_produksi`, `ketua`, `admin_teknis`), fungsi `has_role()` dan `has_permission()` (izin `production.confirm`).
-- [~] **T1.2** Halaman login (StyleGuide §8.1), logout, middleware sesi Supabase SSR.
-- [~] **T1.3** `requireRole()` / `requirePermission()` untuk Server Actions & Route Handlers; halaman 403.
-- [~] **T1.4** Sidebar dibangun dari satu konfigurasi navigasi + peran (menu sesuai peran).
-- [~] **T1.5** Admin teknis: daftar pengguna, buat akun, ubah peran/izin, nonaktifkan (cabut sesi). Pelanggan & anggota tidak dibuatkan akun.
-- [~] **T1.6** Tabel `audit_logs` (pelaku, aksi, objek, sebelum/sesudah, alasan, waktu) + helper pencatat.
-- [~] **T1.7** Test: tiap peran hanya melihat menu & endpoint yang diizinkan (matriks PRD §3.1), termasuk **uji wajib SRS §11: `operator_produksi` tidak dapat mengubah pembayaran/kas** (UI 403 + API 403 + RPC ditolak), dan `admin_teknis` tidak dapat mencatat transaksi usaha.
+- [x] **T1.1** Migrasi `profiles`, `user_roles`, `user_permissions`, enum `app_role` (`admin_kelompok`, `operator_produksi`, `ketua`, `admin_teknis`), fungsi `has_role()` dan `has_permission()` (izin `production.confirm`).
+- [x] **T1.2** Halaman login (StyleGuide §8.1), logout, middleware sesi Supabase SSR.
+- [x] **T1.3** `requireRole()` / `requirePermission()` untuk Server Actions & Route Handlers; halaman 403.
+- [x] **T1.4** Sidebar dibangun dari satu konfigurasi navigasi + peran (menu sesuai peran).
+- [x] **T1.5** Admin teknis: daftar pengguna, buat akun, ubah peran/izin, nonaktifkan (cabut sesi). Pelanggan & anggota tidak dibuatkan akun.
+- [x] **T1.6** Tabel `audit_logs` (pelaku, aksi, objek, sebelum/sesudah, alasan, waktu) + helper pencatat.
+- [x] **T1.7** Test: tiap peran hanya melihat menu & endpoint yang diizinkan (matriks PRD §3.1), termasuk **uji wajib SRS §11: `operator_produksi` tidak dapat mengubah pembayaran/kas** (UI 403 + API 403 + RPC ditolak), dan `admin_teknis` tidak dapat mencatat transaksi usaha. _Status: halaman & peran diuji (Vitest 47 uji + `supabase/tests/rbac_check.sql` 27 uji); sisi API/RPC pembayaran-kas diuji ulang saat tabelnya dibuat di M7._
 
 ## M2 — Master Data (Sprint A) · FR-MST-*
 
