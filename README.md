@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SIM Kelompok Tani Ngudi Makmur
 
-## Getting Started
+Aplikasi web pencatatan jagung masuk, produksi, stok, penjualan, pembayaran & kas, nota thermal, dan laporan untuk Kelompok Tani Ngudi Makmur (Desa Baturejo, Kec. Sukolilo, Kab. Pati).
 
-First, run the development server:
+Stack: Next.js 16 (App Router, TypeScript) · Tailwind CSS 4 · Supabase (Postgres, Auth, Storage) · Vercel.
+Kebutuhan & aturan: [CLAUDE.md](CLAUDE.md) dan [docs/](docs/).
+
+## Menjalankan di laptop
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # lalu isi nilainya (lihat di bawah)
+pnpm dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Halaman awal menampilkan variabel lingkungan mana yang sudah terisi.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Menyambungkan layanan (akun kelurahan)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Supabase
+1. Login ke [supabase.com/dashboard](https://supabase.com/dashboard) dengan akun kelurahan → **New project**.
+   Region: **Southeast Asia (Singapore)**. Simpan kata sandi database.
+2. **Project Settings → Data API**: salin *Project URL* ke `NEXT_PUBLIC_SUPABASE_URL`.
+3. **Project Settings → API Keys**: salin *Publishable key* ke `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   dan *Secret key* ke `SUPABASE_SECRET_KEY` (rahasia, jangan dibagikan).
+4. `SUPABASE_PROJECT_REF` = bagian depan URL proyek; `SUPABASE_DB_PASSWORD` = kata sandi langkah 1.
+5. Sambungkan CLI (sekali): `supabase login` lalu `supabase link --project-ref <ref>`.
 
-## Learn More
+### 2. GitHub
+1. Login ke GitHub dengan akun kelurahan, buat repositori **private** baru (tanpa README).
+2. Di folder ini:
+   ```bash
+   git add -A
+   git commit -m "chore: inisialisasi proyek (T0.1, T0.3)"
+   git branch -M main
+   git remote add origin https://github.com/<akun-kelurahan>/<nama-repo>.git
+   git push -u origin main
+   ```
+   `.env.local` tidak ikut ter-push (sudah di `.gitignore`).
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Vercel
+1. Login ke [vercel.com](https://vercel.com) dengan akun kelurahan (paling mudah: *Continue with GitHub*).
+2. **Add New → Project** → pilih repositori GitHub tadi → Framework: Next.js.
+3. **Environment Variables**: isi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   `SUPABASE_SECRET_KEY`, dan `NEXT_PUBLIC_SITE_URL` = alamat Vercel (mis. `https://<nama-proyek>.vercel.app`).
+4. **Deploy**. Setiap push ke `main` akan otomatis ter-deploy.
+5. Di Supabase → **Authentication → URL Configuration**: isi *Site URL* dengan alamat Vercel.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Perintah
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Perintah | Fungsi |
+|---|---|
+| `pnpm dev` | Jalankan aplikasi lokal |
+| `pnpm build` | Build produksi |
+| `pnpm lint` / `pnpm typecheck` | Pemeriksaan kode |
+| `supabase start` | Supabase lokal (butuh Docker) |
+| `pnpm db:types` / `pnpm db:types:remote` | Buat ulang tipe database dari Supabase lokal / proyek tersambung |
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Catatan
+Folder ini berada di OneDrive. `node_modules` dan `.next` berisi banyak file; bila sinkronisasi OneDrive terasa berat,
+pindahkan folder proyek ke luar OneDrive — kode tetap aman di GitHub.
