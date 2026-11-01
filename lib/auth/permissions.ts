@@ -33,7 +33,7 @@ export type IconName = "dashboard" | "inbox" | "factory" | "box" | "cart" | "wal
 export const NAV: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Ringkasan", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/jagung-masuk", label: "Jagung masuk", icon: "inbox", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
-  { href: "/produksi", label: "Produksi", icon: "factory", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M5" },
+  { href: "/produksi", label: "Produksi", icon: "factory", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/stok", label: "Stok", icon: "box", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: "M6" },
   { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: "M7" },
@@ -52,6 +52,8 @@ export const ACTIONS = {
   "kontak.lihat": ["admin_kelompok", "ketua"], // NIK & no. HP anggota tanpa samaran (Security.md §7)
   // Jagung masuk (PRD §3.1): draft, konfirmasi, void, bukti = admin_kelompok; operator & ketua hanya lihat.
   "penerimaan.kelola": ["admin_kelompok"],
+  // Produksi (PRD §3.1): batch draft, baris, sisa, biaya = operator_produksi. Konfirmasi = izin production.confirm.
+  "produksi.kelola": ["operator_produksi"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;

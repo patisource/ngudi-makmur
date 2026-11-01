@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261101150000_receipts.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261101160000_production.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -11,7 +11,10 @@ export type MovementType = "receipt_in" | "production_out" | "production_in" | "
 export type ReservationStatus = "active" | "released" | "fulfilled";
 export type ReceiptStatus = "draft" | "confirmed" | "void";
 export type ReceiptSource = "anggota" | "luar";
-export type ProofMime = "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+export type ProductionStatus = "draft" | "confirmed" | "pending_void" | "void";
+export type LineDirection = "input" | "output";
+export type BatchCostCategory = "tenaga_kerja" | "kemasan" | "listrik_bbm" | "lain";
+export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
 export type PostingResult = { id: string; doc_number: string | null; status: string; already: boolean };
 
@@ -71,7 +74,13 @@ export type Database = {
         Master & { id: string; code: string; name: string; type: CustomerType; phone: string | null; address: string | null; note: string | null }
       >;
       sales_channels: Table<Master & { code: string; name: string; is_digital: boolean; sort_order: number }>;
-      batch_type_rules: Table<{ batch_type: string; name: string; input_product_id: string; output_product_id: string }>;
+      batch_type_rules: Table<
+        { batch_type: string; name: string; input_product_id: string; output_product_id: string; max_loss_pct: number | null },
+        [
+          { foreignKeyName: "batch_type_rules_input_product_id_fkey"; columns: ["input_product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] },
+          { foreignKeyName: "batch_type_rules_output_product_id_fkey"; columns: ["output_product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] },
+        ]
+      >;
       stock_balances: Table<{ product_id: string; on_hand_kg: number; value_rp: number; updated_at: Ts }>;
       stock_movements: Table<
         {
@@ -119,6 +128,44 @@ export type Database = {
         },
         [Fk<"receipts", "member_id", "members">, Fk<"receipts", "product_id", "products">]
       >;
+      production_batches: Table<
+        {
+          id: string;
+          doc_number: string | null;
+          status: ProductionStatus;
+          batch_type: string;
+          business_date: string;
+          operator_id: string;
+          operator_name: string;
+          note: string | null;
+          residue_kg: number;
+          input_kg: number;
+          output_kg: number;
+          loss_kg: number;
+          material_cost: number | null;
+          other_cost: number;
+          total_cost: number | null;
+          hpp_per_kg: number | null;
+          confirmed_at: Ts | null;
+          confirmed_by: string | null;
+          void_reason: string | null;
+          void_requested_at: Ts | null;
+          void_requested_by: string | null;
+          voided_at: Ts | null;
+          voided_by: string | null;
+          created_at: Ts;
+          updated_at: Ts;
+        },
+        [{ foreignKeyName: "production_batches_batch_type_fkey"; columns: ["batch_type"]; isOneToOne: false; referencedRelation: "batch_type_rules"; referencedColumns: ["batch_type"] }]
+      >;
+      production_lines: Table<
+        { id: string; batch_id: string; direction: LineDirection; product_id: string; qty_kg: number; value_rp: number | null; sort_order: number; created_at: Ts },
+        [Fk<"production_lines", "batch_id", "production_batches">, Fk<"production_lines", "product_id", "products">]
+      >;
+      batch_costs: Table<
+        { id: string; batch_id: string; category: BatchCostCategory; amount_rp: number; source_ref: string | null; note: string | null; sort_order: number; created_at: Ts },
+        [Fk<"batch_costs", "batch_id", "production_batches">]
+      >;
       attachments: Table<
         { id: string; receipt_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
         [Fk<"attachments", "receipt_id", "receipts">]
@@ -159,6 +206,13 @@ export type Database = {
       idem_abort: { Args: { p_key: string }; Returns: undefined };
       confirm_receipt: { Args: { p_id: string }; Returns: Json };
       void_receipt: { Args: { p_id: string; p_reason: string }; Returns: Json };
+      calc_hpp: { Args: { p_total: number; p_output_kg: number }; Returns: number | null };
+      save_production_draft: {
+        Args: { p_id: string | null; p_batch_type: string; p_date: string; p_note: string | null; p_residue_kg: number; p_inputs: number[]; p_outputs: number[]; p_costs: Json };
+        Returns: string;
+      };
+      delete_production_draft: { Args: { p_id: string }; Returns: undefined };
+      confirm_production: { Args: { p_id: string }; Returns: Json };
     };
     Enums: {
       app_role: AppRole;
@@ -170,6 +224,9 @@ export type Database = {
       reservation_status: ReservationStatus;
       receipt_status: ReceiptStatus;
       receipt_source: ReceiptSource;
+      production_status: ProductionStatus;
+      line_direction: LineDirection;
+      batch_cost_category: BatchCostCategory;
     };
     CompositeTypes: { [_ in never]: never };
   };

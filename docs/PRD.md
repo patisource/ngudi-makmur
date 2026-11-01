@@ -503,6 +503,7 @@ Data uji untuk pengembangan, UAT awal, dan demonstrasi mitra. **Bukan capaian ny
 | Q14 | Data nyata dan DEMO dipisah per lingkungan (SRS §13 minggu 2). | Saldo awal kas & stok awal nyata: tanggal cut-off dan siapa yang memverifikasi. |
 | Q15 | Kategori pemasukan lain: iuran anggota, bantuan/hibah, lainnya. | Daftar kategori pemasukan & pengeluaran resmi kelompok. |
 | Q16 | *Asumsi prototipe, perlu dikonfirmasi mitra:* pembatalan (`void`, pembalikan) penerimaan jagung terkonfirmasi dilakukan oleh `admin_kelompok` (FR-RCV-05); pembatalan batch terkonfirmasi dilakukan oleh operator pemegang izin batch (`production.confirm`) **tanpa** persetujuan `ketua`. Keduanya wajib alasan dan hanya bisa bila stok yang diterima/dihasilkan masih tersedia. | Apakah pembatalan batch tetap memerlukan persetujuan `ketua` seperti FR-PRD-08, dan siapa yang berhak membatalkan penerimaan? |
+| Q17 | Ambang peringatan susut % per jenis batch (FR-PRD-04) disimpan di `batch_type_rules.max_loss_pct`; **kosong** sehingga belum ada peringatan. | Berapa ambang susut wajar untuk pemipilan dan penepungan? |
 
 ## 11. Rilis
 

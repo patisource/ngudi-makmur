@@ -88,12 +88,12 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M5 — Produksi (Sprint B) · FR-PRD-*
 
-- [ ] **T5.1** Migrasi `production_batches` (jenis, operator, sisa/susut kg, HPP), `production_lines` (`direction` input/output, `qty_kg`), `batch_costs` (kategori, nilai_alokasi, sumber_biaya).
-- [ ] **T5.2** Editor batch draft (pemipilan/penepungan): baris input & output sesuai `batch_type_rules`, sisa/susut kg, biaya batch; ringkasan langsung (total, susut %, perkiraan HPP).
-- [ ] **T5.3** Fungsi `confirm_production(id, idem_key)` dalam satu transaksi: cek izin `production.confirm`, minimal 1 input & 1 output, cek stok input, kode `PRD-…`, mutasi keluar/masuk, hitung & kunci HPP.
-- [ ] **T5.4** Halaman detail batch terkonfirmasi (read-only) + cetak.
-- [ ] **T5.5** Test HPP (rumus SRS §10): angka DEMO (60 kg PP → 50 kg TP, Rp240.000 + Rp60.000 → **Rp6.000/kg**); **output 0 → "data belum cukup", tanpa pembagian nol**; biaya batch tidak membuat baris kas.
-- [ ] **T5.6** Test (uji wajib SRS §11): bahan tidak cukup ditolak; konfirmasi batch dua kali → hanya satu perubahan stok; sisa/susut tersimpan dalam kg.
+- [x] **T5.1** Migrasi `production_batches` (jenis, operator, sisa/susut kg, HPP), `production_lines` (`direction` input/output, `qty_kg`), `batch_costs` (kategori, nilai_alokasi, sumber_biaya).
+- [~] **T5.2** Editor batch draft (pemipilan/penepungan): baris input & output sesuai `batch_type_rules`, sisa/susut kg, biaya batch; ringkasan langsung (total, susut %, perkiraan HPP).
+- [x] **T5.3** Fungsi `confirm_production(id, idem_key)` dalam satu transaksi: cek izin `production.confirm`, minimal 1 input & 1 output, cek stok input, kode `PRD-…`, mutasi keluar/masuk, hitung & kunci HPP.
+- [~] **T5.4** Halaman detail batch terkonfirmasi (read-only) + cetak.
+- [x] **T5.5** Test HPP (rumus SRS §10): angka DEMO (60 kg PP → 50 kg TP, Rp240.000 + Rp60.000 → **Rp6.000/kg**); **output 0 → "data belum cukup", tanpa pembagian nol**; biaya batch tidak membuat baris kas.
+- [x] **T5.6** Test (uji wajib SRS §11): bahan tidak cukup ditolak; konfirmasi batch dua kali → hanya satu perubahan stok; sisa/susut tersimpan dalam kg. _Status T5.1–T5.6: `supabase/tests/production_check.sql` 33/33 lulus di proyek asli (DEMO: HPP Rp6.000/kg, PP 40 kg, TP 50 kg); `lib/production.test.ts`. T5.2 & T5.4 menunggu uji tampilan sebagai operator produksi. T5.7 menunggu keputusan Q16 (dokumen berbeda soal persetujuan ketua)._
 - [ ] **T5.7** Pembatalan batch dengan persetujuan ketua (P1).
 
 ## M6 — Penjualan / Pesanan (Sprint C) · FR-SAL-*
