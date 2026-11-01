@@ -80,9 +80,9 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
         </p>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-        <div className="flex min-w-0 flex-col gap-5">
-          <Card>
+      {/* Ponsel: Rincian → Konfirmasi & Bukti → Ubah draft (aksi tidak tertimbun form). Layar lebar: aksi di kolom kanan. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+          <Card className="lg:col-start-1">
             <h2 className="font-semibold">Rincian</h2>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
               <Row label="Sumber">
@@ -102,8 +102,21 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
             </p>
           </Card>
 
+          <div className="flex min-w-0 flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1">
+            {canManage && r.status !== "void" && (
+              <Card>
+                <h2 className="font-semibold">{isDraft ? "Konfirmasi" : "Tindakan"}</h2>
+                <ReceiptActions id={r.id} status={r.status} impact={`${productName} +${formatKg(grams)}, nilai persediaan +${formatRupiah(r.acquisition_cost)}`} />
+              </Card>
+            )}
+            <Card>
+              <h2 className="font-semibold">Bukti</h2>
+              <ProofManager receiptId={r.id} proofs={proofs} canEdit={canManage && isDraft} />
+            </Card>
+          </div>
+
           {r.status === "void" && (
-            <Card className="border-danger-soft">
+            <Card className="border-danger-soft lg:col-start-1">
               <h2 className="font-semibold text-danger">Dibatalkan</h2>
               <p className="text-sm">{r.void_reason}</p>
               {r.voided_at && <p className="text-xs text-text-subtle">{timeFmt.format(new Date(r.voided_at))} · stok sudah dikurangi kembali lewat mutasi balik.</p>}
@@ -111,7 +124,7 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
           )}
 
           {canManage && isDraft && options && (
-            <Card>
+            <Card className="lg:col-start-1">
               <h2 className="font-semibold">Ubah draft</h2>
               <ReceiptForm
                 receiptId={r.id}
@@ -131,20 +144,6 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
               />
             </Card>
           )}
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-5">
-          {canManage && r.status !== "void" && (
-            <Card>
-              <h2 className="font-semibold">{isDraft ? "Konfirmasi" : "Tindakan"}</h2>
-              <ReceiptActions id={r.id} status={r.status} impact={`${productName} +${formatKg(grams)}, nilai persediaan +${formatRupiah(r.acquisition_cost)}`} />
-            </Card>
-          )}
-          <Card>
-            <h2 className="font-semibold">Bukti</h2>
-            <ProofManager receiptId={r.id} proofs={proofs} canEdit={canManage && isDraft} />
-          </Card>
-        </div>
       </div>
     </>
   );

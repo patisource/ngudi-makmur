@@ -117,13 +117,16 @@ body {
 }
 
 /* Struk thermal (StyleGuide §8.4 jalur A): kertas selalu putih & tinta hitam, juga di mode gelap (ini pratinjau kertas). */
+/* Lebar = tepat 48 karakter (ch) agar tidak pernah terpotong; Courier 7 pt → 48ch ≈ 71 mm, muat di area cetak 72 mm
+   (7,2 pt pada StyleGuide §8.4 menghasilkan ±73 mm di Courier New sehingga kolom kanan terpotong). */
 .thermal-paper {
-  width: 72mm;
-  padding: 4mm 0;
+  box-sizing: content-box;
+  width: 48ch;
+  padding: 4mm 3mm;
   background: #fff;
   color: #000;
   font-family: "Courier New", Courier, monospace;
-  font-size: 7.2pt;
+  font-size: 7pt;
   line-height: 1.25;
   white-space: pre;
   box-shadow: var(--shadow-pop);
@@ -144,7 +147,8 @@ body {
   }
   .thermal-paper {
     box-shadow: none;
-    margin: 0 4mm;
+    margin: 0;
+    padding: 2mm 4mm;
   }
   *,
   *::before,

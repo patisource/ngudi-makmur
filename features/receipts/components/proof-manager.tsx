@@ -18,7 +18,7 @@ export function ProofManager({ receiptId, proofs, canEdit }: { receiptId: string
   return (
     <div className="flex flex-col gap-3">
       {proofs.length ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <ul className="grid grid-cols-3 gap-3">
           {proofs.map((p) => (
             <li key={p.id} className="flex flex-col gap-1.5">
               <a
@@ -34,8 +34,8 @@ export function ProofManager({ receiptId, proofs, canEdit }: { receiptId: string
                   <span className="grid size-full place-items-center text-sm font-medium text-text-muted">PDF</span>
                 )}
               </a>
-              <div className="flex items-center justify-between gap-2 text-xs text-text-subtle">
-                <span>{sizeLabel(p.size_bytes)}</span>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-text-subtle">
+                <span className="whitespace-nowrap">{sizeLabel(p.size_bytes)}</span>
                 {canEdit && (
                   <button
                     type="button"

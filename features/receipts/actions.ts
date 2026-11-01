@@ -38,10 +38,14 @@ const revalidate = (id?: string) => {
 export async function saveReceiptDraft(receiptId: string | null, _prev: ReceiptFormState, fd: FormData): Promise<ReceiptFormState> {
   await requireAction("penerimaan.kelola");
   if (receiptId && !uuid.safeParse(receiptId).success) return { error: "Data tidak valid" };
-  const parsed = receiptSchema.safeParse(pick(fd));
+  const raw = pick(fd);
+  const parsed = receiptSchema.safeParse(raw);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0] ?? "_")] ??= issue.message;
+    // Aturan sumber (superRefine) baru jalan bila isian lain lolos; tampilkan sekaligus agar tidak bolak-balik.
+    if (raw.sourceType === "anggota" && !String(raw.memberId ?? "").trim()) fieldErrors.memberId ??= "Pilih anggota penyetor";
+    if (raw.sourceType === "luar" && !String(raw.supplierName ?? "").trim()) fieldErrors.supplierName ??= "Nama pemasok wajib diisi";
     return { error: "Periksa kembali isian yang ditandai.", fieldErrors };
   }
   const r = parsed.data;
