@@ -1,3 +1,5 @@
+import { siteUrl } from "@/lib/env";
+
 // Halaman sementara: memeriksa penyiapan lingkungan sebelum modul aplikasi (M1 dst.) dibangun.
 // Hanya menampilkan status tiap variabel (terisi / format salah) — nilainya tidak pernah ditampilkan.
 type Status = "ok" | "empty" | "invalid";
@@ -15,7 +17,7 @@ const check = (value: string | undefined, valid: (v: string) => boolean): Status
   !value ? "empty" : value !== value.trim() || !valid(value) ? "invalid" : "ok";
 
 const CHECKS = [
-  { key: "NEXT_PUBLIC_SITE_URL", label: "Alamat aplikasi", hint: "https://… (lokal boleh http://localhost:3000)", status: check(process.env.NEXT_PUBLIC_SITE_URL, (v) => isHttpsUrl(v, true)) },
+  { key: "NEXT_PUBLIC_SITE_URL", label: "Alamat aplikasi", hint: "https://… (lokal boleh http://localhost:3000)", status: check(siteUrl(), (v) => isHttpsUrl(v, true)) },
   { key: "NEXT_PUBLIC_SUPABASE_URL", label: "URL proyek Supabase", hint: "https://<ref>.supabase.co", status: check(process.env.NEXT_PUBLIC_SUPABASE_URL, (v) => isHttpsUrl(v) && v.includes(".supabase.co")) },
   { key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", label: "Kunci publik Supabase", hint: "diawali sb_publishable_ (atau kunci anon eyJ…)", status: check(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, (v) => /^(sb_publishable_|eyJ)/.test(v)) },
   { key: "SUPABASE_SECRET_KEY", label: "Kunci rahasia Supabase (server)", hint: "diawali sb_secret_ (atau service_role eyJ…)", status: check(process.env.SUPABASE_SECRET_KEY, (v) => /^(sb_secret_|eyJ)/.test(v)) },

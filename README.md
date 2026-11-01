@@ -41,8 +41,10 @@ Halaman awal menampilkan variabel lingkungan mana yang sudah terisi.
 ### 3. Vercel
 1. Login ke [vercel.com](https://vercel.com) dengan akun kelurahan (paling mudah: *Continue with GitHub*).
 2. **Add New → Project** → pilih repositori GitHub tadi → Framework: Next.js.
-3. **Environment Variables**: isi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `SUPABASE_SECRET_KEY`, dan `NEXT_PUBLIC_SITE_URL` = alamat Vercel (mis. `https://<nama-proyek>.vercel.app`).
+3. **Environment Variables**: isi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, dan
+   `SUPABASE_SECRET_KEY` (bisa lewat **Import .env**, lalu hapus `SUPABASE_DB_PASSWORD` & `SUPABASE_PROJECT_REF`).
+   `NEXT_PUBLIC_SITE_URL` tidak perlu diisi: aplikasi memakai domain produksi Vercel secara otomatis.
+   Domain saat ini: https://ngudi-makmur-six.vercel.app
 4. **Deploy**. Setiap push ke `main` akan otomatis ter-deploy.
 5. Di Supabase → **Authentication → URL Configuration**: isi *Site URL* dengan alamat Vercel.
 

@@ -12,10 +12,19 @@ export type PublicEnv = z.infer<typeof publicSchema>;
 
 let cached: PublicEnv | undefined;
 
+// Alamat aplikasi: NEXT_PUBLIC_SITE_URL bila diisi; di Vercel jatuh ke domain produksi yang disediakan Vercel
+// otomatis saat build (NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL, tanpa skema), jadi tidak wajib diisi manual.
+export function siteUrl(): string | undefined {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit;
+  const vercel = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL;
+  return vercel ? `https://${vercel}` : undefined;
+}
+
 export function publicEnv(): PublicEnv {
   if (cached) return cached;
   const parsed = publicSchema.safeParse({
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    NEXT_PUBLIC_SITE_URL: siteUrl(),
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   });
