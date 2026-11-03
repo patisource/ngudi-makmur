@@ -50,6 +50,11 @@ insert into _hasil (uji, lulus) select 'stok PP 40 kg, TP 50 kg setelah batch (H
   and (select b.on_hand_kg - a.on_hand_kg from public.stock_balances b join _awal a using (product_id) where product_id = (select tp from _ctx)) = 50;
 
 -- ---------- reservasi & tersedia (§4.3, FR-STK-05) ----------
+-- Sejak M6 reservasi wajib merujuk pesanan (FK); buat dua pesanan uji minimal.
+insert into public.customers (name) values ('Uji Pelanggan M3');
+insert into public.orders (id, customer_id, customer_name, channel)
+  select o, (select id from public.customers where name = 'Uji Pelanggan M3'), 'Uji Pelanggan M3', 'langsung'
+  from unnest(array[(select order1 from _ctx), (select order2 from _ctx)]) o;
 select public._reserve_stock((select order1 from _ctx), (select tp from _ctx), 5);
 insert into _hasil (uji, lulus) select 'pesanan 5 kg TP → reservasi 5, tersedia berkurang 5',
   reserved_kg = 5 and available_kg = on_hand_kg - 5 from public.v_stock_balance where product_id = (select tp from _ctx);

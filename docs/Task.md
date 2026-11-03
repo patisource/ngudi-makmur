@@ -98,14 +98,14 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M6 — Penjualan / Pesanan (Sprint C) · FR-SAL-*
 
-- [ ] **T6.1** Migrasi `orders` (pelanggan, `channel`, total, status barang, status bayar), `order_items` (`packaging_id`, `qty_input`, `qty_kg`, `price_snapshot`), `order_returns`, `order_return_items`; view `v_order_balance`.
-- [ ] **T6.2** Form pesanan (terbaca di ponsel): pelanggan (combobox + tambah cepat), sumber pasar/saluran, item dengan kemasan atau kg, diskon, ongkir; harga disalin dari katalog; total dihitung server (pratinjau di klien hanya tampilan).
-- [ ] **T6.3** `confirm_order` (nomor INV + reservasi), `cancel_order` (lepas reservasi; catat refund bila sudah ada pembayaran terverifikasi).
-- [ ] **T6.4** `POST /orders/{id}/fulfill` → `fulfill_order`: reservasi → `sale_out`, tidak bergantung status bayar.
-- [ ] **T6.5** Daftar pesanan dengan dua badge status (barang & bayar), filter (termasuk saluran), pencarian nomor.
+- [~] **T6.1** Migrasi `orders` (pelanggan, `channel`, total, status barang, status bayar), `order_items` (`packaging_id`, `qty_input`, `qty_kg`, `price_snapshot`), `order_returns`, `order_return_items`; view `v_order_balance`. _Status: `orders`, `order_items`, FK reservasi → pesanan, dan `v_order_balance` (dibayar/refund masih 0 sampai M7) ada di `20261103120000_orders.sql`. `order_returns`/`order_return_items` dibuat bersama T6.7._
+- [~] **T6.2** Form pesanan (terbaca di ponsel): pelanggan (combobox + tambah cepat), sumber pasar/saluran, item dengan kemasan atau kg, diskon, ongkir; harga disalin dari katalog; total dihitung server (pratinjau di klien hanya tampilan). _Status: form + tambah cepat pelanggan (pemilih pelanggan masih `<select>` biasa sampai Combobox T0.5); harga disalin dari katalog setiap kali draft disimpan dan terkunci setelah konfirmasi. Belum diuji tampilan sebagai admin kelompok (360/768/1280 px, terang & gelap)._
+- [~] **T6.3** `confirm_order` (nomor INV + reservasi), `cancel_order` (lepas reservasi; catat refund bila sudah ada pembayaran terverifikasi). _Status: konfirmasi & batal selesai dan diuji; pencatatan refund saat batal-sesudah-bayar ditambahkan di T7.5 (tabel pembayaran/refund belum ada)._
+- [x] **T6.4** `POST /orders/{id}/fulfill` → `fulfill_order`: reservasi → `sale_out`, tidak bergantung status bayar. _Status: `app/api/v1/orders/[id]/fulfill/route.ts` (wajib `Idempotency-Key`, respons `{data, error}`, 401/403/409/422) + aksi UI memakai inti posting & kunci idempotensi yang sama._
+- [~] **T6.5** Daftar pesanan dengan dua badge status (barang & bayar), filter (termasuk saluran), pencarian nomor. _Status: dibangun & lolos build; belum diuji tampilan sebagai pengguna._
 - [ ] **T6.6** Peringatan harga di bawah HPP dan batas piutang (P1).
-- [ ] **T6.7** Retur barang: `create_return` + `verify_return` (verifikasi fisik → `return_in`); retur sah mengurangi omzet.
-- [ ] **T6.8** Test (uji wajib SRS §11): **stok 5 kg, dua pesanan @4 kg dikonfirmasi bersamaan → hanya satu terkonfirmasi**; harga katalog baru tidak mengubah pesanan lama; batal melepas reservasi; barang diserahkan tidak kembali ke stok tanpa retur terverifikasi.
+- [ ] **T6.7** Retur barang: `create_return` + `verify_return` (verifikasi fisik → `return_in`); retur sah mengurangi omzet. _Keputusan Q7 (3 Nov 2026): retur dicatat `admin_kelompok`, diverifikasi fisik oleh `ketua`._
+- [x] **T6.8** Test (uji wajib SRS §11): **stok 5 kg, dua pesanan @4 kg dikonfirmasi bersamaan → hanya satu terkonfirmasi**; harga katalog baru tidak mengubah pesanan lama; batal melepas reservasi; barang diserahkan tidak kembali ke stok tanpa retur terverifikasi. _Status: `supabase/tests/order_check.sql` 55/55 lulus di proyek asli (transaksi dibatalkan, produk uji sementara); `lib/order.test.ts` 15 uji. Persaingan dua pesanan diuji berurutan dengan kunci saldo yang sama (seperti T3.7); uji dua sesi bersamaan sungguhan butuh database DEMO/lokal._
 
 ## M7 — Pembayaran & Kas (Sprint C) · FR-CSH-*
 

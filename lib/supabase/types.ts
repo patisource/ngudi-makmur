@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261101160000_production.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103120000_orders.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -14,6 +14,8 @@ export type ReceiptSource = "anggota" | "luar";
 export type ProductionStatus = "draft" | "confirmed" | "pending_void" | "void";
 export type LineDirection = "input" | "output";
 export type BatchCostCategory = "tenaga_kerja" | "kemasan" | "listrik_bbm" | "lain";
+export type OrderStatus = "draft" | "confirmed" | "delivered" | "cancelled";
+export type OrderPaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
 export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
 export type PostingResult = { id: string; doc_number: string | null; status: string; already: boolean };
@@ -166,6 +168,57 @@ export type Database = {
         { id: string; batch_id: string; category: BatchCostCategory; amount_rp: number; source_ref: string | null; note: string | null; sort_order: number; created_at: Ts },
         [Fk<"batch_costs", "batch_id", "production_batches">]
       >;
+      orders: Table<
+        {
+          id: string;
+          doc_number: string | null;
+          status: OrderStatus;
+          payment_status: OrderPaymentStatus;
+          business_date: string;
+          customer_id: string;
+          customer_name: string;
+          channel: string;
+          note: string | null;
+          subtotal_rp: number;
+          discount_rp: number;
+          shipping_rp: number;
+          total_rp: number;
+          confirmed_at: Ts | null;
+          confirmed_by: string | null;
+          delivered_on: string | null;
+          delivered_at: Ts | null;
+          delivered_by: string | null;
+          recipient_name: string | null;
+          cancelled_at: Ts | null;
+          cancelled_by: string | null;
+          cancel_reason: string | null;
+          created_by: string | null;
+          created_at: Ts;
+          updated_at: Ts;
+        },
+        [
+          Fk<"orders", "customer_id", "customers">,
+          { foreignKeyName: "orders_channel_fkey"; columns: ["channel"]; isOneToOne: false; referencedRelation: "sales_channels"; referencedColumns: ["code"] },
+        ]
+      >;
+      order_items: Table<
+        {
+          id: string;
+          order_id: string;
+          product_id: string;
+          product_packaging_id: string | null;
+          unit_label: string;
+          qty_input: number;
+          qty_kg: number;
+          price_snapshot: number;
+          gross_rp: number;
+          discount_rp: number;
+          line_total_rp: number;
+          sort_order: number;
+          created_at: Ts;
+        },
+        [Fk<"order_items", "order_id", "orders">, Fk<"order_items", "product_id", "products">, Fk<"order_items", "product_packaging_id", "product_packagings">]
+      >;
       attachments: Table<
         { id: string; receipt_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
         [Fk<"attachments", "receipt_id", "receipts">]
@@ -186,6 +239,20 @@ export type Database = {
           value_rp: number;
           avg_cost_per_kg: number | null;
           below_min: boolean;
+        };
+        Relationships: [];
+      };
+      v_order_balance: {
+        Row: {
+          order_id: string;
+          doc_number: string | null;
+          customer_id: string;
+          status: OrderStatus;
+          payment_status: OrderPaymentStatus;
+          total_rp: number;
+          paid_rp: number;
+          refunded_rp: number;
+          outstanding_rp: number;
         };
         Relationships: [];
       };
@@ -213,6 +280,14 @@ export type Database = {
       };
       delete_production_draft: { Args: { p_id: string }; Returns: undefined };
       confirm_production: { Args: { p_id: string }; Returns: Json };
+      save_order_draft: {
+        Args: { p_id: string | null; p_date: string; p_customer: string; p_channel: string; p_note: string | null; p_shipping_rp: number; p_items: Json };
+        Returns: string;
+      };
+      delete_order_draft: { Args: { p_id: string }; Returns: undefined };
+      confirm_order: { Args: { p_id: string }; Returns: Json };
+      cancel_order: { Args: { p_id: string; p_reason: string }; Returns: Json };
+      fulfill_order: { Args: { p_id: string; p_recipient: string | null; p_date?: string | null }; Returns: Json };
     };
     Enums: {
       app_role: AppRole;
@@ -227,6 +302,8 @@ export type Database = {
       production_status: ProductionStatus;
       line_direction: LineDirection;
       batch_cost_category: BatchCostCategory;
+      order_status: OrderStatus;
+      order_payment_status: OrderPaymentStatus;
     };
     CompositeTypes: { [_ in never]: never };
   };

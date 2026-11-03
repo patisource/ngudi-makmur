@@ -78,7 +78,8 @@ Legenda: **K** = kelola (buat/ubah/arsip/konfirmasi), **L** = lihat, **S** = set
 | Koreksi stok | A | A | S | — |
 | Pelanggan | K | — | L | — |
 | Pesanan (buat, konfirmasi, batal, serah barang) | K | — | L | — |
-| Retur barang (verifikasi fisik) | K | — | L | — |
+| Retur barang — catat | K | — | L | — |
+| Retur barang — verifikasi fisik (Q7) | L | — | S | — |
 | Pembayaran (catat & verifikasi) | K | — | L | — |
 | Pengeluaran, pemasukan lain & refund | K | — | L | — |
 | Kas (saldo & mutasi) | L | — | L | — |
@@ -294,7 +295,7 @@ Di API dan database, pesanan = `orders` (lihat §8.1).
 | FR-SAL-07 | Status barang: `draft`, `confirmed`, `delivered`, `cancelled`. Status bayar **terpisah**: `unpaid`, `partial`, `paid`, `refunded`. Lunas **tidak** otomatis berarti barang diserahkan, dan sebaliknya. | P0 |
 | FR-SAL-08 | Peringatan bila harga jual di bawah HPP rata-rata produk. | P1 |
 | FR-SAL-09 | Peringatan bila piutang pelanggan melebihi batas. | P1 |
-| FR-SAL-10 | **Retur barang** atas pesanan `delivered`: item + kg (≤ kg diserahkan − retur sebelumnya), alasan wajib, status `draft` → `verified`. Barang **baru kembali ke stok** (mutasi `return_in`) sesudah retur fisik **diverifikasi** (pelaku & waktu verifikasi dicatat). Retur sah mengurangi omzet; pengembalian uang dicatat sebagai refund. | P0 |
+| FR-SAL-10 | **Retur barang** atas pesanan `delivered`: item + kg (≤ kg diserahkan − retur sebelumnya), alasan wajib, status `draft` → `verified`. Barang **baru kembali ke stok** (mutasi `return_in`) sesudah retur fisik **diverifikasi oleh `ketua`** (dicatat `admin_kelompok`; pelaku & waktu verifikasi dicatat; Q7). Retur sah mengurangi omzet; pengembalian uang dicatat sebagai refund. | P0 |
 
 ### 5.8 Pembayaran & Kas (`CSH`)
 
@@ -493,7 +494,7 @@ Data uji untuk pengembangan, UAT awal, dan demonstrasi mitra. **Bukan capaian ny
 | Q4 | Tidak ada PPN. | Apakah kelompok tani PKP? |
 | Q5 | Serah barang selalu penuh. | Apakah ada pengiriman bertahap? |
 | Q6 | ✅ Terjawab (SRS §2): satu kelompok tani (Ngudi Makmur); data usaha internal IRT bukan modul tersendiri. | — |
-| Q7 | ✅ Terjawab (SRS §5, §10): retur ada di v1; barang yang sudah diserahkan hanya kembali ke stok sesudah retur fisik terverifikasi; retur sah mengurangi omzet. | Siapa yang memverifikasi fisik retur? *Asumsi prototipe, perlu dikonfirmasi mitra:* retur fisik **dicatat** oleh `admin_kelompok` dan **diverifikasi** oleh `ketua` sebelum barang kembali ke stok (berbeda dengan matriks §3.1 yang memberi verifikasi ke `admin_kelompok`). |
+| Q7 | ✅ Terjawab (SRS §5, §10): retur ada di v1; barang yang sudah diserahkan hanya kembali ke stok sesudah retur fisik terverifikasi; retur sah mengurangi omzet. | ✅ Diputuskan pengguna (3 Nov 2026): retur fisik **dicatat** oleh `admin_kelompok` dan **diverifikasi** oleh `ketua` sebelum barang kembali ke stok (pemisahan tugas; matriks §3.1 sudah disesuaikan). |
 | Q8 | ✅ Terjawab (SRS §1, §6): empat peran (`admin_kelompok`, `operator_produksi`, `ketua`, `admin_teknis`); pelanggan tanpa akun. | — |
 | Q9 | Porsi jagung mentah awal dihitung dari kg produk terjual (SRS §10). | Faktor konversi setara bahan baku (tongkol → pipilan → tepung) untuk laporan dampak program: diambil dari hasil batch nyata dan disepakati bersama mitra. |
 | Q10 | Konsinyasi dan bagi hasil **tidak** dimasukkan di v1 (SRS §5). | Aturan usaha konsinyasi/bagi hasil bila kelak diperlukan. |

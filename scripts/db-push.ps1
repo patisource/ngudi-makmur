@@ -14,7 +14,10 @@ if ($DryRun) { $args_ += "--dry-run" }
 foreach ($prefix in "aws-0", "aws-1") {
   $url = "postgresql://postgres.${ref}:${enc}@${prefix}-${Region}.pooler.supabase.com:5432/postgres"
   Write-Host "Mencoba pooler $prefix-$Region ..."
+  # Windows PowerShell 5.1 mengubah stderr CLI menjadi galat; dengan "Stop" skrip berhenti sebelum hasil terbaca.
+  $ErrorActionPreference = "Continue"
   $out = & supabase @args_ --db-url $url 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -notmatch 'new version of Supabase CLI|updating regularly|NativeCommandError|At line|CategoryInfo|FullyQualifiedErrorId|^\s*\+' }
+  $ErrorActionPreference = "Stop"
   $text = ($out -join "`n").Replace($pw, "***").Replace($enc, "***")
   Write-Host $text
   if ($LASTEXITCODE -eq 0) { exit 0 }

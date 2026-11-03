@@ -35,7 +35,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/jagung-masuk", label: "Jagung masuk", icon: "inbox", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/produksi", label: "Produksi", icon: "factory", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/stok", label: "Stok", icon: "box", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
-  { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: "M6" },
+  { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: null },
   { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: "M7" },
   { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M8" },
   { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
@@ -54,6 +54,8 @@ export const ACTIONS = {
   "penerimaan.kelola": ["admin_kelompok"],
   // Produksi (PRD §3.1): batch draft, baris, sisa, biaya = operator_produksi. Konfirmasi = izin production.confirm.
   "produksi.kelola": ["operator_produksi"],
+  // Pesanan (PRD §3.1): buat, konfirmasi, batal, serah barang = admin_kelompok; ketua hanya lihat.
+  "penjualan.kelola": ["admin_kelompok"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;

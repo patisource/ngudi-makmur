@@ -44,6 +44,13 @@ describe("aksi kelola akun", () => {
   });
 });
 
+describe("aksi penjualan (PRD §3.1: pesanan K = admin_kelompok, ketua L)", () => {
+  it("hanya admin_kelompok yang mencatat, mengonfirmasi, membatalkan, dan menyerahkan pesanan", () => {
+    expect(canDo(["admin_kelompok"], "penjualan.kelola")).toBe(true);
+    for (const r of ["operator_produksi", "ketua", "admin_teknis"] as AppRole[]) expect(canDo([r], "penjualan.kelola")).toBe(false);
+  });
+});
+
 describe("peran rangkap = gabungan hak", () => {
   it("ketua merangkap admin kelompok bisa membuka kas dan akun", () => {
     expect(canOpen(["ketua", "admin_kelompok"], "/kas")).toBe(true);

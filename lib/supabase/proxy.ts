@@ -51,6 +51,10 @@ export async function updateSession(request: NextRequest) {
     return res;
   };
 
+  // API: tanpa sesi → 401 JSON (bentuk respons PRD §8.1), bukan pengalihan ke halaman login.
+  if (!signedIn && path.startsWith("/api/")) {
+    return NextResponse.json({ data: null, error: { code: "UNAUTHENTICATED", message: "Sesi berakhir. Silakan masuk lagi." } }, { status: 401 });
+  }
   if (!signedIn && !isPublic(path)) {
     const next = path === "/" ? "" : "?next=" + encodeURIComponent(path + request.nextUrl.search);
     return redirectTo("/login" + next);
