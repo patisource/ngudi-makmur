@@ -9,9 +9,9 @@ import type { ThermalLine } from "@/lib/thermal";
 
 // Pratinjau & cetak via driver (StyleGuide §8.4 jalur A): baris yang sama persis dengan susunan notaLines,
 // Courier 7,2 pt selebar 72 mm, hitam di putih, tanpa animasi. Tombol disembunyikan saat dicetak.
-export function ThermalPaper({ lines }: { lines: ThermalLine[] }) {
+export function ThermalPaper({ lines, narrow }: { lines: ThermalLine[]; narrow?: boolean }) {
   return (
-    <div className="thermal-paper">
+    <div className={narrow ? "thermal-paper thermal-58" : "thermal-paper"}>
       {lines.map((l, i) => (
         <div key={i} className={l.big ? "thermal-big" : undefined} style={{ textAlign: l.align ?? "left", fontWeight: l.bold ? 700 : 400 }}>
           {l.text || " "}

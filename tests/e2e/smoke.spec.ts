@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 test("halaman login tampil dan terbaca tanpa geser horizontal", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.getByLabel("Kata sandi")).toBeVisible();
+  await expect(page.getByLabel("Kata sandi", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Masuk" })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
@@ -15,7 +15,7 @@ test("halaman login tampil dan terbaca tanpa geser horizontal", async ({ page })
 test("login salah memberi pesan generik (tidak membocorkan email terdaftar)", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("bukan.akun@contoh.test");
-  await page.getByLabel("Kata sandi").fill("salah-sekali-123");
+  await page.getByLabel("Kata sandi", { exact: true }).fill("salah-sekali-123");
   await page.getByRole("button", { name: "Masuk" }).click();
   await expect(page.getByText("Email atau kata sandi salah.")).toBeVisible();
 });
@@ -32,4 +32,17 @@ test("API posting tanpa sesi → 401 JSON { data: null, error }", async ({ reque
   const res = await request.post(`/api/v1/orders/${id}/payments`, { headers: { "Idempotency-Key": id }, data: { amountRp: 1 } });
   expect(res.status()).toBe(401);
   expect(await res.json()).toEqual({ data: null, error: { code: "UNAUTHENTICATED", message: "Sesi berakhir. Silakan masuk lagi." } });
+});
+
+test.describe("welcome splash (StyleGuide §6.6)", () => {
+  test.use({ contextOptions: { reducedMotion: "no-preference" } });
+  test("tampil sekali per sesi, bisa dilewati, lalu tidak muncul lagi", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.locator(".splash")).toBeVisible();
+    await page.locator(".splash").click();
+    await expect(page.locator(".splash")).toHaveCount(0, { timeout: 5000 });
+    await expect(page.getByRole("button", { name: "Masuk" })).toBeVisible();
+    await page.reload();
+    await expect(page.locator(".splash")).toBeHidden();
+  });
 });

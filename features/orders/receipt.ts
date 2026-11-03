@@ -9,7 +9,6 @@ import { center, HEADER_LINES, lr, sep, wrap, type PaperCols, type ThermalLine }
 // Nota penjualan & kuitansi (FR-RPT-01..03a): disusun dari transaksi yang SUDAH tersimpan; tidak menulis apa pun
 // selain print_logs (dicatat terpisah lewat log_print saat benar-benar dicetak). Nomor nota = nomor pesanan (INV).
 
-const COLS: PaperCols = 48;
 const ymdToDmy = (d: string) => d.split("-").reverse().join("-");
 const printedAt = new Intl.DateTimeFormat("id-ID", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Jakarta" });
 const qtyText = (v: number) => gramsToKgString(dbKgToGrams(v)).replace(".", ",");
@@ -20,8 +19,11 @@ export async function printCount(docType: "order" | "payment", id: string) {
   return count ?? 0;
 }
 
-/** Nota pesanan. priorPrints = cetakan sebelumnya; > 0 → tanda "CETAK ULANG ke-n". */
-export async function orderReceipt(orderId: string, priorPrints: number) {
+/**
+ * Nota pesanan. priorPrints = cetakan sebelumnya; > 0 → tanda "CETAK ULANG ke-n". Satu kali baca data, baris
+ * disusun untuk setiap lebar kertas yang diminta (80 mm = 48 kolom, 58 mm = 32 kolom; StyleGuide §8.4).
+ */
+export async function orderReceipt(orderId: string, priorPrints: number, opts: { cashier?: string } = {}) {
   const supabase = await createClient();
   const [{ data: o }, { data: items }, { data: pays }, { data: refunds }, { data: bal }] = await Promise.all([
     supabase.from("orders").select("*, sales_channels(name)").eq("id", orderId).maybeSingle(),
@@ -32,50 +34,60 @@ export async function orderReceipt(orderId: string, priorPrints: number) {
   ]);
   if (!o || o.status === "draft") return null;
 
-  const lines: ThermalLine[] = [
-    ...HEADER_LINES(COLS),
-    center("NOTA PENJUALAN", { bold: true }),
-    ...(priorPrints > 0 ? [center(`*** CETAK ULANG ke-${priorPrints} ***`, { bold: true })] : []),
-    ...(o.status === "cancelled" ? [center("*** PESANAN DIBATALKAN ***", { bold: true })] : []),
-    sep(COLS),
-    lr("No.", o.doc_number ?? "-", COLS, true),
-    lr("Tanggal", ymdToDmy(o.business_date), COLS),
-    lr("Pelanggan", o.customer_name, COLS),
-    lr("Saluran", o.sales_channels?.name ?? o.channel, COLS),
-    sep(COLS),
-  ];
-  for (const it of items ?? []) {
-    const unit = it.product_packaging_id ? it.unit_label.toLowerCase() : "kg";
-    lines.push(...wrap(it.products?.name ?? "Produk", COLS));
-    lines.push(lr(`  ${qtyText(it.qty_input)} ${unit} x ${formatRupiah(it.price_snapshot)}`, formatRupiah(it.line_total_rp + it.discount_rp), COLS));
-    if (it.product_packaging_id) lines.push({ text: `  = ${formatKg(dbKgToGrams(it.qty_kg))}` });
-    if (it.discount_rp > 0) lines.push(lr("  Diskon", `-${formatRupiah(it.discount_rp)}`, COLS));
-  }
-  lines.push(
-    sep(COLS),
-    lr("Subtotal", formatRupiah(o.subtotal_rp), COLS),
-    ...(o.discount_rp > 0 ? [lr("Diskon", `-${formatRupiah(o.discount_rp)}`, COLS)] : []),
-    ...(o.shipping_rp > 0 ? [lr("Ongkos kirim", formatRupiah(o.shipping_rp), COLS)] : []),
-    lr("TOTAL", formatRupiah(o.total_rp), COLS, true),
-    ...((bal?.returned_rp ?? 0) > 0 ? [lr("Retur", `-${formatRupiah(bal?.returned_rp ?? 0)}`, COLS)] : []),
-    sep(COLS),
-  );
-  for (const p of pays ?? []) lines.push(lr(`${p.doc_number} ${METHOD_LABEL[p.method]}`, formatRupiah(p.amount_rp), COLS));
-  for (const r of refunds ?? []) lines.push(lr(`${r.doc_number} refund`, `-${formatRupiah(r.amount_rp)}`, COLS));
-  lines.push(
-    lr("Dibayar", formatRupiah((bal?.paid_rp ?? 0) - (bal?.refunded_rp ?? 0)), COLS),
-    lr("Sisa tagihan", formatRupiah(bal?.outstanding_rp ?? 0), COLS, true),
-    lr("Status bayar", PAYMENT_STATUS_LABEL[o.payment_status], COLS),
-    lr("Status barang", ORDER_STATUS_LABEL[o.status], COLS),
-    sep(COLS),
-    center("Terima kasih."),
-    center(`Dicetak ${printedAt.format(new Date())}`),
-  );
-  return { order: { id: o.id, docNumber: o.doc_number, status: o.status, paymentStatus: o.payment_status, totalRp: o.total_rp, outstandingRp: bal?.outstanding_rp ?? 0 }, lines };
+  const build = (COLS: PaperCols): ThermalLine[] => {
+    const lines: ThermalLine[] = [
+      ...HEADER_LINES(COLS),
+      center("NOTA PENJUALAN", { bold: true }),
+      ...(priorPrints > 0 ? [center(`*** CETAK ULANG ke-${priorPrints} ***`, { bold: true })] : []),
+      ...(o.status === "cancelled" ? [center("*** PESANAN DIBATALKAN ***", { bold: true })] : []),
+      sep(COLS),
+      lr("No.", o.doc_number ?? "-", COLS, true),
+      lr("Tanggal", ymdToDmy(o.business_date), COLS),
+      ...(opts.cashier ? [lr("Kasir", opts.cashier, COLS)] : []),
+      lr("Pelanggan", o.customer_name, COLS),
+      lr("Saluran", o.sales_channels?.name ?? o.channel, COLS),
+      sep(COLS),
+    ];
+    for (const it of items ?? []) {
+      const unit = it.product_packaging_id ? it.unit_label.toLowerCase() : "kg";
+      lines.push(...wrap(it.products?.name ?? "Produk", COLS));
+      lines.push(lr(`  ${qtyText(it.qty_input)} ${unit} x ${formatRupiah(it.price_snapshot)}`, formatRupiah(it.line_total_rp + it.discount_rp), COLS));
+      if (it.product_packaging_id) lines.push({ text: `  = ${formatKg(dbKgToGrams(it.qty_kg))}` });
+      if (it.discount_rp > 0) lines.push(lr("  Diskon", `-${formatRupiah(it.discount_rp)}`, COLS));
+    }
+    lines.push(
+      sep(COLS),
+      lr("Subtotal", formatRupiah(o.subtotal_rp), COLS),
+      ...(o.discount_rp > 0 ? [lr("Diskon", `-${formatRupiah(o.discount_rp)}`, COLS)] : []),
+      ...(o.shipping_rp > 0 ? [lr("Ongkos kirim", formatRupiah(o.shipping_rp), COLS)] : []),
+      lr("TOTAL", formatRupiah(o.total_rp), COLS, true),
+      ...((bal?.returned_rp ?? 0) > 0 ? [lr("Retur", `-${formatRupiah(bal?.returned_rp ?? 0)}`, COLS)] : []),
+      sep(COLS),
+    );
+    for (const p of pays ?? []) lines.push(lr(`${p.doc_number} ${METHOD_LABEL[p.method]}`, formatRupiah(p.amount_rp), COLS));
+    for (const r of refunds ?? []) lines.push(lr(`${r.doc_number} refund`, `-${formatRupiah(r.amount_rp)}`, COLS));
+    lines.push(
+      lr("Dibayar", formatRupiah((bal?.paid_rp ?? 0) - (bal?.refunded_rp ?? 0)), COLS),
+      lr("Sisa tagihan", formatRupiah(bal?.outstanding_rp ?? 0), COLS, true),
+      lr("Status bayar", PAYMENT_STATUS_LABEL[o.payment_status], COLS),
+      lr("Status barang", ORDER_STATUS_LABEL[o.status], COLS),
+      sep(COLS),
+      center("Terima kasih atas pembelian Anda"),
+      center("Simpan struk ini sebagai bukti."),
+      center(`Dicetak ${printedAt.format(new Date())}`),
+    );
+    return lines;
+  };
+  return {
+    order: { id: o.id, docNumber: o.doc_number, status: o.status, paymentStatus: o.payment_status, totalRp: o.total_rp, outstandingRp: bal?.outstanding_rp ?? 0 },
+    lines: build(48),
+    lines58: build(32),
+  };
 }
 
 /** Kuitansi satu pembayaran terverifikasi (FR-RPT-02). */
 export async function paymentReceipt(paymentId: string, priorPrints: number) {
+  const COLS: PaperCols = 48;
   const supabase = await createClient();
   const { data: p } = await supabase.from("payments").select("id, doc_number, business_date, method, amount_rp, status, note, order_id, cash_accounts(name), orders(doc_number, customer_name)").eq("id", paymentId).maybeSingle();
   if (!p || p.status !== "verified") return null;

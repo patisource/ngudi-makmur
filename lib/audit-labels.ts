@@ -39,6 +39,7 @@ const ACTION_LABEL: Record<string, string> = {
   "expense.created": "Pengeluaran",
   "other_income.created": "Pemasukan lain",
   "cash.opening_set": "Saldo awal kas",
+  "cash_transfer.created": "Transfer antar akun",
   "cash_correction.requested": "Ajukan koreksi kas",
   "cash_correction.approved": "Setujui koreksi kas",
   "cash_correction.rejected": "Tolak koreksi kas",
@@ -79,7 +80,82 @@ export const AUDIT_GROUPS: Array<[string, string]> = [
   ["expense", "Pengeluaran"],
   ["other_income", "Pemasukan lain"],
   ["cash", "Kas"],
+  ["cash_transfer", "Transfer antar akun"],
   ["cash_correction", "Koreksi kas"],
   ["stock_adjustment", "Koreksi stok"],
   ["opname", "Stok opname"],
 ];
+
+// ---------------------------------------------------------------- ringkasan baris audit (desain 01/07/08)
+type Obj = Record<string, unknown>;
+const asObj = (v: unknown): Obj | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : null);
+const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : null);
+const rp = (v: number) => `${v < 0 ? "−" : ""}Rp${new Intl.NumberFormat("id-ID").format(Math.abs(v))}`;
+const kg = (v: number) => `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(v)} kg`;
+
+export type AuditIcon = "cart" | "wallet" | "inbox" | "factory" | "box" | "user" | "cash" | "history";
+const ICON_BY_PREFIX: Record<string, AuditIcon> = {
+  order: "cart",
+  return: "cart",
+  payment: "wallet",
+  refund: "wallet",
+  receipt: "inbox",
+  attachment: "inbox",
+  production: "factory",
+  stock_adjustment: "box",
+  opname: "box",
+  expense: "cash",
+  other_income: "cash",
+  cash: "cash",
+  cash_correction: "cash",
+  cash_transfer: "cash",
+  user: "user",
+  auth: "user",
+};
+
+const OUT_ACTIONS = new Set(["expense.created", "refund.created"]);
+
+/**
+ * Ringkas satu baris audit untuk ditampilkan: objek (nomor dokumen / nama), perubahan atau alasan, dan nominal.
+ * Hanya membaca field umum dari nilai sebelum/sesudah; tidak menampilkan data sensitif (NIK/HP tidak pernah ada di sini).
+ */
+export function describeAudit(row: { action: string; before?: unknown; after?: unknown; reason?: string | null }) {
+  const a = asObj(row.after) ?? {};
+  const b = asObj(row.before) ?? {};
+  const object = str(a.doc_number) ?? str(b.doc_number) ?? str(a.name) ?? str(b.name) ?? str(a.full_name) ?? str(a.order_doc) ?? str(a.order) ?? null;
+  const parts: string[] = [];
+  const weight = num(a.weight_kg) ?? num(a.qty_kg);
+  if (weight != null && weight > 0) parts.push(kg(weight));
+  const hpp = num(a.hpp_per_kg);
+  if (hpp != null && row.action === "production.confirmed") parts.push(`HPP ${rp(hpp)}/kg`);
+  const loss = num(a.loss_kg);
+  if (loss != null && row.action === "production.confirmed") parts.push(`susut ${kg(loss)}`);
+  // Perubahan nilai sederhana (mis. harga katalog): field angka yang berbeda antara sebelum & sesudah.
+  if (!parts.length && asObj(row.before) && asObj(row.after)) {
+    for (const k of ["default_price_per_kg", "default_price", "content_kg", "min_stock_kg"]) {
+      const x = num(b[k]);
+      const y = num(a[k]);
+      if (x != null && y != null && x !== y) parts.push(k.includes("price") ? `${rp(x)} → ${rp(y)}` : `${x} → ${y}`);
+    }
+  }
+  const rawAmount = num(a.total_rp) ?? num(a.amount_rp);
+  const amount = rawAmount == null ? null : OUT_ACTIONS.has(row.action) ? -rawAmount : rawAmount;
+  return {
+    object,
+    change: [row.reason ?? null, ...parts].filter(Boolean).join(" · ") || null,
+    amount: amount == null ? (hpp != null && row.action === "production.confirmed" ? `HPP ${rp(hpp)}/kg` : null) : rp(amount),
+    icon: ICON_BY_PREFIX[row.action.split(".")[0]] ?? ("history" as AuditIcon),
+  };
+}
+
+/** Kode aksi yang labelnya memuat kata kunci (pencarian log audit, desain 08). */
+export function actionsMatching(q: string): string[] {
+  const s = q.trim().toLowerCase();
+  if (!s) return [];
+  const direct = Object.entries(ACTION_LABEL)
+    .filter(([code, label]) => label.toLowerCase().includes(s) || code.includes(s))
+    .map(([code]) => code);
+  const master = Object.keys(ENTITY_LABEL).flatMap((e) => Object.keys(VERB_LABEL).map((v) => `${e}.${v}`)).filter((code) => actionLabel(code).toLowerCase().includes(s));
+  return [...direct, ...master];
+}

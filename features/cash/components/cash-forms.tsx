@@ -6,12 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { formCls, Notice } from "@/components/shared/notice";
-import { createExpense, createIncome, decideCorrection, requestCorrection, setOpeningBalance } from "@/features/cash/actions";
+import { createExpense, createIncome, createTransfer, decideCorrection, requestCorrection, setOpeningBalance } from "@/features/cash/actions";
 import type { FormState } from "@/features/master/actions";
 import { formatRupiah } from "@/lib/money";
 import { todayWib } from "@/lib/validation/common";
 
 type Account = { id: string; name: string; balanceRp: number };
+type DialogProps = { inDialog?: boolean; onDone?: (message: string) => void };
+
+/** Kartu biasa, atau isi polos saat form dipakai di dalam dialog (desain 06). */
+function Shell({ inDialog, children }: { inDialog?: boolean; children: React.ReactNode }) {
+  return inDialog ? <div className="flex flex-col gap-4">{children}</div> : <Card>{children}</Card>;
+}
 type Category = { code: string; name: string };
 const newKey = () => crypto.randomUUID();
 
@@ -21,13 +27,13 @@ function useSubmit() {
   const [key, setKey] = useState(newKey);
   const [state, setState] = useState<FormState>({});
   const [pending, start] = useTransition();
-  const submit = (fn: (key: string) => Promise<FormState>, onOk?: () => void) =>
+  const submit = (fn: (key: string) => Promise<FormState>, onOk?: (res: FormState) => void) =>
     start(async () => {
       const res = await fn(key);
       setState(res);
       if (res.ok) {
         setKey(newKey());
-        onOk?.();
+        onOk?.(res);
         router.refresh();
       }
     });
@@ -35,7 +41,7 @@ function useSubmit() {
 }
 
 // ---------------------------------------------------------------- pengeluaran / pemasukan lain (FR-CSH-05, 05a)
-export function CashEntryForm({ kind, categories, accounts }: { kind: "expense" | "income"; categories: Category[]; accounts: Account[] }) {
+export function CashEntryForm({ kind, categories, accounts, inDialog, onDone }: { kind: "expense" | "income"; categories: Category[]; accounts: Account[] } & DialogProps) {
   const empty = { date: todayWib(), category: categories[0]?.code ?? "", accountId: accounts[0]?.id ?? "", amount: "", description: "", reference: "" };
   const [v, setV] = useState(empty);
   const { state, pending, submit, fe } = useSubmit();
@@ -43,8 +49,8 @@ export function CashEntryForm({ kind, categories, accounts }: { kind: "expense" 
   const acc = accounts.find((a) => a.id === v.accountId);
 
   return (
-    <Card>
-      <h2 className="font-semibold">{isExpense ? "Catat pengeluaran" : "Catat pemasukan lain"}</h2>
+    <Shell inDialog={inDialog}>
+      {!inDialog && <h2 className="font-semibold">{isExpense ? "Catat pengeluaran" : "Catat pemasukan lain"}</h2>}
       <p className="text-sm text-text-muted">
         {isExpense
           ? "Uang yang benar-benar keluar (bahan baku, upah, kemasan, listrik/BBM). Catat sekali di sini; biaya batch cukup merujuk nomornya, tanpa kas kedua."
@@ -95,13 +101,16 @@ export function CashEntryForm({ kind, categories, accounts }: { kind: "expense" 
               isExpense
                 ? createExpense({ businessDate: v.date, category: v.category, accountId: v.accountId, amountRp: v.amount, description: v.description, reference: v.reference }, key)
                 : createIncome({ businessDate: v.date, category: v.category, accountId: v.accountId, amountRp: v.amount, description: v.description }, key),
-            () => setV({ ...empty, category: v.category, accountId: v.accountId }),
+            (res) => {
+              setV({ ...empty, category: v.category, accountId: v.accountId });
+              onDone?.(res.message ?? "Tersimpan.");
+            },
           )
         }
       >
         {pending ? "Menyimpan…" : isExpense ? "Simpan pengeluaran" : "Simpan pemasukan"}
       </Button>
-    </Card>
+    </Shell>
   );
 }
 
@@ -144,13 +153,13 @@ export function OpeningForm({ accountId, name }: { accountId: string; name: stri
 }
 
 // ---------------------------------------------------------------- koreksi kas (FR-CSH-11)
-export function CorrectionForm({ accounts }: { accounts: Account[] }) {
+export function CorrectionForm({ accounts, inDialog, onDone }: { accounts: Account[] } & DialogProps) {
   const empty = { accountId: accounts[0]?.id ?? "", direction: "in" as "in" | "out", amount: "", reason: "", date: todayWib() };
   const [v, setV] = useState(empty);
   const { state, pending, submit, fe } = useSubmit();
   return (
-    <Card>
-      <h2 className="font-semibold">Ajukan koreksi kas</h2>
+    <Shell inDialog={inDialog}>
+      {!inDialog && <h2 className="font-semibold">Ajukan koreksi kas</h2>}
       <p className="text-sm text-text-muted">Untuk selisih uang fisik vs catatan. Saldo baru berubah setelah ketua menyetujui.</p>
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-label font-medium">Arah</legend>
@@ -195,11 +204,19 @@ export function CorrectionForm({ accounts }: { accounts: Account[] }) {
         kind="primary"
         className="w-full sm:w-fit"
         disabled={pending || v.reason.trim().length < 5}
-        onClick={() => submit((key) => requestCorrection({ accountId: v.accountId, direction: v.direction, amountRp: v.amount, reason: v.reason, businessDate: v.date }, key), () => setV(empty))}
+        onClick={() =>
+          submit(
+            (key) => requestCorrection({ accountId: v.accountId, direction: v.direction, amountRp: v.amount, reason: v.reason, businessDate: v.date }, key),
+            (res) => {
+              setV(empty);
+              onDone?.(res.message ?? "Koreksi diajukan.");
+            },
+          )
+        }
       >
         {pending ? "Mengajukan…" : "Ajukan koreksi"}
       </Button>
-    </Card>
+    </Shell>
   );
 }
 
@@ -242,5 +259,65 @@ export function CorrectionDecision({ id, summary }: { id: string; summary: strin
       )}
       <Notice state={state} />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- transfer antar akun (FR-CSH-09)
+export function TransferForm({ accounts, inDialog, onDone }: { accounts: Account[] } & DialogProps) {
+  const empty = { from: accounts[0]?.id ?? "", to: accounts[1]?.id ?? "", amount: "", note: "", date: todayWib() };
+  const [v, setV] = useState(empty);
+  const { state, pending, submit, fe } = useSubmit();
+  const from = accounts.find((a) => a.id === v.from);
+  return (
+    <Shell inDialog={inDialog}>
+      {!inDialog && <h2 className="font-semibold">Transfer antar akun</h2>}
+      <p className="text-sm text-text-muted">Memindahkan uang sendiri, mis. setor tunai ke rekening. Kas total tidak berubah dan tidak dihitung sebagai kas masuk/keluar.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Dari akun *" htmlFor="trf-from" error={fe.fromAccountId} hint={from ? `Saldo ${formatRupiah(from.balanceRp)}` : undefined}>
+          <select id="trf-from" value={v.from} onChange={(e) => setV({ ...v, from: e.target.value })} className={formCls.select}>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Ke akun *" htmlFor="trf-to" error={fe.toAccountId}>
+          <select id="trf-to" value={v.to} onChange={(e) => setV({ ...v, to: e.target.value })} className={formCls.select}>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Jumlah (Rp) *" htmlFor="trf-amount" error={fe.amountRp}>
+          <Input id="trf-amount" inputMode="numeric" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} placeholder="mis. 5000000" className={formCls.input} />
+        </Field>
+        <Field label="Tanggal *" htmlFor="trf-date" error={fe.businessDate}>
+          <Input id="trf-date" type="date" max={todayWib()} value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} className={formCls.input} />
+        </Field>
+      </div>
+      <Field label="Keterangan *" htmlFor="trf-note" error={fe.note}>
+        <Input id="trf-note" maxLength={500} value={v.note} onChange={(e) => setV({ ...v, note: e.target.value })} placeholder="mis. Setor ke BRI" className={formCls.input} />
+      </Field>
+      <Notice state={state} />
+      <Button
+        kind="primary"
+        className="w-full sm:w-fit"
+        disabled={pending || accounts.length < 2 || v.note.trim().length < 1}
+        onClick={() =>
+          submit(
+            (key) => createTransfer({ businessDate: v.date, fromAccountId: v.from, toAccountId: v.to, amountRp: v.amount, note: v.note }, key),
+            (res) => {
+              setV({ ...empty, from: v.from, to: v.to });
+              onDone?.(res.message ?? "Transfer dicatat.");
+            },
+          )
+        }
+      >
+        {pending ? "Menyimpan…" : "Simpan transfer"}
+      </Button>
+    </Shell>
   );
 }

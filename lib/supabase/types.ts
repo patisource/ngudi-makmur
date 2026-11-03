@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103170000_stock_control.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103180000_payment_proofs_transfers.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -56,7 +56,7 @@ export type StockReportRow = {
   min_stock_kg: number;
   below_min: boolean;
 };
-export type CashSourceType = "opening_balance" | "payment" | "other_income" | "expense" | "refund" | "cash_correction";
+export type CashSourceType = "opening_balance" | "payment" | "other_income" | "expense" | "refund" | "cash_correction" | "transfer_out" | "transfer_in";
 export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
 export type PostingResult = { id: string; doc_number: string | null; status: string; already: boolean };
@@ -286,8 +286,12 @@ export type Database = {
         [Fk<"order_return_items", "return_id", "order_returns">, Fk<"order_return_items", "order_item_id", "order_items">, Fk<"order_return_items", "product_id", "products">]
       >;
       attachments: Table<
-        { id: string; receipt_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
-        [Fk<"attachments", "receipt_id", "receipts">]
+        { id: string; receipt_id: string | null; payment_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
+        [Fk<"attachments", "receipt_id", "receipts">, Fk<"attachments", "payment_id", "payments">]
+      >;
+      cash_transfers: Table<
+        { id: string; doc_number: string; business_date: string; from_account_id: string; to_account_id: string; amount_rp: number; note: string; created_by: string; created_at: Ts },
+        [Fk<"cash_transfers", "from_account_id", "cash_accounts">, Fk<"cash_transfers", "to_account_id", "cash_accounts">]
       >;
       cash_accounts: Table<{
         id: string;
@@ -528,6 +532,7 @@ export type Database = {
       reject_payment: { Args: { p_id: string; p_reason: string }; Returns: Json };
       create_refund: { Args: { p_order: string; p_account: string; p_amount: number; p_reason: string; p_date: string | null; p_return?: string | null }; Returns: Json };
       create_expense: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string; p_reference: string | null }; Returns: Json };
+      create_cash_transfer: { Args: { p_date: string | null; p_from: string; p_to: string; p_amount: number; p_note: string }; Returns: Json };
       create_other_income: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string }; Returns: Json };
       request_cash_correction: { Args: { p_account: string; p_direction: CashDirection; p_amount: number; p_reason: string; p_date: string | null }; Returns: Json };
       decide_cash_correction: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };

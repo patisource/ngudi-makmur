@@ -74,3 +74,10 @@ export async function postDecision(correctionId: string, d: { approve: boolean; 
     supabase.rpc("decide_cash_correction", { p_id: correctionId, p_approve: d.approve, p_note: d.note ?? null }),
   );
 }
+
+export async function postTransfer(t: { businessDate: string; fromAccountId: string; toAccountId: string; amountRp: number; note: string }, key: string) {
+  const supabase = await createClient();
+  return runPosting("cash_transfers.create", key, t, () =>
+    supabase.rpc("create_cash_transfer", { p_date: t.businessDate, p_from: t.fromAccountId, p_to: t.toAccountId, p_amount: t.amountRp, p_note: t.note }),
+  );
+}

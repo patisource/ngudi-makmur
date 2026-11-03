@@ -57,3 +57,61 @@ export function periodQuery(p: Period): string {
 
 const longFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 export const periodLabel = (p: Period) => (p.from === p.to ? longFmt.format(toDate(p.from)) : `${longFmt.format(toDate(p.from))} – ${longFmt.format(toDate(p.to))}`);
+
+// ---------------------------------------------------------------- pembanding & pengelompokan (dashboard)
+const lastDayOfMonth = (s: string) => {
+  const d = toDate(`${s.slice(0, 8)}01`);
+  d.setUTCMonth(d.getUTCMonth() + 1, 0);
+  return fmt(d);
+};
+const isFullMonth = (p: { from: string; to: string }) => p.from.endsWith("-01") && p.to === lastDayOfMonth(p.from);
+
+/**
+ * Periode pembanding nyata (FR-DASH-07): bulan penuh → bulan sebelumnya; "bulan ini" (berjalan) → tanggal yang sama
+ * di bulan sebelumnya; selain itu rentang sama panjang tepat sebelum periode.
+ */
+export function previousPeriod(p: Period): { from: string; to: string } {
+  if (isFullMonth(p)) {
+    const end = addDays(p.from, -1);
+    return { from: `${end.slice(0, 8)}01`, to: end };
+  }
+  if (p.key === "bulan-ini") {
+    const prevStart = `${addDays(p.from, -1).slice(0, 8)}01`;
+    const day = Number(p.to.slice(8, 10));
+    const last = lastDayOfMonth(prevStart);
+    const to = `${prevStart.slice(0, 8)}${String(Math.min(day, Number(last.slice(8, 10)))).padStart(2, "0")}`;
+    return { from: prevStart, to };
+  }
+  return { from: addDays(p.from, -p.days), to: addDays(p.from, -1) };
+}
+
+const monthLong = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
+const monthShort = new Intl.DateTimeFormat("id-ID", { month: "short", year: "numeric", timeZone: "UTC" });
+const dayMonth = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/** "Oktober 2026" untuk bulan penuh, selain itu rentang tanggal. */
+export const periodTitle = (p: { from: string; to: string }) => (isFullMonth(p) ? monthLong.format(toDate(p.from)) : periodLabel({ ...p, key: "kustom", days: 0 }));
+/** "Sep 2026" untuk bulan penuh, selain itu rentang tanggal ringkas. */
+export const periodShort = (p: { from: string; to: string }) =>
+  isFullMonth(p)
+    ? monthShort.format(toDate(p.from))
+    : p.from === p.to
+      ? dayMonth.format(toDate(p.from))
+      : `${dayMonth.format(toDate(p.from))} – ${dayMonth.format(toDate(p.to))}`;
+
+/**
+ * Kelompokkan seri harian: ≤ 14 hari → per hari; selain itu per 7 hari dari awal periode ("1–7 Okt", …, "29–31 Okt").
+ */
+export function bucketDays<T extends { day: string }>(rows: T[], sum: (acc: T[]) => { a: number; b: number }) {
+  if (rows.length <= 14) return rows.map((r) => ({ key: r.day, label: dayMonth.format(toDate(r.day)), ...sum([r]) }));
+  const out: Array<{ key: string; label: string; a: number; b: number }> = [];
+  for (let i = 0; i < rows.length; i += 7) {
+    const part = rows.slice(i, i + 7);
+    const a = toDate(part[0].day);
+    const z = toDate(part[part.length - 1].day);
+    const sameMonth = a.getUTCMonth() === z.getUTCMonth();
+    const label = sameMonth ? `${a.getUTCDate()}–${dayMonth.format(z)}` : `${dayMonth.format(a)} – ${dayMonth.format(z)}`;
+    out.push({ key: part[0].day, label: part.length === 1 ? dayMonth.format(a) : label, ...sum(part) });
+  }
+  return out;
+}

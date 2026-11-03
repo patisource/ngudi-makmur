@@ -68,3 +68,26 @@ Runner SQL: skrip Node kecil dengan paket `pg` yang menyambung ke pooler sesi Su
   atur ukuran kertas 80 mm × panjang otomatis, margin 0, skala 100%, matikan header/footer browser.
 - Uji di lokasi mitra: cetak nota, cetak ulang (harus tertulis "CETAK ULANG ke-1"), cabut kabel printer saat mencetak →
   pembayaran tetap ada, cukup cetak ulang. Catat merek/model printer & pengaturan di Task.md T9.9.
+
+## 6. Data uji coba di proyek asli (sebelum go-live)
+
+Keputusan pengguna 3 Nov 2026 (PRD Q22): agar aplikasi bisa dicoba dari perangkat mana pun, proyek Supabase asli diisi
+data rekaan ± 5 minggu (tanggal 1 bulan lalu s.d. hari ini): 10 anggota, 6 pelanggan, jagung masuk, pemipilan &
+penepungan, ± 80 pesanan dengan pembayaran tunai/transfer/cicilan/belum bayar, pengeluaran, iuran, satu koreksi stok,
+satu koreksi kas, satu retur, dan satu draft pesanan yang menunggu tindakan.
+
+- Pelaku transaksi = 4 akun `uji.*@contoh.invalid` yang **tidak bisa login** (kata sandi acak + diblokir). Pengurus
+  mencoba aplikasi dengan akunnya sendiri.
+- Memuat: jalankan `supabase/seed_uji.sql` sebagai `postgres` (SQL editor Supabase atau runner). Menolak berjalan dua kali.
+  Saldo awal kas (Rp3 jt tunai, Rp12 jt bank) hanya diisi bila belum pernah diisi; harga katalog hanya bila masih kosong.
+- **Membersihkan (wajib sebelum data nyata dicatat):** jalankan `supabase/bersihkan_data_uji.sql`. Semua transaksi,
+  mutasi stok & kas, nomor dokumen, dan log audit selain masuk/keluar & akun dikosongkan; anggota/pelanggan contoh dan
+  akun uji dihapus; akun nyata, produk, kemasan, kategori, akun kas, dan harga katalog tetap. Saldo awal kas diisi ulang
+  di aplikasi setelahnya. File bukti di Storage tidak ikut terhapus: kosongkan bucket `proofs` lewat Dashboard → Storage.
+- Setelah dibersihkan, jalankan ulang semua uji DB (§4): uji yang menghitung rata-rata stok produk asli hanya lulus bila stok
+  kosong.
+
+Lingkungan uji lokal (tanpa menyentuh proyek asli): Docker Desktop + `supabase start` (lihat §3); bila port 543xx dipakai
+proyek lain, salin folder `supabase/` ke folder lain, ganti `project_id` & port di `config.toml`, lalu `supabase start --workdir <folder>`.
+Login email lokal butuh `[auth.email] enable_signup = true` (di CLI kunci ini menyalakan login email; pendaftaran publik
+tetap tertutup oleh `[auth] enable_signup = false`).

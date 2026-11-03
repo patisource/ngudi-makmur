@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { Crumb } from "@/components/shell/crumb";
 import { Badge, Card, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 import { DecisionPanel } from "@/components/shared/decision-panel";
@@ -56,8 +57,37 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
   const estimate = summarizeBatch(inputs.map((l) => dbKgToGrams(l.qty_kg)), outputs.map((l) => dbKgToGrams(l.qty_kg)), costs.map((c) => c.amount_rp), opt?.inputAvgCost ?? null);
   const impact = `${inName} −${formatKg(estimate.inputGrams)}, ${outName} +${formatKg(estimate.outputGrams)}, sisa/susut ${formatKg(estimate.lossGrams)}${estimate.hpp != null ? `, HPP ± ${formatRupiah(estimate.hpp)}/kg` : ""}`;
 
+  if (isDraft && canManage && opt) {
+    return (
+      <>
+        <Crumb label={`Batch ${b.batch_type_rules?.name.toLowerCase() ?? ""}`} />
+        {sp.simpan === "baru" && (
+          <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-label text-accent">
+            Draft batch tersimpan. Periksa ringkasan lalu konfirmasi untuk memperbarui stok.
+          </p>
+        )}
+        <BatchEditor
+          batchId={b.id}
+          options={options}
+          header={{ title: `Batch ${b.batch_type_rules?.name.toLowerCase() ?? ""} baru`, subtitle: `Operator: ${b.operator_name} · kode batch terbit saat dikonfirmasi` }}
+          actions={<BatchActions id={b.id} impact={impact} canConfirm={canConfirm} canDelete={canManage} />}
+          defaults={{
+            batchType: b.batch_type,
+            businessDate: b.business_date,
+            note: b.note ?? "",
+            residueKg: kgInput(b.residue_kg),
+            inputs: inputs.map((l) => kgInput(l.qty_kg)),
+            outputs: outputs.map((l) => kgInput(l.qty_kg)),
+            costs: costs.map((c) => ({ category: c.category, amount: String(c.amount_rp), sourceRef: c.source_ref ?? "", note: c.note ?? "" })),
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <>
+      <Crumb label={b.doc_number ?? "Draft batch"} />
       <PageHeader
         title={b.doc_number ?? `Draft ${b.batch_type_rules?.name.toLowerCase() ?? "batch"}`}
         description={
@@ -85,11 +115,10 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
         </p>
       )}
 
-      {isDraft && (canManage || canConfirm) && (
-        <Card>
-          <h2 className="font-semibold">Konfirmasi</h2>
-          <BatchActions id={b.id} impact={impact} canConfirm={canConfirm} canDelete={canManage} />
-        </Card>
+      {isDraft && canConfirm && (
+        <div className="flex flex-wrap gap-2">
+          <BatchActions id={b.id} impact={impact} canConfirm={canConfirm} canDelete={false} />
+        </div>
       )}
 
       {(b.status === "confirmed" || b.status === "pending_void" || b.status === "void") && (b.void_reason || canDo(user.roles, "produksi.batal.ajukan")) && (
@@ -113,22 +142,7 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
         </Card>
       )}
 
-      {isDraft && canManage && opt ? (
-        <BatchEditor
-          batchId={b.id}
-          options={options}
-          defaults={{
-            batchType: b.batch_type,
-            businessDate: b.business_date,
-            note: b.note ?? "",
-            residueKg: kgInput(b.residue_kg),
-            inputs: inputs.map((l) => kgInput(l.qty_kg)),
-            outputs: outputs.map((l) => kgInput(l.qty_kg)),
-            costs: costs.map((c) => ({ category: c.category, amount: String(c.amount_rp), sourceRef: c.source_ref ?? "", note: c.note ?? "" })),
-          }}
-        />
-      ) : (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
           <div className="flex min-w-0 flex-col gap-5">
             <Table>
               <thead>
@@ -201,8 +215,7 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
               {b.confirmed_at && ` Dikonfirmasi ${timeFmt.format(new Date(b.confirmed_at))}.`}
             </p>
           </Card>
-        </div>
-      )}
+      </div>
     </>
   );
 }

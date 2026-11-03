@@ -54,3 +54,20 @@ export const HEADER_LINES = (cols: PaperCols): ThermalLine[] => [
   center("Kec. Sukolilo, Kab. Pati"),
   sep(cols),
 ];
+
+/**
+ * Byte ESC/POS (StyleGuide §8.4 jalur B): ESC @ (init) → ESC t 0 (PC437) → per baris ESC a n (rata), ESC E n (tebal),
+ * GS ! 0x11/0 (ukuran ganda/normal), teks ASCII, LF → akhir: ESC d 4 (feed 4) lalu GS V 66 0 (potong).
+ */
+export function escposBytes(lines: ThermalLine[]): Uint8Array {
+  const ESC = 0x1b;
+  const GS = 0x1d;
+  const out: number[] = [ESC, 0x40, ESC, 0x74, 0x00];
+  for (const l of lines) {
+    out.push(ESC, 0x61, l.align === "center" ? 1 : l.align === "right" ? 2 : 0, ESC, 0x45, l.bold ? 1 : 0, GS, 0x21, l.big ? 0x11 : 0x00);
+    for (const ch of toAscii(l.text)) out.push(ch.charCodeAt(0));
+    out.push(0x0a);
+  }
+  out.push(ESC, 0x61, 0, GS, 0x21, 0, ESC, 0x64, 4, GS, 0x56, 66, 0);
+  return new Uint8Array(out);
+}

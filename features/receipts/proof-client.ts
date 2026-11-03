@@ -22,8 +22,8 @@ async function reencode(file: File): Promise<Blob> {
   return blob;
 }
 
-/** Siapkan & unggah satu bukti untuk penerimaan draft. Mengembalikan pesan galat, atau null bila berhasil. */
-export async function uploadReceiptProof(receiptId: string, file: File): Promise<string | null> {
+/** Siapkan file bukti: foto → JPEG tanpa EXIF, PDF apa adanya; cek ukuran. */
+export async function prepareProof(file: File): Promise<{ blob: Blob; mime: ProofMime } | { error: string }> {
   let blob: Blob;
   let mime: ProofMime;
   try {
@@ -34,12 +34,20 @@ export async function uploadReceiptProof(receiptId: string, file: File): Promise
       blob = await reencode(file);
       mime = "image/jpeg";
     } else {
-      return "Bukti harus foto (JPG, PNG, WebP) atau PDF.";
+      return { error: "Bukti harus foto (JPG, PNG, WebP) atau PDF." };
     }
   } catch {
-    return "Foto tidak dapat dibaca. Coba format JPG atau PNG.";
+    return { error: "Foto tidak dapat dibaca. Coba format JPG atau PNG." };
   }
-  if (blob.size > PROOF_MAX_BYTES) return "Ukuran bukti maksimal 5 MB.";
+  if (blob.size > PROOF_MAX_BYTES) return { error: "Ukuran bukti maksimal 5 MB." };
+  return { blob, mime };
+}
+
+/** Siapkan & unggah satu bukti untuk penerimaan draft. Mengembalikan pesan galat, atau null bila berhasil. */
+export async function uploadReceiptProof(receiptId: string, file: File): Promise<string | null> {
+  const prepared = await prepareProof(file);
+  if ("error" in prepared) return prepared.error;
+  const { blob, mime } = prepared;
 
   const path = proofPath("receipts", todayWib(), crypto.randomUUID(), mime);
   const { error } = await createClient().storage.from("proofs").upload(path, blob, { contentType: mime, upsert: false });

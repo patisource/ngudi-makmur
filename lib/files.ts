@@ -51,8 +51,8 @@ export function hasExif(b: Uint8Array, mime: ProofMime): boolean {
   return false;
 }
 
-/** Nama file bukti baru: receipts/yyyy/mm/uuid.ext (tanpa nama file asli). */
-export function proofPath(folder: "receipts", dateYmd: string, uuid: string, mime: ProofMime) {
+/** Nama file bukti baru: {receipts|payments}/yyyy/mm/uuid.ext (tanpa nama file asli). */
+export function proofPath(folder: "receipts" | "payments", dateYmd: string, uuid: string, mime: ProofMime) {
   const [y, m] = dateYmd.split("-");
   return `${folder}/${y}/${m}/${uuid}.${PROOF_EXT[mime]}`;
 }

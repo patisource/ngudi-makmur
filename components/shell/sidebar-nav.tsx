@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { Icon } from "./icon";
 
 // Daftar menu (sudah disaring per peran di server) dengan penanda halaman aktif dan laci di ponsel.
-export function SidebarNav({ items, children }: { items: NavItem[]; children: React.ReactNode }) {
+export function SidebarNav({ items, badges = {}, children }: { items: NavItem[]; badges?: Record<string, number>; children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false); // laci ponsel; ditutup saat menu dipilih
 
@@ -25,14 +25,14 @@ export function SidebarNav({ items, children }: { items: NavItem[]; children: Re
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
-        className="fixed left-4 top-3 z-30 grid size-10 place-items-center rounded-full border border-border bg-surface lg:hidden"
+        className="fixed left-4 top-3 z-30 grid size-10 shadow-pop place-items-center rounded-full border border-border bg-surface lg:hidden"
       >
         <Icon name="menu" />
       </button>
       {open && <button type="button" aria-label="Tutup menu" onClick={() => setOpen(false)} className="fixed inset-0 z-30 bg-scrim lg:hidden" />}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-[232px] flex-col gap-2 border-r border-border bg-surface p-3 transition-transform duration-300 ease-expo lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col gap-2 border-r border-border bg-surface p-3 transition-transform duration-300 ease-expo lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -64,6 +64,12 @@ export function SidebarNav({ items, children }: { items: NavItem[]; children: Re
                   >
                     <Icon name={n.icon} className="shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{n.label}</span>
+                    {(badges[n.href] ?? 0) > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-sm bg-warning-soft px-1.5 py-0.5 text-[11px] font-medium text-warning tabular-nums" aria-label={`${badges[n.href]} menunggu`}>
+                        <span aria-hidden className="size-1.5 rounded-full bg-current" />
+                        {badges[n.href]}
+                      </span>
+                    )}
                     {n.milestone && <span className="text-[10px] text-text-subtle">{n.milestone}</span>}
                   </Link>
                 );

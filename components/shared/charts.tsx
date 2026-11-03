@@ -160,3 +160,112 @@ function DataTable({ data, aLabel, bLabel }: { data: DayPoint[]; aLabel: string;
     </details>
   );
 }
+
+// ---------------------------------------------------------------- batang berkelompok (desain 01/07)
+export type BucketPoint = { key: string; label: string; a: number; b: number }; // gram
+
+const GH = 230;
+/** Dua seri batang berdampingan per kelompok (mis. per minggu): pembanding abu + seri utama aksen. Satu sumbu kg. */
+export function GroupedBarChart({ data, aLabel, bLabel, title }: { data: BucketPoint[]; aLabel: string; bLabel: string; title: string }) {
+  // 3 langkah sumbu dengan angka bulat (1/2/2,5/5 × 10^n kg).
+  const step = niceMax(Math.max(1, ...data.map((d) => Math.max(d.a, d.b))) / 3);
+  const max = step * 3;
+  const plotW = W - PAD.left - PAD.right;
+  const slot = plotW / Math.max(data.length, 1);
+  const bar = Math.min(28, Math.max(4, (slot - 16) / 2));
+  const gap = Math.min(6, bar / 3);
+  const base = GH - PAD.bottom;
+  const y = (g: number) => PAD.top + (base - PAD.top) * (1 - Math.min(g, max) / max);
+  const ticks = [0, step, 2 * step, max];
+  const labelEvery = Math.ceil(data.length / 10);
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="-mx-1 overflow-x-auto px-1">
+      <svg viewBox={`0 0 ${W} ${GH}`} role="img" aria-label={title} className="h-auto w-full min-w-[520px] overflow-visible">
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeDasharray={t === 0 ? undefined : "3 4"} />
+            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize="10" fill="var(--text-subtle)">
+              {kgFmt.format(Math.round(t / 1000))}
+            </text>
+          </g>
+        ))}
+        {data.map((d, i) => {
+          const cx = PAD.left + slot * i + slot / 2;
+          return (
+            <g key={d.key}>
+              <title>{`${d.label} — ${aLabel}: ${kg(d.a)}; ${bLabel}: ${kg(d.b)}`}</title>
+              <rect x={cx - slot / 2} y={PAD.top} width={slot} height={base - PAD.top} fill="transparent" />
+              <Column cx={cx - gap / 2 - bar / 2} top={y(d.a)} base={base} w={bar} fill="color-mix(in srgb, var(--text) 15%, transparent)" />
+              <Column cx={cx + gap / 2 + bar / 2} top={y(d.b)} base={base} w={bar} fill="var(--accent)" />
+              {i % labelEvery === 0 && (
+                <text x={cx} y={GH - 4} textAnchor="middle" fontSize="10" fill="var(--text-subtle)">
+                  {d.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      </div>
+      <details className="text-xs text-text-muted">
+        <summary className="cursor-pointer select-none">Lihat tabel data</summary>
+        <table className="mt-2 w-full tabular-nums">
+          <thead>
+            <tr className="text-left">
+              <th className="py-1 font-medium">Periode</th>
+              <th className="py-1 text-right font-medium">{aLabel}</th>
+              <th className="py-1 text-right font-medium">{bLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.key} className="border-t border-border">
+                <td className="py-1">{d.label}</td>
+                <td className="py-1 text-right">{kg(d.a)}</td>
+                <td className="py-1 text-right">{kg(d.b)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    </figure>
+  );
+}
+
+/** Legenda kecil (kanan atas kartu grafik): kotak warna + label. */
+export function ChartLegend({ items }: { items: Array<{ label: string; tone: "muted" | "accent" }> }) {
+  return (
+    <div className="flex flex-wrap gap-4 text-xs text-text-muted">
+      {items.map((i) => (
+        <span key={i.label} className="inline-flex items-center gap-1.5">
+          <span aria-hidden className={i.tone === "accent" ? "size-2.5 rounded-sm bg-accent" : "size-2.5 rounded-sm bg-text/15"} />
+          {i.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Batang mini harian (kartu omzet): tanpa sumbu, batang terakhir beraksen; nilai per batang lewat <title>. */
+export function MiniBars({ values, labels, title, format }: { values: number[]; labels: string[]; title: string; format: (v: number) => string }) {
+  const n = Math.max(values.length, 1);
+  const mw = 260;
+  const mh = 44;
+  const slot = mw / n;
+  const w = Math.max(2, Math.min(8, slot - 3));
+  const max = Math.max(1, ...values);
+  return (
+    <svg viewBox={`0 0 ${mw} ${mh}`} role="img" aria-label={title} className="h-11 w-full" preserveAspectRatio="none">
+      {values.map((v, i) => {
+        const h = v > 0 ? Math.max(2, (v / max) * (mh - 2)) : 1;
+        return (
+          <g key={i}>
+            <title>{`${labels[i]}: ${format(v)}`}</title>
+            <rect x={slot * i + (slot - w) / 2} y={mh - h} width={w} height={h} rx={Math.min(2, w / 2)} fill={i === n - 1 ? "var(--accent)" : "color-mix(in srgb, var(--text) 18%, transparent)"} className="chart-col" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}

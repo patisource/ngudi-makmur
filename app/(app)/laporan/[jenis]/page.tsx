@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Card, PageHeader } from "@/components/ui/card";
 import { EmptyState, Table, Td, Th } from "@/components/ui/table";
-import { PeriodFilter } from "@/components/shared/period-filter";
+import { CustomRange, PeriodFilter } from "@/components/shared/period-filter";
 import { isReportType, REPORTS, reportsFor, type ReportData } from "@/features/reports/definitions";
 import { MasterTabs } from "@/features/master/components/tabs";
 import { requireRole } from "@/lib/auth/session";
 import type { Cell, ColumnType } from "@/lib/csv";
 import { formatRupiah } from "@/lib/money";
-import { parsePeriod, periodQuery } from "@/lib/period";
+import { parsePeriod, periodLabel, periodQuery } from "@/lib/period";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
 export const metadata: Metadata = { title: "Laporan · SIM Ngudi Makmur" };
@@ -59,7 +59,13 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/l
         }
       />
       <MasterTabs label="Jenis laporan" tabs={tabs} />
-      {def.usesPeriod && <PeriodFilter period={period} basePath={`/laporan/${jenis}`} />}
+      {def.usesPeriod && (
+        <div className="flex flex-wrap items-end gap-3">
+          <PeriodFilter period={period} basePath={`/laporan/${jenis}`} />
+          <CustomRange period={period} basePath={`/laporan/${jenis}`} />
+          <span className="text-sm text-text-muted">{periodLabel(period)}</span>
+        </div>
+      )}
 
       {!data ? (
         <EmptyState title="Laporan tidak dapat dimuat">Coba muat ulang halaman; bila berulang, hubungi admin teknis.</EmptyState>

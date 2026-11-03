@@ -1,88 +1,96 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import type { FormState } from "@/features/master/actions";
 import { confirmProduction, deleteProductionDraft } from "@/features/production/actions";
 
-// Aksi draft batch. Kunci idempotensi dibuat saat panel konfirmasi dibuka dan dipakai ulang bila diulang (Security.md §6).
+// Aksi draft batch di header (desain 03): Hapus draft · Konfirmasi produksi, masing-masing lewat dialog dampak.
+// Kunci idempotensi dibuat saat dialog dibuka dan dipakai ulang bila diulang (Security.md §6).
 export function BatchActions({ id, impact, canConfirm, canDelete }: { id: string; impact: string; canConfirm: boolean; canDelete: boolean }) {
   const router = useRouter();
-  const [panel, setPanel] = useState<null | { kind: "confirm" | "delete"; key: string }>(null);
+  const [open, setOpen] = useState<null | { kind: "confirm" | "delete"; key: string }>(null);
   const [state, setState] = useState<FormState>({});
+  const [shake, setShake] = useState(0);
   const [pending, start] = useTransition();
 
-  const open = (kind: "confirm" | "delete") => {
+  const show = (kind: "confirm" | "delete") => {
     setState({});
-    setPanel({ kind, key: crypto.randomUUID() });
+    setOpen({ kind, key: crypto.randomUUID() });
   };
   const run = (fn: () => Promise<FormState>, after: () => void) =>
     start(async () => {
       const res = await fn();
       setState(res);
       if (res.ok) {
-        setPanel(null);
+        setOpen(null);
         after();
-      }
+      } else setShake((n) => n + 1);
     });
 
   return (
-    <div className="flex flex-col gap-3">
-      {!panel && (
-        <div className="flex flex-wrap gap-2">
-          {canConfirm && (
-            <Button kind="primary" onClick={() => open("confirm")}>
-              Konfirmasi batch
-            </Button>
-          )}
-          {canDelete && (
-            <Button kind="ghost" onClick={() => open("delete")}>
-              Hapus draft
-            </Button>
-          )}
-        </div>
+    <>
+      {canDelete && (
+        <Button kind="ghost" onClick={() => show("delete")}>
+          Hapus draft
+        </Button>
       )}
-      {!canConfirm && <p className="text-xs text-text-subtle">Konfirmasi hanya oleh pemegang izin konfirmasi batch.</p>}
+      {canConfirm && (
+        <Button kind="primary" onClick={() => show("confirm")}>
+          <Check size={16} strokeWidth={1.75} />
+          Konfirmasi produksi
+        </Button>
+      )}
+      {!open && state.error && <Notice state={state} />}
 
-      {panel?.kind === "confirm" && (
-        <div className="flex flex-col gap-3 rounded-lg border border-border-strong bg-surface-muted p-4">
-          <p className="text-sm">
-            <strong className="font-semibold">{impact}</strong>. Nomor PRD terbit, stok berubah, dan HPP dikunci; batch tidak bisa diubah lagi.
+      {open?.kind === "confirm" && (
+        <Dialog
+          title="Konfirmasi produksi"
+          description="Nomor PRD terbit, stok berubah, dan HPP dikunci; batch tidak bisa diubah lagi."
+          onClose={() => setOpen(null)}
+          shakeKey={shake}
+          footer={
+            <>
+              <Button disabled={pending} onClick={() => setOpen(null)}>
+                Batal
+              </Button>
+              <Button kind="primary" disabled={pending} onClick={() => run(() => confirmProduction(id, open.key), () => router.refresh())}>
+                {pending ? "Mengonfirmasi…" : "Konfirmasi produksi"}
+              </Button>
+            </>
+          }
+        >
+          <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
+            <span className="block text-xs text-accent">Dampak saat dikonfirmasi</span>
+            {impact}
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="primary" disabled={pending} onClick={() => run(() => confirmProduction(id, panel.key), () => router.refresh())}>
-              {pending ? "Mengonfirmasi…" : "Ya, konfirmasi"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Batal
-            </Button>
-          </div>
-        </div>
+          <p className="text-xs text-text-muted">Konfirmasi memakai data draft yang terakhir disimpan. Simpan draft dulu bila ada perubahan.</p>
+          <Notice state={state} />
+        </Dialog>
       )}
-      {panel?.kind === "delete" && (
-        <div className="flex flex-col gap-3 rounded-lg border border-border-strong bg-surface-muted p-4">
-          <p className="text-sm">Hapus draft batch ini? Draft belum mengubah stok.</p>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="danger" disabled={pending} onClick={() => run(() => deleteProductionDraft(id), () => router.push("/produksi?simpan=hapus"))}>
-              {pending ? "Menghapus…" : "Ya, hapus draft"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Batal
-            </Button>
-          </div>
-        </div>
+      {open?.kind === "delete" && (
+        <Dialog
+          title="Hapus draft batch"
+          onClose={() => setOpen(null)}
+          footer={
+            <>
+              <Button disabled={pending} onClick={() => setOpen(null)}>
+                Batal
+              </Button>
+              <Button kind="danger" disabled={pending} onClick={() => run(() => deleteProductionDraft(id), () => router.push("/produksi?simpan=hapus"))}>
+                {pending ? "Menghapus…" : "Hapus draft"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-text-muted">Draft belum mengubah stok. Draft yang dihapus tidak bisa dikembalikan.</p>
+          <Notice state={state} />
+        </Dialog>
       )}
-      {state.error && (
-        <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-label text-danger">
-          {state.error}
-        </p>
-      )}
-      {state.ok && state.message && (
-        <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-label text-accent">
-          {state.message}
-        </p>
-      )}
-    </div>
+    </>
   );
 }

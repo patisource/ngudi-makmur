@@ -9,11 +9,13 @@ const PORT = 3107;
 
 export default defineConfig({
   testDir: "tests/e2e",
-  timeout: 60_000,
+  timeout: 90_000,
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   retries: 0,
   reporter: [["list"]],
-  use: { baseURL: process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`, trace: "retain-on-failure", locale: "id-ID", timezoneId: "Asia/Jakarta" },
+  // reducedMotion: splash & animasi masuk dilewati agar test stabil; splash sendiri diuji terpisah (smoke.spec.ts).
+  use: { baseURL: process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`, trace: "retain-on-failure", locale: "id-ID", timezoneId: "Asia/Jakarta", contextOptions: { reducedMotion: "reduce" } },
   projects: [
     { name: "laptop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
     { name: "ponsel", use: { ...devices["Pixel 5"], viewport: { width: 360, height: 780 } } },

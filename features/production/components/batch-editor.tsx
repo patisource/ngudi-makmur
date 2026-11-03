@@ -1,10 +1,12 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { saveProductionDraft, type BatchFormState } from "@/features/production/actions";
 import { formatRupiah, parseRupiah } from "@/lib/money";
@@ -26,25 +28,42 @@ export type EditorTypeOption = {
 type CostRow = { category: BatchCostCategory; amount: string; sourceRef: string; note: string };
 export type BatchDefaults = { batchType: string; businessDate: string; note: string; residueKg: string; inputs: string[]; outputs: string[]; costs: CostRow[] };
 
-const chipCls =
-  "flex min-h-10 cursor-pointer flex-col items-center justify-center rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-muted transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-fg has-[:disabled]:cursor-default has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-info-soft";
-const selectCls = "h-10 w-full rounded-md border border-border bg-surface px-3 text-sm outline-none focus:border-border-strong focus:ring-4 focus:ring-info-soft";
-const iconBtn = "grid size-10 shrink-0 place-items-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text disabled:opacity-40";
+const selectCls = "h-11 w-full rounded-md border border-border bg-surface px-3 text-base outline-none focus:border-border-strong focus:ring-4 focus:ring-info-soft sm:h-10 sm:text-sm";
+const inputCls = "h-11 text-base sm:h-10 sm:text-sm";
+const iconBtn = "grid size-10 shrink-0 place-items-center rounded-md text-text-subtle hover:bg-surface-muted hover:text-text disabled:opacity-40";
+const card = "flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-surface p-5";
+const kgNum = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 });
 
 const grams = (s: string) => parseKgToGrams(s) ?? 0;
 
-function Row({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: "warn" | "err" }) {
+function Row({ label, value, strong, tone, extra }: { label: string; value: ReactNode; strong?: boolean; tone?: "warn" | "err" | "ok"; extra?: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 text-sm">
+    <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-text-muted">{label}</span>
-      <span className={`tabular-nums ${strong ? "font-semibold" : ""} ${tone === "err" ? "text-danger" : tone === "warn" ? "text-warning" : ""}`}>{value}</span>
+      <span className="flex items-center gap-2">
+        {extra}
+        <span className={`tabular-nums ${strong ? "font-semibold" : ""} ${tone === "err" ? "text-danger" : tone === "warn" ? "text-warning" : tone === "ok" ? "text-accent" : ""}`}>{value}</span>
+      </span>
     </div>
   );
 }
 
-// Editor batch (FR-PRD-01..05, StyleGuide §8.3): pilih jenis batch dulu; produk input/output mengikuti jenis tersebut
-// (nama dari master). Semua berat kg. Panel ringkasan menempel di kanan: total, susut %, biaya, perkiraan HPP.
-export function BatchEditor({ batchId, options, defaults }: { batchId: string | null; options: EditorTypeOption[]; defaults?: BatchDefaults }) {
+// Editor batch (desain 03, FR-PRD-01..05, StyleGuide §8.3): jenis batch dulu; produk input/output mengikuti jenis
+// (nama dari master). Semua berat kg. Ringkasan menempel di kanan: total, susut vs batas, nilai bahan, biaya, HPP.
+export function BatchEditor({
+  batchId,
+  options,
+  defaults,
+  header,
+  actions,
+}: {
+  batchId: string | null;
+  options: EditorTypeOption[];
+  defaults?: BatchDefaults;
+  header: { title: string; subtitle: string };
+  /** tombol tambahan di header (hapus draft, konfirmasi) — hanya untuk draft yang sudah tersimpan */
+  actions?: ReactNode;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [state, setState] = useState<BatchFormState>({});
@@ -62,6 +81,8 @@ export function BatchEditor({ batchId, options, defaults }: { batchId: string | 
   const lossTooHigh = opt?.maxLossPct != null && s.lossPct != null && s.lossPct > opt.maxLossPct;
   const availableG = dbKgToGrams(opt?.inputAvailableKg ?? 0);
   const fe = state.fieldErrors ?? {};
+  const inName = opt?.input?.name ?? "Bahan";
+  const outName = opt?.output?.name ?? "Hasil";
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -83,170 +104,265 @@ export function BatchEditor({ batchId, options, defaults }: { batchId: string | 
     });
   }
 
-  const qtyRows = (dir: "inputs" | "outputs", rows: string[], set: (r: string[]) => void, product: Product) => (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 flex w-full flex-wrap items-baseline justify-between gap-2 text-label font-medium">
-        <span>
-          {dir === "inputs" ? "Input (bahan)" : "Output (hasil layak jual)"} · {product?.name ?? "—"}
-        </span>
-        {dir === "inputs" && <span className="text-xs font-normal text-text-subtle">Tersedia {formatKg(availableG)}</span>}
-      </legend>
-      {rows.map((v, i) => (
-        <div key={i} className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <Input
-              inputMode="decimal"
-              value={v}
-              onChange={(e) => set(rows.map((x, j) => (j === i ? e.target.value : x)))}
-              placeholder="kg, mis. 60"
-              aria-label={`${dir === "inputs" ? "Berat input" : "Berat output"} baris ${i + 1} (kg)`}
-              aria-invalid={Boolean(fe[`${dir}.${i}`])}
-            />
-            <button type="button" className={iconBtn} disabled={rows.length === 1} onClick={() => set(rows.filter((_, j) => j !== i))} aria-label={`Hapus baris ${i + 1}`}>
-              <X size={16} />
-            </button>
-          </div>
-          {fe[`${dir}.${i}`] && <p className="text-xs text-danger">{fe[`${dir}.${i}`]}</p>}
-        </div>
-      ))}
-      <Button size="sm" kind="ghost" className="w-fit" disabled={rows.length >= 50} onClick={() => set([...rows, ""])}>
-        <Plus size={14} /> Tambah baris
-      </Button>
-    </fieldset>
-  );
+  const lineValue = (v: string) => (v.trim() !== "" && opt?.inputAvgCost != null ? formatRupiah(Math.round((grams(v) * opt.inputAvgCost) / 1000)) : "—");
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
-      <div className="flex min-w-0 flex-col gap-5">
-        <Card>
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1.5 text-label font-medium">Jenis batch</legend>
-            <div className="grid grid-cols-2 gap-2 sm:max-w-md">
-              {options.map((o) => (
-                <label key={o.batchType} className={chipCls}>
-                  <input type="radio" name="batchType" value={o.batchType} checked={type === o.batchType} disabled={Boolean(batchId)} onChange={() => setType(o.batchType)} className="sr-only" />
-                  {o.name}
-                  <span className="text-xs font-normal opacity-80">
-                    {o.input?.code ?? "?"} → {o.output?.code ?? "?"}
-                  </span>
-                </label>
-              ))}
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <Link href="/produksi" className="inline-flex w-fit items-center gap-1.5 text-sm text-text-muted hover:text-text">
+          <ArrowLeft size={15} strokeWidth={1.75} /> Produksi
+        </Link>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-[28px] font-semibold leading-tight tracking-tight">{header.title}</h1>
+              <Badge>Draft</Badge>
             </div>
-            {batchId && <p className="text-xs text-text-subtle">Jenis batch tidak bisa diubah setelah disimpan.</p>}
-          </fieldset>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Tanggal produksi" htmlFor="businessDate" error={fe.businessDate}>
-              <Input id="businessDate" type="date" max={todayWib()} value={date} onChange={(e) => setDate(e.target.value)} />
-            </Field>
+            <p className="text-sm text-text-muted">{header.subtitle}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
+            <Button type="submit" kind={actions ? "secondary" : "primary"} disabled={pending || !opt}>
+              {pending ? "Menyimpan…" : "Simpan draft"}
+            </Button>
+          </div>
+        </div>
+      </div>
+      {state.error && (
+        <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-label text-danger">
+          {fe._ ?? state.error}
+        </p>
+      )}
+      {state.ok && state.message && <Notice state={state} />}
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <section className={card}>
+            <h2 className="font-semibold">Info batch</h2>
+            <div className="grid gap-4 sm:grid-cols-[200px_minmax(0,1fr)]">
+              <Field label="Tanggal produksi" htmlFor="businessDate" error={fe.businessDate}>
+                <Input id="businessDate" type="date" max={todayWib()} value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+              </Field>
+              <Field label="Jenis batch" htmlFor="batchType" hint={batchId ? "Jenis batch tidak bisa diubah setelah disimpan." : undefined}>
+                <select id="batchType" value={type} disabled={Boolean(batchId)} onChange={(e) => setType(e.target.value)} className={selectCls}>
+                  {options.map((o) => (
+                    <option key={o.batchType} value={o.batchType}>
+                      {o.name} ({o.input?.name.toLowerCase() ?? "?"} → {o.output?.name.toLowerCase() ?? "?"})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
             <Field label="Catatan" htmlFor="note" error={fe.note}>
-              <Input id="note" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Opsional" />
+              <Input id="note" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Opsional, mis. mesin penepung 2" className={inputCls} />
             </Field>
-          </div>
-        </Card>
+          </section>
 
-        <Card>
-          <div className="grid gap-6 sm:grid-cols-2">
-            {qtyRows("inputs", inputs, setInputs, opt?.input ?? null)}
-            {qtyRows("outputs", outputs, setOutputs, opt?.output ?? null)}
-          </div>
-          <Field
-            label="Rincian sisa (kg)"
-            htmlFor="residueKg"
-            error={fe.residueKg}
-            hint={`Bagian sisa yang bisa ditimbang (mis. janggel/kulit; tidak masuk stok). Sisanya dihitung susut. Maks. ${formatKg(s.lossGrams)}.`}
-          >
-            <Input id="residueKg" inputMode="decimal" value={residue} onChange={(e) => setResidue(e.target.value)} className="sm:max-w-48" aria-invalid={residueG > s.lossGrams} />
-          </Field>
-        </Card>
+          <section className={card}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Bahan (input)</h2>
+              <span className="text-xs text-text-subtle">Nilai = rata-rata biaya stok saat ini</span>
+            </div>
+            <div className="hidden grid-cols-[minmax(0,1fr)_140px_120px_40px] gap-3 border-b border-border pb-2 text-xs text-text-muted sm:grid">
+              <span>Produk</span>
+              <span>Qty (kg)</span>
+              <span className="text-right">Nilai</span>
+              <span />
+            </div>
+            {inputs.map((v, i) => (
+              <div key={i} className="flex flex-col gap-1 border-b border-border pb-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_140px_120px_40px]">
+                  <span className="col-span-2 flex h-10 items-center rounded-md border border-border bg-surface-muted px-3 text-sm sm:col-span-1">{inName}</span>
+                  <Input
+                    inputMode="decimal"
+                    value={v}
+                    onChange={(e) => setInputs(inputs.map((x, j) => (j === i ? e.target.value : x)))}
+                    placeholder="kg"
+                    aria-label={`Berat ${inName} baris ${i + 1} (kg)`}
+                    aria-invalid={Boolean(fe[`inputs.${i}`])}
+                    className={inputCls}
+                  />
+                  <span className="hidden text-right text-sm tabular-nums sm:block">{lineValue(v)}</span>
+                  <button type="button" className={iconBtn} disabled={inputs.length === 1} onClick={() => setInputs(inputs.filter((_, j) => j !== i))} aria-label={`Hapus baris bahan ${i + 1}`}>
+                    <Trash2 size={17} strokeWidth={1.75} />
+                  </button>
+                </div>
+                {i === 0 && (
+                  <span className="text-xs text-text-subtle">
+                    Tersedia {formatKg(availableG)}
+                    {opt?.inputAvgCost != null && ` · rata-rata ${formatRupiah(opt.inputAvgCost)}/kg`}
+                  </span>
+                )}
+                {fe[`inputs.${i}`] && <p className="text-xs text-danger">{fe[`inputs.${i}`]}</p>}
+              </div>
+            ))}
+            <Button size="sm" kind="ghost" className="w-fit" disabled={inputs.length >= 50} onClick={() => setInputs([...inputs, ""])}>
+              <Plus size={15} /> Tambah baris
+            </Button>
+          </section>
 
-        <Card>
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-semibold">Biaya batch</h2>
-            <span className="text-xs text-text-subtle">Hanya alokasi HPP — tidak menambah atau mengurangi kas.</span>
-          </div>
-          {costs.length === 0 && <p className="text-sm text-text-muted">Belum ada biaya. Tambahkan upah, kemasan, listrik/BBM, atau alokasi lain.</p>}
-          {costs.map((c, i) => (
-            <div key={i} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start sm:border-0 sm:p-0">
-              <select
-                aria-label={`Kategori biaya ${i + 1}`}
-                value={c.category}
-                onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, category: e.target.value as BatchCostCategory } : x)))}
-                className={selectCls}
-              >
-                {(Object.keys(COST_CATEGORY_LABEL) as BatchCostCategory[]).map((k) => (
-                  <option key={k} value={k}>
-                    {COST_CATEGORY_LABEL[k]}
-                  </option>
-                ))}
-              </select>
-              <div className="flex flex-col gap-1">
-                <Input
-                  inputMode="numeric"
-                  value={c.amount}
-                  onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))}
-                  placeholder="Rp, mis. 60000"
-                  aria-label={`Nilai biaya ${i + 1} (Rp)`}
-                  aria-invalid={Boolean(fe[`costs.${i}.amountRp`])}
-                />
+          <section className={card}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Hasil (output)</h2>
+              <span className="text-xs text-text-subtle">Hanya hasil layak jual yang masuk stok</span>
+            </div>
+            <div className="hidden grid-cols-[minmax(0,1fr)_140px_120px_40px] gap-3 border-b border-border pb-2 text-xs text-text-muted sm:grid">
+              <span>Produk</span>
+              <span>Qty (kg)</span>
+              <span>Jenis</span>
+              <span />
+            </div>
+            {outputs.map((v, i) => (
+              <div key={i} className="flex flex-col gap-1 border-b border-border pb-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_140px_120px_40px]">
+                  <span className="col-span-2 flex h-10 items-center rounded-md border border-border bg-surface-muted px-3 text-sm sm:col-span-1">{outName}</span>
+                  <Input
+                    inputMode="decimal"
+                    value={v}
+                    onChange={(e) => setOutputs(outputs.map((x, j) => (j === i ? e.target.value : x)))}
+                    placeholder="kg"
+                    aria-label={`Berat ${outName} baris ${i + 1} (kg)`}
+                    aria-invalid={Boolean(fe[`outputs.${i}`])}
+                    className={inputCls}
+                  />
+                  <span className="hidden sm:block">
+                    <Badge tone="ok">Hasil utama</Badge>
+                  </span>
+                  <button type="button" className={iconBtn} disabled={outputs.length === 1} onClick={() => setOutputs(outputs.filter((_, j) => j !== i))} aria-label={`Hapus baris hasil ${i + 1}`}>
+                    <Trash2 size={17} strokeWidth={1.75} />
+                  </button>
+                </div>
+                {fe[`outputs.${i}`] && <p className="text-xs text-danger">{fe[`outputs.${i}`]}</p>}
+              </div>
+            ))}
+            <Button size="sm" kind="ghost" className="w-fit" disabled={outputs.length >= 50} onClick={() => setOutputs([...outputs, ""])}>
+              <Plus size={15} /> Tambah baris
+            </Button>
+            <Field
+              label="Sisa terukur (kg)"
+              htmlFor="residueKg"
+              error={fe.residueKg}
+              hint={`Bagian sisa yang ditimbang (mis. janggel/dedak; tidak masuk stok). Sisanya dihitung susut. Maks. ${formatKg(s.lossGrams)}.`}
+            >
+              <Input id="residueKg" inputMode="decimal" value={residue} onChange={(e) => setResidue(e.target.value)} className={`${inputCls} sm:max-w-48`} aria-invalid={residueG > s.lossGrams} />
+            </Field>
+          </section>
+
+          <section className={card}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Biaya produksi</h2>
+              <span className="text-xs text-text-subtle">Alokasi HPP — tidak menambah atau mengurangi kas</span>
+            </div>
+            {costs.length > 0 && (
+              <div className="hidden grid-cols-[160px_minmax(0,1fr)_140px_40px] gap-3 border-b border-border pb-2 text-xs text-text-muted sm:grid">
+                <span>Komponen</span>
+                <span>Keterangan</span>
+                <span>Jumlah</span>
+                <span />
+              </div>
+            )}
+            {costs.length === 0 && <p className="text-sm text-text-muted">Belum ada biaya. Tambahkan tenaga kerja, solar/listrik, kemasan, atau alokasi lain.</p>}
+            {costs.map((c, i) => (
+              <div key={i} className="flex flex-col gap-1 border-b border-border pb-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_40px] items-start gap-3 sm:grid-cols-[160px_minmax(0,1fr)_140px_40px]">
+                  <select
+                    aria-label={`Komponen biaya ${i + 1}`}
+                    value={c.category}
+                    onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, category: e.target.value as BatchCostCategory } : x)))}
+                    className={selectCls}
+                  >
+                    {(Object.keys(COST_CATEGORY_LABEL) as BatchCostCategory[]).map((k) => (
+                      <option key={k} value={k}>
+                        {COST_CATEGORY_LABEL[k]}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className={`${iconBtn} sm:hidden`} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
+                    <Trash2 size={17} strokeWidth={1.75} />
+                  </button>
+                  <Input
+                    value={c.note}
+                    maxLength={500}
+                    onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))}
+                    placeholder="mis. 2 orang × 1 hari"
+                    aria-label={`Keterangan biaya ${i + 1}`}
+                    className={`${inputCls} col-span-2 sm:col-span-1`}
+                  />
+                  <Input
+                    inputMode="numeric"
+                    value={c.amount}
+                    onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))}
+                    placeholder="Rp"
+                    aria-label={`Jumlah biaya ${i + 1} (Rp)`}
+                    aria-invalid={Boolean(fe[`costs.${i}.amountRp`])}
+                    className={`${inputCls} col-span-2 sm:col-span-1`}
+                  />
+                  <button type="button" className={`${iconBtn} hidden sm:grid`} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
+                    <Trash2 size={17} strokeWidth={1.75} />
+                  </button>
+                </div>
                 {fe[`costs.${i}.amountRp`] && <p className="text-xs text-danger">{fe[`costs.${i}.amountRp`]}</p>}
               </div>
-              <Input
-                value={c.sourceRef}
-                maxLength={60}
-                onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, sourceRef: e.target.value } : x)))}
-                placeholder="Sumber, mis. no. pengeluaran"
-                aria-label={`Sumber biaya ${i + 1}`}
-              />
-              <button type="button" className={iconBtn} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
-                <X size={16} />
-              </button>
-            </div>
-          ))}
-          <Button size="sm" kind="ghost" className="w-fit" disabled={costs.length >= 20} onClick={() => setCosts([...costs, { category: "tenaga_kerja", amount: "", sourceRef: "", note: "" }])}>
-            <Plus size={14} /> Tambah biaya
-          </Button>
-        </Card>
-      </div>
+            ))}
+            <Button size="sm" kind="ghost" className="w-fit" disabled={costs.length >= 20} onClick={() => setCosts([...costs, { category: "tenaga_kerja", amount: "", sourceRef: "", note: "" }])}>
+              <Plus size={15} /> Tambah baris
+            </Button>
+          </section>
+        </div>
 
-      <div className="flex flex-col gap-3 lg:sticky lg:top-8">
-        <Card>
-          <h2 className="font-semibold">Ringkasan</h2>
-          <div className="flex flex-col gap-2">
-            <Row label="Total input" value={formatKg(s.inputGrams)} />
-            <Row label="Total output" value={formatKg(s.outputGrams)} tone={s.outputExceedsInput ? "err" : undefined} />
-            <Row
-              label="Sisa/susut"
-              value={`${formatKg(s.lossGrams)}${s.lossPct != null ? ` · ${String(s.lossPct).replace(".", ",")}%` : ""}`}
-              tone={lossTooHigh ? "warn" : undefined}
-            />
-            <div className="my-1 border-t border-border" />
-            <Row label="Bahan (perkiraan)" value={formatRupiah(s.materialRp)} />
-            <Row label="Biaya batch" value={formatRupiah(s.otherRp)} />
-            <Row label="Total biaya" value={formatRupiah(s.totalRp)} strong />
-            <div className="mt-1 rounded-md bg-surface-muted px-3 py-2.5">
-              <span className="block text-xs text-text-muted">HPP per kg (perkiraan)</span>
-              <span className="text-xl font-semibold tabular-nums">{s.hpp != null ? formatRupiah(s.hpp) : "—"}</span>
-              {s.hpp == null && <span className="block text-xs text-text-muted">Data belum cukup untuk menghitung HPP</span>}
+        <div className="flex flex-col gap-5 lg:sticky lg:top-6">
+          <section className={card}>
+            <h2 className="font-semibold">Ringkasan batch</h2>
+            <div className="flex flex-col gap-2.5">
+              <Row label="Total input" value={formatKg(s.inputGrams)} />
+              <Row label="Total output" value={formatKg(s.outputGrams)} tone={s.outputExceedsInput ? "err" : undefined} />
+              <Row
+                label="Susut"
+                value={`${kgNum.format(s.lossGrams / 1000)} kg${s.lossPct != null ? ` · ${String(s.lossPct).replace(".", ",")}%` : ""}`}
+                tone={lossTooHigh ? "warn" : undefined}
+                extra={
+                  opt?.maxLossPct != null && s.lossPct != null ? (
+                    <Badge tone={lossTooHigh ? "warn" : "ok"}>
+                      {lossTooHigh ? "Melebihi" : "Normal"} · batas {String(opt.maxLossPct).replace(".", ",")}%
+                    </Badge>
+                  ) : undefined
+                }
+              />
+              <div className="my-1 border-t border-border" />
+              <Row label="Nilai bahan" value={formatRupiah(s.materialRp)} />
+              <Row label="Biaya produksi" value={formatRupiah(s.otherRp)} />
+              <Row label="Total dibebankan" value={formatRupiah(s.totalRp)} strong />
             </div>
+            <div className="rounded-lg bg-surface-muted px-4 py-3.5">
+              <span className="block text-xs text-text-muted">HPP {outName}</span>
+              {s.hpp != null ? (
+                <span className="flex items-baseline gap-1.5">
+                  <span className="text-[28px] font-semibold leading-tight tracking-tight tabular-nums">{formatRupiah(s.hpp)}</span>
+                  <span className="text-sm text-text-muted">/ kg</span>
+                </span>
+              ) : (
+                <span className="block py-1 text-sm">Data belum cukup untuk menghitung HPP</span>
+              )}
+              <span className="block text-xs text-text-subtle">Perkiraan · dikunci saat konfirmasi</span>
+            </div>
+            {s.outputExceedsInput && <p className="text-xs text-danger">Output melebihi input — periksa timbangan.</p>}
+            {s.inputGrams > availableG && <p className="text-xs text-warning">Input melebihi stok tersedia; konfirmasi akan ditolak.</p>}
+          </section>
+
+          <section className={card}>
+            <h2 className="font-semibold">Dampak saat dikonfirmasi</h2>
+            <div className="flex flex-col gap-2">
+              <Row label={inName} value={s.inputGrams > 0 ? `−${formatKg(s.inputGrams)}` : formatKg(0)} tone={s.inputGrams > 0 ? "err" : undefined} />
+              <Row label={outName} value={s.outputGrams > 0 ? `+${formatKg(s.outputGrams)}` : formatKg(0)} tone={s.outputGrams > 0 ? "ok" : undefined} />
+            </div>
+            <p className="text-xs text-text-subtle">Mutasi stok dan kode batch PRD dibuat bersamaan dalam satu transaksi. Batch terkonfirmasi tidak bisa diedit.</p>
+          </section>
+
+          <div className="rounded-xl bg-surface-muted px-5 py-4 text-sm">
+            <span className="block text-xs text-text-muted">Catatan</span>
+            {options.map((o) => `${o.name}: ${o.input?.name ?? "?"} → ${o.output?.name ?? "?"}`).join(". ")}. Biaya batch hanya alokasi HPP dan tidak membuat kas.
           </div>
-          {s.outputExceedsInput && <p className="text-xs text-danger">Output melebihi input — periksa timbangan.</p>}
-          {lossTooHigh && <p className="text-xs text-warning">Susut melebihi ambang {opt?.maxLossPct}% untuk jenis batch ini.</p>}
-          {s.inputGrams > availableG && <p className="text-xs text-warning">Input melebihi stok tersedia; konfirmasi akan ditolak.</p>}
-          <p className="text-xs text-text-subtle">Biaya bahan memakai rata-rata saat ini; angka final dikunci saat konfirmasi.</p>
-        </Card>
-        {state.error && (
-          <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-label text-danger">
-            {fe._ ?? state.error}
-          </p>
-        )}
-        {state.ok && state.message && (
-          <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-label text-accent">
-            {state.message}
-          </p>
-        )}
-        <Button type="submit" kind={batchId ? "secondary" : "primary"} disabled={pending || !opt}>
-          {pending ? "Menyimpan…" : batchId ? "Simpan perubahan draft" : "Simpan draft"}
-        </Button>
+        </div>
       </div>
     </form>
   );

@@ -1,24 +1,28 @@
 "use client";
 
+import { Check, PackageCheck, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { formCls, Notice } from "@/components/shared/notice";
+import { ReceiptDialog } from "@/components/shared/receipt-dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/field";
 import type { FormState } from "@/features/master/actions";
 import { cancelOrder, confirmOrder, deleteOrderDraft, fulfillOrder } from "@/features/orders/actions";
 import { formatRupiah } from "@/lib/money";
 import type { OrderStatus } from "@/lib/supabase/types";
+import type { ThermalLine } from "@/lib/thermal";
 import { todayWib } from "@/lib/validation/common";
 
-type Kind = "confirm" | "delete" | "fulfill" | "cancel";
-type Panel = null | { kind: Kind; key: string };
+type Kind = "confirm" | "delete" | "fulfill" | "cancel" | "nota";
+type Open = null | { kind: Kind; key: string };
 
-const panelCls = "flex flex-col gap-3 rounded-lg border border-border-strong bg-surface-muted p-4";
-const textareaCls = "rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:border-border-strong focus:ring-4 focus:ring-info-soft sm:text-sm";
+export type ReceiptProps = { lines80: ThermalLine[]; lines58: ThermalLine[]; printed: number; canPrint: boolean };
 
-// Aksi status pesanan (FR-SAL-04..06). Kunci idempotensi dibuat saat panel dibuka dan dipakai ulang untuk percobaan
-// ulang, sehingga klik ganda / koneksi putus tidak memposting dua kali (Security.md §6). Setiap aksi menjelaskan
-// dampaknya dan tombolnya menyebut aksinya (StyleGuide §9).
+// Aksi status pesanan di header (desain 02): Batalkan · Nota thermal · Serahkan barang. Setiap aksi lewat dialog yang
+// menjelaskan dampaknya (StyleGuide §9). Kunci idempotensi dibuat saat dialog dibuka dan dipakai ulang untuk percobaan
+// ulang, sehingga klik ganda / koneksi putus tidak memposting dua kali (Security.md §6).
 export function OrderActions({
   id,
   status,
@@ -27,6 +31,8 @@ export function OrderActions({
   impact,
   netPaidRp = 0,
   accounts = [],
+  canManage,
+  receipt,
 }: {
   id: string;
   status: OrderStatus;
@@ -36,127 +42,140 @@ export function OrderActions({
   /** pembayaran bersih terverifikasi; > 0 → batal wajib memilih akun refund */
   netPaidRp?: number;
   accounts?: Array<{ id: string; name: string; balanceRp: number }>;
+  canManage: boolean;
+  receipt?: ReceiptProps;
 }) {
   const router = useRouter();
-  const [panel, setPanel] = useState<Panel>(null);
+  const [open, setOpen] = useState<Open>(null);
   const [reason, setReason] = useState("");
   const [refundAccount, setRefundAccount] = useState(accounts[0]?.id ?? "");
   const [recipient, setRecipient] = useState("");
-  const [deliveredOn, setDeliveredOn] = useState(todayWib());
+  const [deliveredOn, setDeliveredOn] = useState(todayWib);
   const [state, setState] = useState<FormState>({});
+  const [shake, setShake] = useState(0);
   const [pending, start] = useTransition();
+  const [refreshing, startRefresh] = useTransition(); // tombol nonaktif sampai data terbaru tampil
 
-  const open = (kind: Kind) => {
+  const show = (kind: Kind) => {
     setState({});
-    setPanel({ kind, key: crypto.randomUUID() });
+    setOpen({ kind, key: crypto.randomUUID() });
   };
+  const close = () => setOpen(null);
   const run = (fn: () => Promise<FormState>, after?: () => void) =>
     start(async () => {
       const res = await fn();
       setState(res);
       if (res.ok) {
-        setPanel(null);
+        setOpen(null);
         if (after) after();
-        else router.refresh();
-      }
+        else startRefresh(() => router.refresh());
+      } else setShake((n) => n + 1);
     });
 
-  if (status === "cancelled" || status === "delivered") return null;
+  const live = status === "draft" || status === "confirmed";
+  const footer = (confirmLabel: string, onConfirm: () => void, opts: { danger?: boolean; disabled?: boolean } = {}) => (
+    <>
+      <Button disabled={pending} onClick={close}>
+        Batal
+      </Button>
+      <Button kind={opts.danger ? "danger" : "primary"} disabled={pending || opts.disabled} onClick={onConfirm}>
+        {pending ? "Menyimpan…" : confirmLabel}
+      </Button>
+    </>
+  );
 
   return (
-    <div className="flex flex-col gap-3">
-      {!panel && (
-        <div className="flex flex-wrap gap-2">
-          {status === "draft" ? (
-            <>
-              <Button kind="primary" onClick={() => open("confirm")}>
-                Konfirmasi pesanan
-              </Button>
-              <Button kind="ghost" onClick={() => open("delete")}>
-                Hapus draft
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button kind="primary" onClick={() => open("fulfill")}>
-                Serahkan barang
-              </Button>
-              <Button kind="ghost" onClick={() => open("cancel")}>
-                Batalkan pesanan
-              </Button>
-            </>
-          )}
-        </div>
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        {canManage && live && status === "draft" && (
+          <>
+            <Button kind="ghost" disabled={refreshing} onClick={() => show("delete")}>
+              Hapus draft
+            </Button>
+            <Button kind="primary" disabled={refreshing} onClick={() => show("confirm")}>
+              <Check size={16} strokeWidth={1.75} />
+              Konfirmasi pesanan
+            </Button>
+          </>
+        )}
+        {canManage && status === "confirmed" && (
+          <Button kind="ghost" disabled={refreshing} onClick={() => show("cancel")}>
+            Batalkan
+          </Button>
+        )}
+        {receipt && (
+          <Button onClick={() => show("nota")}>
+            <Printer size={16} strokeWidth={1.75} />
+            Nota thermal
+          </Button>
+        )}
+        {canManage && status === "confirmed" && (
+          <Button kind="primary" disabled={refreshing} onClick={() => show("fulfill")}>
+            <PackageCheck size={16} strokeWidth={1.75} />
+            Serahkan barang
+          </Button>
+        )}
+      </div>
+      {!open && <Notice state={state} />}
+
+      {open?.kind === "nota" && receipt && (
+        <ReceiptDialog title={`Struk thermal ${docNumber ?? ""}`} docId={id} lines80={receipt.lines80} lines58={receipt.lines58} printed={receipt.printed} canPrint={receipt.canPrint} onClose={close} />
       )}
 
-      {panel?.kind === "confirm" && (
-        <div className={panelCls}>
-          <p className="text-sm">
-            <strong className="font-semibold">{impact}</strong>. Nomor INV terbit, stok direservasi, dan isi pesanan dikunci. Ditolak bila stok tersedia tidak cukup.
+      {open?.kind === "confirm" && (
+        <Dialog title="Konfirmasi pesanan" description="Nomor INV terbit dan isi pesanan dikunci." onClose={close} shakeKey={shake} footer={footer("Konfirmasi & reservasi", () => run(() => confirmOrder(id, open.key)))}>
+          <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
+            <span className="block text-xs text-accent">Setelah dikonfirmasi</span>
+            {impact}. Ditolak bila stok tersedia tidak cukup.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="primary" disabled={pending} onClick={() => run(() => confirmOrder(id, panel.key))}>
-              {pending ? "Mengonfirmasi…" : "Ya, konfirmasi"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+          <Notice state={state} />
+        </Dialog>
       )}
 
-      {panel?.kind === "delete" && (
-        <div className={panelCls}>
-          <p className="text-sm">Hapus draft pesanan ini? Draft belum mengubah stok dan belum punya nomor.</p>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="danger" disabled={pending} onClick={() => run(() => deleteOrderDraft(id), () => router.push("/penjualan?simpan=hapus"))}>
-              {pending ? "Menghapus…" : "Ya, hapus draft"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+      {open?.kind === "delete" && (
+        <Dialog title="Hapus draft pesanan" onClose={close} footer={footer("Hapus draft", () => run(() => deleteOrderDraft(id), () => router.push("/penjualan?simpan=hapus")), { danger: true })}>
+          <p className="text-sm text-text-muted">Draft belum mengubah stok dan belum punya nomor. Draft yang dihapus tidak bisa dikembalikan.</p>
+          <Notice state={state} />
+        </Dialog>
       )}
 
-      {panel?.kind === "fulfill" && (
-        <div className={panelCls}>
-          <p className="text-sm">
-            <strong className="font-semibold">{impact}</strong> keluar dari stok (reservasi menjadi stok keluar). Status bayar tidak berubah; barang yang sudah diserahkan hanya bisa kembali lewat retur.
-          </p>
+      {open?.kind === "fulfill" && (
+        <Dialog title="Serahkan barang" description={docNumber ?? undefined} onClose={close} shakeKey={shake} footer={footer("Serahkan barang", () => run(() => fulfillOrder(id, { recipient, deliveredOn }, open.key)))}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Diterima oleh" htmlFor="recipient" hint="Opsional, mis. nama pelanggan atau kurir.">
-              <Input id="recipient" maxLength={120} value={recipient} onChange={(e) => setRecipient(e.target.value)} className="h-11 text-base sm:h-10 sm:text-sm" />
+              <Input id="recipient" maxLength={120} value={recipient} onChange={(e) => setRecipient(e.target.value)} className={formCls.input} />
             </Field>
             <Field label="Tanggal serah" htmlFor="deliveredOn">
-              <Input id="deliveredOn" type="date" min={businessDate} max={todayWib()} value={deliveredOn} onChange={(e) => setDeliveredOn(e.target.value)} className="h-11 text-base sm:h-10 sm:text-sm" />
+              <Input id="deliveredOn" type="date" min={businessDate} max={todayWib()} value={deliveredOn} onChange={(e) => setDeliveredOn(e.target.value)} className={formCls.input} />
             </Field>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="primary" disabled={pending} onClick={() => run(() => fulfillOrder(id, { recipient, deliveredOn }, panel.key))}>
-              {pending ? "Menyimpan…" : "Serahkan barang"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+          <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
+            <span className="block text-xs text-accent">Setelah disimpan</span>
+            {impact} keluar dari stok (reservasi menjadi stok keluar). Status bayar tidak berubah; barang yang sudah diserahkan hanya bisa kembali lewat retur.
+          </p>
+          <Notice state={state} />
+        </Dialog>
       )}
 
-      {panel?.kind === "cancel" && (
-        <div className={panelCls}>
-          <p className="text-sm">
-            Batalkan {docNumber}? Reservasi stok dilepas dan nomor tidak dipakai ulang; pembayaran yang belum diverifikasi ikut ditolak.
+      {open?.kind === "cancel" && (
+        <Dialog
+          title={`Batalkan ${docNumber ?? "pesanan"}`}
+          onClose={close}
+          shakeKey={shake}
+          footer={footer("Batalkan pesanan", () => run(() => cancelOrder(id, reason, netPaidRp > 0 ? refundAccount : null, open.key)), { danger: true, disabled: reason.trim().length < 5 })}
+        >
+          <p className="text-sm text-text-muted">
+            Reservasi stok dilepas dan nomor tidak dipakai ulang; pembayaran yang belum diverifikasi ikut ditolak.
             {netPaidRp > 0 && (
               <>
                 {" "}
-                Pesanan sudah dibayar <strong className="font-semibold">{formatRupiah(netPaidRp)}</strong>: uang dikembalikan penuh sebagai refund (kas keluar) dalam langkah yang sama.
+                Pesanan sudah dibayar <strong className="font-semibold text-text">{formatRupiah(netPaidRp)}</strong>: uang dikembalikan penuh sebagai refund (kas keluar) dalam langkah yang sama.
               </>
             )}
           </p>
           {netPaidRp > 0 && (
             <Field label="Refund dari akun *" htmlFor="refund-account">
-              <select id="refund-account" value={refundAccount} onChange={(e) => setRefundAccount(e.target.value)} className="h-11 w-full rounded-md border border-border bg-surface px-3 text-base sm:h-10 sm:text-sm">
+              <select id="refund-account" value={refundAccount} onChange={(e) => setRefundAccount(e.target.value)} className={formCls.select}>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name} · saldo {formatRupiah(a.balanceRp)}
@@ -165,39 +184,12 @@ export function OrderActions({
               </select>
             </Field>
           )}
-          <label htmlFor="cancel-reason" className="text-label font-medium">
-            Alasan pembatalan *
-          </label>
-          <textarea
-            id="cancel-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            maxLength={500}
-            rows={2}
-            placeholder="mis. Pelanggan membatalkan lewat WhatsApp"
-            className={textareaCls}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button kind="danger" disabled={pending || reason.trim().length < 5} onClick={() => run(() => cancelOrder(id, reason, netPaidRp > 0 ? refundAccount : null, panel.key))}>
-              {pending ? "Membatalkan…" : "Batalkan pesanan"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+          <Field label="Alasan pembatalan *" htmlFor="cancel-reason">
+            <textarea id="cancel-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} placeholder="mis. Pelanggan membatalkan lewat WhatsApp" className={formCls.textarea} />
+          </Field>
+          <Notice state={state} />
+        </Dialog>
       )}
-
-      {state.error && (
-        <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-label text-danger">
-          {state.error}
-        </p>
-      )}
-      {state.ok && state.message && (
-        <p role="status" className="rounded-md bg-accent-soft px-3 py-2 text-label text-accent">
-          {state.message}
-        </p>
-      )}
-    </div>
+    </>
   );
 }

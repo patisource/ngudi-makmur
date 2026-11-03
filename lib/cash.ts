@@ -13,4 +13,6 @@ export const CASH_SOURCE_LABEL: Record<CashSourceType, string> = {
   expense: "Pengeluaran",
   refund: "Refund",
   cash_correction: "Koreksi kas",
+  transfer_out: "Transfer keluar",
+  transfer_in: "Transfer masuk",
 };

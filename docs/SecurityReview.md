@@ -22,7 +22,7 @@ Pemeriksaan basis data dijalankan ke proyek Supabase nyata (hanya baca katalog; 
 | Pendaftaran publik nonaktif; kata sandi bocor ditolak | ⏳ perlu cek dashboard | `config.toml` lokal `enable_signup=false`, minimal 8 karakter. Proyek nyata: pastikan di Dashboard → Authentication (signup off, minimum 8, *leaked password protection* on) |
 | `service_role`/kunci rahasia tidak ada di bundel klien | ✅ | `grep` `.next/static`: nilai kunci tidak ditemukan; satu temuan teks `"sb_secret_"` hanya literal pemeriksa awalan di pustaka supabase-js |
 | Header keamanan | ✅ | `next.config.ts`: CSP (`frame-ancestors 'none'` dll.), X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, HSTS; `X-Powered-By` dimatikan. CSP `script-src` belum ketat (skrip inline Next.js) |
-| Bucket Storage privat; signed URL kedaluwarsa | ✅ | `proofs` `public=false`; signed URL dibuat server berlaku 5 menit (`features/receipts/queries.ts`) |
+| Bucket Storage privat; signed URL kedaluwarsa | ✅ | `proofs` `public=false`; signed URL dibuat server berlaku 5 menit (`features/receipts/queries.ts`, bukti transfer di `features/cash/queries.ts`). Folder `payments/` (3 Nov 2026): unggah hanya `admin_kelompok`, baca admin & ketua, isi diperiksa ulang server (magic bytes, ukuran, EXIF), maks. 3 per pembayaran, tidak bisa dihapus setelah diverifikasi (uji `transfer_proof_check`) |
 | Ekspor CSV aman dari injection | ✅ | `lib/csv.ts` (awalan `'` untuk `= + - @`), `lib/report-utils.test.ts` |
 | Backup harian berjalan | ⏳ | Belum dijadwalkan di mesin server mitra (Operasional.md §1) |
 | Seed DEMO tidak ada di basis data nyata | ✅ | Akun `@contoh.test` = 0, transaksi `DEMO%` = 0 |

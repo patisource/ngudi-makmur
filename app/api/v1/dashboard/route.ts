@@ -3,6 +3,7 @@ import { dashboardData, FLOUR_TARGET_KG_PER_DAY } from "@/features/dashboard/que
 import { apiError, apiOk } from "@/lib/api";
 import { canOpen, hasAnyRole } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/session";
+import { toCsv, type Column } from "@/lib/csv";
 import { parsePeriod } from "@/lib/period";
 
 // GET /api/v1/dashboard?periode=…&dari=…&sampai=… (PRD §8.1, T8.1): agregat sesuai peran, rumus PRD §5.9.
@@ -12,9 +13,32 @@ export async function GET(request: NextRequest) {
   if (!user || !user.isActive) return apiError(401, { code: "UNAUTHENTICATED", message: "Sesi berakhir. Silakan masuk lagi." });
   if (!canOpen(user.roles, "/dashboard")) return apiError(403, { code: "FORBIDDEN", message: "Anda tidak berhak membuka dashboard." });
   const period = parsePeriod(Object.fromEntries(request.nextUrl.searchParams));
-  const { kpi, daily, stock, error } = await dashboardData(period);
-  if (error) return apiError(500, { code: "INTERNAL", message: "Ringkasan tidak dapat dimuat." });
   const finance = hasAnyRole(user.roles, ["admin_kelompok", "ketua"]);
+  const { kpi, daily, stock, error } = await dashboardData(period, { finance });
+  if (error) return apiError(500, { code: "INTERNAL", message: "Ringkasan tidak dapat dimuat." });
+
+  // Ekspor CSV (tombol "Ekspor CSV" di dashboard): seri harian periode ini, kolom keuangan hanya untuk admin/ketua.
+  if (request.nextUrl.searchParams.get("format") === "csv") {
+    const columns: Column[] = [
+      { key: "day", label: "Tanggal", type: "date" },
+      { key: "receipts", label: "Jagung masuk (kg)", type: "kg" },
+      { key: "flour", label: "Produksi tepung (kg)", type: "kg" },
+      ...(finance
+        ? ([
+            { key: "sales", label: "Terjual bersih (kg)", type: "kg" },
+            { key: "omzet", label: "Omzet (Rp)", type: "rp" },
+          ] as Column[])
+        : []),
+    ];
+    const rows = daily.map((d) => ({ day: d.day, receipts: d.receipts / 1000, flour: d.flour / 1000, sales: d.sales / 1000, omzet: d.omzet }));
+    return new Response(toCsv(columns, rows), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="ringkasan-${period.from}_${period.to}.csv"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
   const production = {
     receipts_kg: kpi.receipts_kg,
     receipts_count: kpi.receipts_count,

@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { FormState } from "@/features/master/actions";
-import { postCorrection, postDecision, postExpense, postIncome, postOpening, postRecordPayment, postRefund, postRejectPayment, postVerifyPayment } from "@/features/cash/posting";
+import { postCorrection, postDecision, postExpense, postIncome, postOpening, postRecordPayment, postRefund, postRejectPayment, postTransfer, postVerifyPayment } from "@/features/cash/posting";
+import { mapDbError } from "@/lib/errors";
+import { hasExif, PROOF_EXT, PROOF_MAX_BYTES, sniffMime } from "@/lib/files";
+import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
 import type { PostingOutcome } from "@/lib/posting";
@@ -13,14 +16,17 @@ import {
   expenseSchema,
   incomeSchema,
   openingSchema,
+  paymentProofPathSchema,
   paymentSchema,
   refundSchema,
   rejectPaymentSchema,
+  transferSchema,
   type CorrectionInput,
   type ExpenseInput,
   type IncomeInput,
   type PaymentInput,
   type RefundInput,
+  type TransferInput,
 } from "@/lib/validation/cash";
 
 const uuid = z.uuid();
@@ -45,13 +51,15 @@ const done = (res: PostingOutcome, msg: (r: Extract<PostingOutcome, { ok: true }
 };
 
 // ---------------------------------------------------------------- pembayaran pesanan (T7.2, T7.3)
-export async function recordPayment(orderId: string, raw: PaymentInput, key: string): Promise<FormState> {
+/** id = pembayaran yang tercatat (untuk melampirkan bukti transfer sesudahnya). */
+export async function recordPayment(orderId: string, raw: PaymentInput, key: string): Promise<FormState & { id?: string }> {
   await requireAction("kas.kelola");
   if (!uuid.safeParse(orderId).success || !uuid.safeParse(key).success) return bad();
   const parsed = paymentSchema.safeParse(raw);
   if (!parsed.success) return zodErrors(parsed.error);
   const res = await postRecordPayment(orderId, parsed.data, key);
-  return done(
+  const id = res.ok ? res.result.id : undefined;
+  const state = done(
     res,
     (r, already) =>
       already
@@ -61,6 +69,7 @@ export async function recordPayment(orderId: string, raw: PaymentInput, key: str
           : `Pembayaran ${formatRupiah(parsed.data.amountRp)} dicatat, menunggu verifikasi. Kas belum bertambah.`,
     orderId,
   );
+  return { ...state, id };
 }
 
 export async function verifyPayment(orderId: string, paymentId: string, key: string): Promise<FormState> {
@@ -133,4 +142,50 @@ export async function decideCorrection(correctionId: string, raw: { approve: boo
   if (!parsed.success) return zodErrors(parsed.error);
   const res = await postDecision(correctionId, parsed.data, key);
   return done(res, (r) => (r.status === "approved" ? `Koreksi ${r.doc_number} disetujui; saldo kas diperbarui.` : `Koreksi ${r.doc_number} ditolak.`));
+}
+
+// ---------------------------------------------------------------- transfer antar akun (FR-CSH-09)
+export async function createTransfer(raw: TransferInput, key: string): Promise<FormState> {
+  await requireAction("kas.kelola");
+  if (!uuid.safeParse(key).success) return bad();
+  const parsed = transferSchema.safeParse(raw);
+  if (!parsed.success) return zodErrors(parsed.error);
+  const res = await postTransfer(parsed.data, key);
+  return done(res, (r) => `Transfer ${r.doc_number} dicatat: ${formatRupiah(parsed.data.amountRp)} dipindahkan antar akun.`);
+}
+
+// ---------------------------------------------------------------- bukti pembayaran (FR-CSH-02, Security.md §8)
+/** Daftarkan file yang sudah diunggah klien ke payments/…: isi diperiksa ulang di server (tipe dari magic bytes, ukuran, EXIF). */
+export async function registerPaymentProof(orderId: string, paymentId: string, path: string): Promise<FormState> {
+  await requireAction("kas.kelola");
+  if (!uuid.safeParse(orderId).success || !uuid.safeParse(paymentId).success || !paymentProofPathSchema.safeParse(path).success) return bad();
+  const supabase = await createClient();
+  const reject = async (error: string): Promise<FormState> => {
+    await supabase.storage.from("proofs").remove([path]);
+    return { error };
+  };
+  const { data: blob, error } = await supabase.storage.from("proofs").download(path);
+  if (error || !blob) return { error: "File bukti tidak ditemukan. Coba unggah lagi." };
+  if (blob.size > PROOF_MAX_BYTES) return reject("Ukuran bukti maksimal 5 MB.");
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const mime = sniffMime(bytes);
+  if (!mime || !path.endsWith(`.${PROOF_EXT[mime]}`)) return reject("Bukti harus foto (JPG, PNG, WebP) atau PDF.");
+  if (hasExif(bytes, mime)) return reject("Foto masih berisi metadata lokasi. Unggah ulang lewat formulir ini.");
+  const { error: insErr } = await supabase.from("attachments").insert({ payment_id: paymentId, storage_path: path, mime_type: mime, size_bytes: bytes.length });
+  if (insErr) return reject(mapDbError(insErr).message);
+  revalidateCash(orderId);
+  return { ok: true, message: "Bukti transfer dilampirkan." };
+}
+
+export async function removePaymentProof(orderId: string, attachmentId: string): Promise<FormState> {
+  await requireAction("kas.kelola");
+  if (!uuid.safeParse(orderId).success || !uuid.safeParse(attachmentId).success) return bad();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("attachments").delete().eq("id", attachmentId).select("storage_path");
+  if (error) return { error: mapDbError(error).message };
+  const row = data?.[0];
+  if (!row) return { error: "Bukti tidak ditemukan." };
+  await supabase.storage.from("proofs").remove([row.storage_path]);
+  revalidateCash(orderId);
+  return { ok: true, message: "Bukti dihapus." };
 }

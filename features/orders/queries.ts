@@ -107,3 +107,18 @@ export async function getOrder(id: string) {
   ]);
   return { order: order.data, items: items.data ?? [], balance: balance.data, returns: returns.data ?? [], error: order.error };
 }
+
+/** Kolom kanan detail pesanan (desain 02): data pelanggan, piutang berjalan pelanggan, dan jumlah/waktu cetak nota. */
+export async function orderSideInfo(orderId: string, customerId: string) {
+  const supabase = await createClient();
+  const [customer, open, prints] = await Promise.all([
+    supabase.from("customers").select("name, address, phone, credit_limit_rp").eq("id", customerId).maybeSingle(),
+    supabase.from("v_order_balance").select("outstanding_rp").eq("customer_id", customerId).in("status", ["confirmed", "delivered"]),
+    supabase.from("print_logs").select("printed_at").eq("doc_type", "order").eq("doc_id", orderId).order("printed_at"),
+  ]);
+  return {
+    customer: customer.data,
+    customerOutstandingRp: (open.data ?? []).reduce((s, r) => s + r.outstanding_rp, 0),
+    prints: (prints.data ?? []).map((p) => p.printed_at),
+  };
+}

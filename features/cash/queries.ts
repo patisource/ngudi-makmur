@@ -117,10 +117,47 @@ export async function orderPayments(orderId: string) {
   const [payments, refunds] = await Promise.all([
     supabase
       .from("payments")
-      .select("id, doc_number, business_date, method, amount_rp, status, note, reject_reason, created_at, cash_accounts(name)")
+      .select("id, doc_number, business_date, method, amount_rp, status, note, reject_reason, created_at, verified_at, cash_accounts(name), attachments(id, storage_path, mime_type, created_at)")
       .eq("order_id", orderId)
       .order("created_at"),
-    supabase.from("refunds").select("id, doc_number, business_date, amount_rp, reason, return_id, cash_accounts(name)").eq("order_id", orderId).order("created_at"),
+    supabase.from("refunds").select("id, doc_number, business_date, amount_rp, reason, return_id, created_at, cash_accounts(name)").eq("order_id", orderId).order("created_at"),
   ]);
-  return { payments: payments.data ?? [], refunds: refunds.data ?? [] };
+  // Bukti transfer privat: signed URL 5 menit setelah RLS memastikan pengguna boleh melihat pembayaran (Security.md §8).
+  const files = (payments.data ?? []).flatMap((p) => p.attachments ?? []);
+  const { data: signed } = files.length ? await supabase.storage.from("proofs").createSignedUrls(files.map((a) => a.storage_path), 300) : { data: [] };
+  const url = new Map(files.map((a, i) => [a.id, signed?.[i]?.signedUrl ?? null]));
+  return {
+    payments: (payments.data ?? []).map((p) => ({
+      ...p,
+      proofs: [...(p.attachments ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((a) => ({ id: a.id, mime: a.mime_type, url: url.get(a.id) ?? null })),
+    })),
+    refunds: refunds.data ?? [],
+  };
+}
+
+/** Ringkasan halaman Pembayaran & kas (desain 06): saldo awal per akun, mutasi terbaru, koreksi terbaru. */
+export async function cashOverview(account: string | undefined) {
+  const supabase = await createClient();
+  let mut = supabase
+    .from("cash_transactions")
+    .select("id, account_id, direction, amount_rp, source_type, doc_number, business_date, note, cash_accounts(name, kind)")
+    .order("business_date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(15);
+  if (account) mut = mut.eq("account_id", account);
+  const [opening, recent, corrections] = await Promise.all([
+    supabase.from("cash_transactions").select("account_id, amount_rp").eq("source_type", "opening_balance"),
+    mut,
+    supabase
+      .from("cash_corrections")
+      .select("id, doc_number, direction, amount_rp, reason, status, requested_by_name, decided_by_name, decision_note, created_at, cash_accounts(name)")
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+  return {
+    opening: new Map((opening.data ?? []).map((o) => [o.account_id, o.amount_rp])),
+    recent: recent.data ?? [],
+    corrections: corrections.data ?? [],
+    error: recent.error ?? corrections.error,
+  };
 }

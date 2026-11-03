@@ -44,6 +44,14 @@ export const expenseSchema = z
 
 export const incomeSchema = expenseSchema.omit({ reference: true });
 
+/** Transfer antar akun kas (FR-CSH-09): dua akun berbeda, jumlah > 0, keterangan wajib. */
+export const transferSchema = z
+  .object({ businessDate: businessDate("Tanggal"), fromAccountId: accountId, toAccountId: accountId, amountRp: positiveRupiah("Jumlah"), note: text(500, "Keterangan") })
+  .strict()
+  .refine((t) => t.fromAccountId !== t.toAccountId, { path: ["toAccountId"], message: "Pilih akun tujuan yang berbeda" });
+
+export const paymentProofPathSchema = z.string().regex(/^payments\/\d{4}\/\d{2}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|pdf)$/, "Path bukti tidak valid");
+
 export const openingSchema = z
   .object({ accountId, amountRp: rupiah("Saldo awal"), businessDate: businessDate("Tanggal saldo awal") })
   .strict();
@@ -67,4 +75,5 @@ export type PaymentInput = z.input<typeof paymentSchema>;
 export type RefundInput = z.input<typeof refundSchema>;
 export type ExpenseInput = z.input<typeof expenseSchema>;
 export type IncomeInput = z.input<typeof incomeSchema>;
+export type TransferInput = z.input<typeof transferSchema>;
 export type CorrectionInput = z.input<typeof correctionSchema>;
