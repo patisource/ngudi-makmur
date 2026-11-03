@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { itemGrams, lineGross, summarizeOrder } from "./order";
-import { orderDraftSchema, cancelOrderSchema, fulfillOrderSchema } from "./validation/order";
+import { orderDraftSchema, cancelOrderSchema, fulfillOrderSchema, returnSchema } from "./validation/order";
 
 // Rumus pratinjau harus sama dengan save_order_draft (DB): gross = round(qty × harga), kg = round(qty × isi kg, 3).
 describe("pratinjau pesanan (FR-SAL-03)", () => {
@@ -89,5 +89,20 @@ describe("validasi pesanan (Security.md §5.2)", () => {
   it("serah barang: penerima opsional, tanggal wajib & tidak di masa depan", () => {
     expect(fulfillOrderSchema.parse({ recipient: "", deliveredOn: "2026-11-01" })).toEqual({ recipient: undefined, deliveredOn: "2026-11-01" });
     expect(fulfillOrderSchema.safeParse({ recipient: "Bu Sari", deliveredOn: "2999-01-01" }).success).toBe(false);
+  });
+});
+
+describe("validasi retur (FR-SAL-10)", () => {
+  const item = "8a7b6c5d-4e3f-4a1b-8c9d-0e1f2a3b4c5d";
+  it("retur valid: berat kg (koma) → string numeric", () => {
+    expect(returnSchema.parse({ businessDate: "2026-11-01", reason: "Kemasan sobek", items: [{ orderItemId: item, qtyKg: "1,5" }] }).items[0].qtyKg).toBe("1.5");
+  });
+  it("menolak tanpa item, berat 0, alasan pendek, atau nilai dari klien", () => {
+    const ok = { businessDate: "2026-11-01", reason: "Kemasan sobek", items: [{ orderItemId: item, qtyKg: "1" }] };
+    expect(returnSchema.safeParse({ ...ok, items: [] }).success).toBe(false);
+    expect(returnSchema.safeParse({ ...ok, items: [{ orderItemId: item, qtyKg: "0" }] }).success).toBe(false);
+    expect(returnSchema.safeParse({ ...ok, reason: "rusak" }).success).toBe(true);
+    expect(returnSchema.safeParse({ ...ok, reason: "abc" }).success).toBe(false);
+    expect(returnSchema.safeParse({ ...ok, items: [{ orderItemId: item, qtyKg: "1", salesValueRp: 1 }] }).success).toBe(false);
   });
 });

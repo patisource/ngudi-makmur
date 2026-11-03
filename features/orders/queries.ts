@@ -85,7 +85,7 @@ export type OrderFormOptions = Awaited<ReturnType<typeof orderFormOptions>>;
 
 export async function getOrder(id: string) {
   const supabase = await createClient();
-  const [order, items, balance] = await Promise.all([
+  const [order, items, balance, returns] = await Promise.all([
     supabase.from("orders").select("*, sales_channels(name)").eq("id", id).maybeSingle(),
     supabase
       .from("order_items")
@@ -93,6 +93,11 @@ export async function getOrder(id: string) {
       .eq("order_id", id)
       .order("sort_order"),
     supabase.from("v_order_balance").select("paid_rp, refunded_rp, outstanding_rp").eq("order_id", id).maybeSingle(),
+    supabase
+      .from("order_returns")
+      .select("id, doc_number, status, business_date, reason, total_kg, sales_value_rp, created_by, created_by_name, verified_at, verified_by_name, order_return_items(order_item_id, qty_kg)")
+      .eq("order_id", id)
+      .order("created_at"),
   ]);
-  return { order: order.data, items: items.data ?? [], balance: balance.data, error: order.error };
+  return { order: order.data, items: items.data ?? [], balance: balance.data, returns: returns.data ?? [], error: order.error };
 }

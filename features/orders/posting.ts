@@ -38,6 +38,11 @@ export async function postCancelOrder(orderId: string, reason: string, key: stri
   return post("orders.cancel", key, { orderId, reason }, () => supabase.rpc("cancel_order", { p_id: orderId, p_reason: reason }));
 }
 
+export async function postVerifyReturn(returnId: string, key: string) {
+  const supabase = await createClient();
+  return post("returns.verify", key, { returnId }, () => supabase.rpc("verify_return", { p_id: returnId }));
+}
+
 export async function postFulfillOrder(orderId: string, input: { recipient?: string; deliveredOn: string }, key: string) {
   const supabase = await createClient();
   const recipient = input.recipient ?? null;

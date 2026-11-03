@@ -6,6 +6,7 @@ import { Badge, Card, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 import { OrderActions } from "@/features/orders/components/order-actions";
 import { OrderForm } from "@/features/orders/components/order-form";
+import { ReturnsSection } from "@/features/orders/components/returns-section";
 import { getOrder, orderFormOptions } from "@/features/orders/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
@@ -37,8 +38,20 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const sp = await searchParams;
-  const { order: o, items, balance } = await getOrder(id);
+  const { order: o, items, balance, returns } = await getOrder(id);
   if (!o) notFound();
+
+  // Retur: sisa per baris = kg diserahkan − retur terverifikasi (draft dicek ulang database saat verifikasi).
+  const returnedByItem = new Map<string, number>();
+  for (const r of returns)
+    if (r.status === "verified")
+      for (const ri of r.order_return_items ?? []) returnedByItem.set(ri.order_item_id, (returnedByItem.get(ri.order_item_id) ?? 0) + dbKgToGrams(ri.qty_kg));
+  const returnItems = items.map((it) => ({
+    id: it.id,
+    name: `${it.products?.name ?? "Produk"} (${qtyText(it.qty_input)} ${it.product_packaging_id ? it.unit_label.toLowerCase() : "kg"})`,
+    soldGrams: dbKgToGrams(it.qty_kg),
+    returnedGrams: returnedByItem.get(it.id) ?? 0,
+  }));
 
   const isDraft = o.status === "draft";
   const options = isDraft && canManage ? await orderFormOptions() : null;
@@ -167,6 +180,30 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             </p>
           </Card>
         </div>
+      )}
+
+      {o.status === "delivered" && o.delivered_on && (
+        <ReturnsSection
+          orderId={o.id}
+          deliveredOn={o.delivered_on}
+          items={returnItems}
+          returns={returns.map((r) => ({
+            id: r.id,
+            docNumber: r.doc_number,
+            status: r.status,
+            businessDate: r.business_date,
+            reason: r.reason,
+            totalGrams: dbKgToGrams(r.total_kg),
+            salesValueRp: r.sales_value_rp,
+            createdBy: r.created_by,
+            createdByName: r.created_by_name,
+            verifiedAt: r.verified_at,
+            verifiedByName: r.verified_by_name,
+          }))}
+          canRecord={canDo(user.roles, "retur.catat")}
+          canVerify={canDo(user.roles, "retur.verifikasi")}
+          userId={user.id}
+        />
       )}
     </>
   );

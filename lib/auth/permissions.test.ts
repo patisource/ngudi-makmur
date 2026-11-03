@@ -73,3 +73,16 @@ describe("navItemFor", () => {
     expect(homeFor(["operator_produksi"])).toBe("/dashboard");
   });
 });
+
+describe("aksi retur (PRD Q7: catat admin_kelompok, verifikasi ketua)", () => {
+  it("hanya admin_kelompok mencatat, hanya ketua memverifikasi", () => {
+    expect(canDo(["admin_kelompok"], "retur.catat")).toBe(true);
+    expect(canDo(["admin_kelompok"], "retur.verifikasi")).toBe(false);
+    expect(canDo(["ketua"], "retur.verifikasi")).toBe(true);
+    expect(canDo(["ketua"], "retur.catat")).toBe(false);
+    for (const r of ["operator_produksi", "admin_teknis"] as AppRole[]) {
+      expect(canDo([r], "retur.catat")).toBe(false);
+      expect(canDo([r], "retur.verifikasi")).toBe(false);
+    }
+  });
+});

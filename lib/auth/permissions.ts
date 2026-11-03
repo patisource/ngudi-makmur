@@ -56,6 +56,9 @@ export const ACTIONS = {
   "produksi.kelola": ["operator_produksi"],
   // Pesanan (PRD §3.1): buat, konfirmasi, batal, serah barang = admin_kelompok; ketua hanya lihat.
   "penjualan.kelola": ["admin_kelompok"],
+  // Retur (PRD §3.1, Q7): dicatat admin_kelompok, diverifikasi fisik ketua (pencatat ≠ pemverifikasi, dicek database).
+  "retur.catat": ["admin_kelompok"],
+  "retur.verifikasi": ["ketua"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;

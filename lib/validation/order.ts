@@ -42,5 +42,18 @@ export const quickCustomerSchema = z
   })
   .strict();
 
+// Retur (FR-SAL-10): kg per baris pesanan; batas sisa yang bisa diretur diperiksa database.
+export const returnSchema = z
+  .object({
+    businessDate: businessDate("Tanggal retur"),
+    reason: text(500, "Alasan retur").refine((s) => s.length >= 5, "Alasan retur minimal 5 karakter"),
+    items: z
+      .array(z.object({ orderItemId: z.uuid("Item tidak valid"), qtyKg: kg({ label: "Berat retur" }) }).strict())
+      .min(1, "Isi berat retur minimal pada satu item")
+      .max(50, "Maksimal 50 item"),
+  })
+  .strict();
+
 export type OrderDraftInput = z.input<typeof orderDraftSchema>;
+export type ReturnInput = z.input<typeof returnSchema>;
 export type FulfillOrderInput = z.input<typeof fulfillOrderSchema>;
