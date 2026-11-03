@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Badge, Card, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
+import { PaymentsSection } from "@/features/cash/components/payments-section";
+import { listAccounts, orderPayments } from "@/features/cash/queries";
 import { OrderActions } from "@/features/orders/components/order-actions";
 import { OrderForm } from "@/features/orders/components/order-form";
 import { ReturnsSection } from "@/features/orders/components/returns-section";
@@ -54,6 +56,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   }));
 
   const isDraft = o.status === "draft";
+  // Pembayaran (M7): admin kelompok & ketua melihat; hanya admin kelompok mencatat (kas.kelola).
+  const [{ payments, refunds }, accounts] = isDraft ? [{ payments: [], refunds: [] }, []] : await Promise.all([orderPayments(o.id), listAccounts()]);
+  const activeAccounts = accounts.filter((a) => a.archived_at === null).map((a) => ({ id: a.account_id, name: a.name, kind: a.kind, balanceRp: a.balance_rp }));
+  const netPaid = (balance?.paid_rp ?? 0) - (balance?.refunded_rp ?? 0);
   const options = isDraft && canManage ? await orderFormOptions() : null;
 
   // Kebutuhan kg per produk (dampak konfirmasi / serah barang), nama produk dari master.
@@ -92,7 +98,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       {canManage && (o.status === "draft" || o.status === "confirmed") && (
         <Card>
           <h2 className="font-semibold">{isDraft ? "Konfirmasi" : "Serah barang atau batal"}</h2>
-          <OrderActions id={o.id} status={o.status} docNumber={o.doc_number} businessDate={o.business_date} impact={impact} />
+          <OrderActions id={o.id} status={o.status} docNumber={o.doc_number} businessDate={o.business_date} impact={impact} netPaidRp={netPaid} accounts={activeAccounts} />
         </Card>
       )}
 
@@ -180,6 +186,36 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             </p>
           </Card>
         </div>
+      )}
+
+      {!isDraft && balance && (
+        <PaymentsSection
+          orderId={o.id}
+          open={o.status === "confirmed" || o.status === "delivered"}
+          balance={{
+            billRp: balance.bill_rp,
+            paidRp: balance.paid_rp,
+            refundedRp: balance.refunded_rp,
+            outstandingRp: balance.outstanding_rp,
+            creditRp: balance.credit_rp,
+            pendingRp: balance.pending_rp,
+          }}
+          payments={payments.map((p) => ({
+            id: p.id,
+            docNumber: p.doc_number,
+            businessDate: p.business_date,
+            method: p.method,
+            amountRp: p.amount_rp,
+            status: p.status,
+            note: p.note,
+            rejectReason: p.reject_reason,
+            accountName: p.cash_accounts?.name ?? "—",
+          }))}
+          refunds={refunds.map((r) => ({ id: r.id, docNumber: r.doc_number, businessDate: r.business_date, amountRp: r.amount_rp, reason: r.reason, accountName: r.cash_accounts?.name ?? "—" }))}
+          accounts={activeAccounts}
+          returns={returns.filter((r) => r.status === "verified").map((r) => ({ id: r.id, label: `${r.doc_number} · ${formatKg(dbKgToGrams(r.total_kg))} · ${formatRupiah(r.sales_value_rp)}` }))}
+          canManage={canDo(user.roles, "kas.kelola")}
+        />
       )}
 
       {o.status === "delivered" && o.delivered_on && (

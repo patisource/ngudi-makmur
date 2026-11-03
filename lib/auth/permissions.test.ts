@@ -86,3 +86,17 @@ describe("aksi retur (PRD Q7: catat admin_kelompok, verifikasi ketua)", () => {
     }
   });
 });
+
+describe("UJI WAJIB SRS §11: pembayaran & kas", () => {
+  it("hanya admin_kelompok mencatat pembayaran/pengeluaran/refund; operator & admin teknis tidak pernah", () => {
+    expect(canDo(["admin_kelompok"], "kas.kelola")).toBe(true);
+    for (const r of ["operator_produksi", "ketua", "admin_teknis"] as AppRole[]) expect(canDo([r], "kas.kelola")).toBe(false);
+  });
+  it("koreksi kas diputuskan ketua saja", () => {
+    expect(canDo(["ketua"], "kas.putuskan")).toBe(true);
+    for (const r of ["admin_kelompok", "operator_produksi", "admin_teknis"] as AppRole[]) expect(canDo([r], "kas.putuskan")).toBe(false);
+  });
+  it("operator produksi tidak bisa membuka halaman kas mana pun", () => {
+    for (const p of ["/kas/buku", "/kas/pembayaran", "/kas/pengeluaran", "/kas/pemasukan", "/kas/koreksi"]) expect(canOpen(["operator_produksi"], p)).toBe(false);
+  });
+});

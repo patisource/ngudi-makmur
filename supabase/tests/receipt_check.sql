@@ -238,7 +238,7 @@ insert into _hasil (uji, lulus) select 'audit: draft dibuat, dikonfirmasi, di-vo
      and action in ('receipt.draft_created', 'receipt.confirmed', 'receipt.voided', 'receipt.draft_deleted', 'attachment.added')) = 5
   and (select reason from public.audit_logs where action = 'receipt.voided' and entity_id = (select id from _id where k = 'r1')::text) = 'Salah timbang, dicatat ulang';
 insert into _hasil (uji, lulus) select 'tidak ada kas dari biaya perolehan (FR-RCV-04)',
-  to_regclass('public.cash_transactions') is null;
+  not exists (select 1 from public.cash_transactions where source_id in (select id from _id));
 insert into _hasil (uji, lulus) select 'nilai saldo = Σ nilai mutasi (semua produk)',
   bool_and(b.value_rp = coalesce((select sum(case when m.direction = 'in' then m.value_rp else -m.value_rp end) from public.stock_movements m where m.product_id = b.product_id), 0))
   from public.stock_balances b;

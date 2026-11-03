@@ -92,7 +92,7 @@ export async function getOrder(id: string) {
       .select("id, product_id, product_packaging_id, unit_label, qty_input, qty_kg, price_snapshot, gross_rp, discount_rp, line_total_rp, sort_order, products(code, name)")
       .eq("order_id", id)
       .order("sort_order"),
-    supabase.from("v_order_balance").select("paid_rp, refunded_rp, outstanding_rp").eq("order_id", id).maybeSingle(),
+    supabase.from("v_order_balance").select("paid_rp, refunded_rp, outstanding_rp, bill_rp, credit_rp, pending_rp, returned_rp").eq("order_id", id).maybeSingle(),
     supabase
       .from("order_returns")
       .select("id, doc_number, status, business_date, reason, total_kg, sales_value_rp, created_by, created_by_name, verified_at, verified_by_name, order_return_items(order_item_id, qty_kg)")

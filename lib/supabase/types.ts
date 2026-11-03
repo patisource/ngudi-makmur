@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103140000_password_change_audit.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103150000_cash.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -17,6 +17,12 @@ export type BatchCostCategory = "tenaga_kerja" | "kemasan" | "listrik_bbm" | "la
 export type OrderStatus = "draft" | "confirmed" | "delivered" | "cancelled";
 export type OrderPaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
 export type ReturnStatus = "draft" | "verified";
+export type CashDirection = "in" | "out";
+export type CashAccountKind = "tunai" | "bank";
+export type PaymentMethod = "tunai" | "transfer";
+export type PaymentStatus = "pending" | "verified" | "rejected";
+export type CorrectionStatus = "pending" | "approved" | "rejected";
+export type CashSourceType = "opening_balance" | "payment" | "other_income" | "expense" | "refund" | "cash_correction";
 export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
 export type PostingResult = { id: string; doc_number: string | null; status: string; already: boolean };
@@ -249,6 +255,120 @@ export type Database = {
         { id: string; receipt_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
         [Fk<"attachments", "receipt_id", "receipts">]
       >;
+      cash_accounts: Table<{
+        id: string;
+        code: string;
+        name: string;
+        kind: CashAccountKind;
+        balance_rp: number;
+        opening_set_at: Ts | null;
+        sort_order: number;
+        archived_at: Ts | null;
+        created_at: Ts;
+        updated_at: Ts;
+      }>;
+      cash_transactions: Table<
+        {
+          id: number;
+          account_id: string;
+          direction: CashDirection;
+          amount_rp: number;
+          balance_after_rp: number;
+          source_type: CashSourceType;
+          source_id: string;
+          doc_number: string | null;
+          business_date: string;
+          note: string | null;
+          created_by: string | null;
+          created_at: Ts;
+        },
+        [Fk<"cash_transactions", "account_id", "cash_accounts">]
+      >;
+      payments: Table<
+        {
+          id: string;
+          doc_number: string | null;
+          order_id: string;
+          business_date: string;
+          method: PaymentMethod;
+          account_id: string;
+          amount_rp: number;
+          status: PaymentStatus;
+          note: string | null;
+          created_by: string | null;
+          created_at: Ts;
+          verified_at: Ts | null;
+          verified_by: string | null;
+          rejected_at: Ts | null;
+          rejected_by: string | null;
+          reject_reason: string | null;
+          updated_at: Ts;
+        },
+        [Fk<"payments", "order_id", "orders">, Fk<"payments", "account_id", "cash_accounts">]
+      >;
+      refunds: Table<
+        {
+          id: string;
+          doc_number: string;
+          order_id: string;
+          return_id: string | null;
+          account_id: string;
+          amount_rp: number;
+          reason: string;
+          business_date: string;
+          created_by: string | null;
+          created_at: Ts;
+        },
+        [Fk<"refunds", "order_id", "orders">, Fk<"refunds", "account_id", "cash_accounts">, Fk<"refunds", "return_id", "order_returns">]
+      >;
+      expense_categories: Table<{ code: string; name: string; sort_order: number; archived_at: Ts | null; created_at: Ts }>;
+      income_categories: Table<{ code: string; name: string; sort_order: number; archived_at: Ts | null; created_at: Ts }>;
+      expenses: Table<
+        {
+          id: string;
+          doc_number: string;
+          business_date: string;
+          category: string;
+          account_id: string;
+          amount_rp: number;
+          description: string;
+          reference: string | null;
+          created_by: string | null;
+          created_at: Ts;
+        },
+        [
+          Fk<"expenses", "account_id", "cash_accounts">,
+          { foreignKeyName: "expenses_category_fkey"; columns: ["category"]; isOneToOne: false; referencedRelation: "expense_categories"; referencedColumns: ["code"] },
+        ]
+      >;
+      other_incomes: Table<
+        { id: string; doc_number: string; business_date: string; category: string; account_id: string; amount_rp: number; description: string; created_by: string | null; created_at: Ts },
+        [
+          Fk<"other_incomes", "account_id", "cash_accounts">,
+          { foreignKeyName: "other_incomes_category_fkey"; columns: ["category"]; isOneToOne: false; referencedRelation: "income_categories"; referencedColumns: ["code"] },
+        ]
+      >;
+      cash_corrections: Table<
+        {
+          id: string;
+          doc_number: string;
+          account_id: string;
+          direction: CashDirection;
+          amount_rp: number;
+          reason: string;
+          business_date: string;
+          status: CorrectionStatus;
+          requested_by: string;
+          requested_by_name: string;
+          decided_at: Ts | null;
+          decided_by: string | null;
+          decided_by_name: string | null;
+          decision_note: string | null;
+          created_at: Ts;
+          updated_at: Ts;
+        },
+        [Fk<"cash_corrections", "account_id", "cash_accounts">]
+      >;
     };
     Views: {
       v_stock_balance: {
@@ -279,7 +399,15 @@ export type Database = {
           paid_rp: number;
           refunded_rp: number;
           outstanding_rp: number;
+          returned_rp: number;
+          bill_rp: number;
+          credit_rp: number;
+          pending_rp: number;
         };
+        Relationships: [];
+      };
+      v_cash_balance: {
+        Row: { account_id: string; code: string; name: string; kind: CashAccountKind; balance_rp: number; opening_set_at: Ts | null; archived_at: Ts | null; sort_order: number };
         Relationships: [];
       };
     };
@@ -312,11 +440,23 @@ export type Database = {
       };
       delete_order_draft: { Args: { p_id: string }; Returns: undefined };
       confirm_order: { Args: { p_id: string }; Returns: Json };
-      cancel_order: { Args: { p_id: string; p_reason: string }; Returns: Json };
+      cancel_order: { Args: { p_id: string; p_reason: string; p_refund_account?: string | null }; Returns: Json };
       fulfill_order: { Args: { p_id: string; p_recipient: string | null; p_date?: string | null }; Returns: Json };
       create_return: { Args: { p_order: string; p_date: string; p_reason: string; p_items: Json }; Returns: string };
       delete_return_draft: { Args: { p_id: string }; Returns: undefined };
       verify_return: { Args: { p_id: string }; Returns: Json };
+      set_opening_balance: { Args: { p_account: string; p_amount: number; p_date: string | null }; Returns: Json };
+      record_payment: {
+        Args: { p_order: string; p_date: string | null; p_method: PaymentMethod; p_account: string; p_amount: number; p_note: string | null; p_verified: boolean };
+        Returns: Json;
+      };
+      verify_payment: { Args: { p_id: string }; Returns: Json };
+      reject_payment: { Args: { p_id: string; p_reason: string }; Returns: Json };
+      create_refund: { Args: { p_order: string; p_account: string; p_amount: number; p_reason: string; p_date: string | null; p_return?: string | null }; Returns: Json };
+      create_expense: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string; p_reference: string | null }; Returns: Json };
+      create_other_income: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string }; Returns: Json };
+      request_cash_correction: { Args: { p_account: string; p_direction: CashDirection; p_amount: number; p_reason: string; p_date: string | null }; Returns: Json };
+      decide_cash_correction: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
     };
     Enums: {
       app_role: AppRole;
@@ -334,6 +474,11 @@ export type Database = {
       order_status: OrderStatus;
       order_payment_status: OrderPaymentStatus;
       return_status: ReturnStatus;
+      cash_direction: CashDirection;
+      cash_account_kind: CashAccountKind;
+      payment_method: PaymentMethod;
+      payment_status: PaymentStatus;
+      correction_status: CorrectionStatus;
     };
     CompositeTypes: { [_ in never]: never };
   };

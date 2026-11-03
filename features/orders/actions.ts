@@ -72,17 +72,25 @@ export async function confirmOrder(orderId: string, idemKey: string): Promise<Fo
   if (!uuid.safeParse(orderId).success || !uuid.safeParse(idemKey).success) return { error: "Data tidak valid" };
   const res = await postConfirmOrder(orderId, idemKey);
   if (res.ok) revalidate(orderId);
-  return fromPosting(res, (doc, already) => (already ? `Sudah dikonfirmasi sebelumnya sebagai ${doc}.` : `Dikonfirmasi sebagai ${doc}${res.ok && res.result.total_rp != null ? ` · tagihan ${formatRupiah(res.result.total_rp)}` : ""}. Stok direservasi.`));
+  return fromPosting(res, (doc, already) => (already ? `Sudah dikonfirmasi sebelumnya sebagai ${doc}.` : `Dikonfirmasi sebagai ${doc}${res.ok && typeof res.result.total_rp === "number" ? ` · tagihan ${formatRupiah(res.result.total_rp)}` : ""}. Stok direservasi.`));
 }
 
-export async function cancelOrder(orderId: string, reason: string, idemKey: string): Promise<FormState> {
+/** Batal (FR-SAL-06). refundAccountId wajib bila pesanan sudah dibayar: refund penuh dicatat dalam transaksi yang sama. */
+export async function cancelOrder(orderId: string, reason: string, refundAccountId: string | null, idemKey: string): Promise<FormState> {
   await requireAction("penjualan.kelola");
   if (!uuid.safeParse(orderId).success || !uuid.safeParse(idemKey).success) return { error: "Data tidak valid" };
+  if (refundAccountId && !uuid.safeParse(refundAccountId).success) return { error: "Akun refund tidak valid" };
   const parsed = cancelOrderSchema.safeParse({ reason });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Alasan tidak valid" };
-  const res = await postCancelOrder(orderId, parsed.data.reason, idemKey);
-  if (res.ok) revalidate(orderId);
-  return fromPosting(res, (doc, already) => (already ? `${doc} sudah dibatalkan sebelumnya.` : `${doc} dibatalkan. Reservasi stok dilepas.`));
+  const res = await postCancelOrder(orderId, parsed.data.reason, refundAccountId, idemKey);
+  if (res.ok) {
+    revalidate(orderId);
+    revalidatePath("/kas", "layout");
+  }
+  const refundDoc = res.ok && typeof res.result.refund_doc === "string" ? res.result.refund_doc : null;
+  return fromPosting(res, (doc, already) =>
+    already ? `${doc} sudah dibatalkan sebelumnya.` : `${doc} dibatalkan. Reservasi stok dilepas.${refundDoc ? ` Refund ${refundDoc} dicatat sebagai kas keluar.` : ""}`,
+  );
 }
 
 export async function fulfillOrder(orderId: string, raw: FulfillOrderInput, idemKey: string): Promise<FormState> {

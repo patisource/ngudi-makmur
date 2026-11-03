@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import type { FormState } from "@/features/master/actions";
 import { cancelOrder, confirmOrder, deleteOrderDraft, fulfillOrder } from "@/features/orders/actions";
+import { formatRupiah } from "@/lib/money";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { todayWib } from "@/lib/validation/common";
 
@@ -18,10 +19,28 @@ const textareaCls = "rounded-md border border-border bg-surface px-3 py-2 text-b
 // Aksi status pesanan (FR-SAL-04..06). Kunci idempotensi dibuat saat panel dibuka dan dipakai ulang untuk percobaan
 // ulang, sehingga klik ganda / koneksi putus tidak memposting dua kali (Security.md §6). Setiap aksi menjelaskan
 // dampaknya dan tombolnya menyebut aksinya (StyleGuide §9).
-export function OrderActions({ id, status, docNumber, businessDate, impact }: { id: string; status: OrderStatus; docNumber: string | null; businessDate: string; impact: string }) {
+export function OrderActions({
+  id,
+  status,
+  docNumber,
+  businessDate,
+  impact,
+  netPaidRp = 0,
+  accounts = [],
+}: {
+  id: string;
+  status: OrderStatus;
+  docNumber: string | null;
+  businessDate: string;
+  impact: string;
+  /** pembayaran bersih terverifikasi; > 0 → batal wajib memilih akun refund */
+  netPaidRp?: number;
+  accounts?: Array<{ id: string; name: string; balanceRp: number }>;
+}) {
   const router = useRouter();
   const [panel, setPanel] = useState<Panel>(null);
   const [reason, setReason] = useState("");
+  const [refundAccount, setRefundAccount] = useState(accounts[0]?.id ?? "");
   const [recipient, setRecipient] = useState("");
   const [deliveredOn, setDeliveredOn] = useState(todayWib());
   const [state, setState] = useState<FormState>({});
@@ -127,8 +146,25 @@ export function OrderActions({ id, status, docNumber, businessDate, impact }: { 
       {panel?.kind === "cancel" && (
         <div className={panelCls}>
           <p className="text-sm">
-            Batalkan {docNumber}? Reservasi stok dilepas dan nomor tidak dipakai ulang. Pembayaran yang sudah diterima dikembalikan lewat refund (modul pembayaran).
+            Batalkan {docNumber}? Reservasi stok dilepas dan nomor tidak dipakai ulang; pembayaran yang belum diverifikasi ikut ditolak.
+            {netPaidRp > 0 && (
+              <>
+                {" "}
+                Pesanan sudah dibayar <strong className="font-semibold">{formatRupiah(netPaidRp)}</strong>: uang dikembalikan penuh sebagai refund (kas keluar) dalam langkah yang sama.
+              </>
+            )}
           </p>
+          {netPaidRp > 0 && (
+            <Field label="Refund dari akun *" htmlFor="refund-account">
+              <select id="refund-account" value={refundAccount} onChange={(e) => setRefundAccount(e.target.value)} className="h-11 w-full rounded-md border border-border bg-surface px-3 text-base sm:h-10 sm:text-sm">
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} · saldo {formatRupiah(a.balanceRp)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <label htmlFor="cancel-reason" className="text-label font-medium">
             Alasan pembatalan *
           </label>
@@ -142,7 +178,7 @@ export function OrderActions({ id, status, docNumber, businessDate, impact }: { 
             className={textareaCls}
           />
           <div className="flex flex-wrap gap-2">
-            <Button kind="danger" disabled={pending || reason.trim().length < 5} onClick={() => run(() => cancelOrder(id, reason, panel.key))}>
+            <Button kind="danger" disabled={pending || reason.trim().length < 5} onClick={() => run(() => cancelOrder(id, reason, netPaidRp > 0 ? refundAccount : null, panel.key))}>
               {pending ? "Membatalkan…" : "Batalkan pesanan"}
             </Button>
             <Button disabled={pending} onClick={() => setPanel(null)}>

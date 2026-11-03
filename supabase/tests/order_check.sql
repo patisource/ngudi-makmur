@@ -308,7 +308,7 @@ do $$ begin
   insert into _hasil (uji, lulus) values ('kunci DB: delivered tidak bisa kembali ke confirmed', false);
 exception when others then insert into _hasil (uji, lulus) values ('kunci DB: delivered tidak bisa kembali ke confirmed', true);
 end $$;
-insert into _hasil (uji, lulus) select 'pesanan tidak membuat kas (kas hanya dari pembayaran terverifikasi, M7)', to_regclass('public.cash_transactions') is null;
+insert into _hasil (uji, lulus) select 'pesanan, serah, batal tanpa pembayaran tidak membuat kas', not exists (select 1 from public.cash_transactions where source_id in (select id from _id));
 insert into _hasil (uji, lulus) select 'audit: draft, konfirmasi, batal (dengan alasan), serah, hapus tercatat',
   exists (select 1 from public.audit_logs where action = 'order.draft_created' and entity_id = (select id from _id where k = 'o1')::text)
   and exists (select 1 from public.audit_logs where action = 'order.confirmed' and entity_id = (select id from _id where k = 'o1')::text)

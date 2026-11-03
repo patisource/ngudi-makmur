@@ -36,7 +36,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/produksi", label: "Produksi", icon: "factory", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/stok", label: "Stok", icon: "box", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: null },
-  { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: "M7" },
+  { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: null },
   { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M8" },
   { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/pengaturan/akun", label: "Akun & izin", icon: "shield", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
@@ -59,6 +59,10 @@ export const ACTIONS = {
   // Retur (PRD §3.1, Q7): dicatat admin_kelompok, diverifikasi fisik ketua (pencatat ≠ pemverifikasi, dicek database).
   "retur.catat": ["admin_kelompok"],
   "retur.verifikasi": ["ketua"],
+  // Pembayaran, pengeluaran, pemasukan lain, refund, saldo awal, ajukan koreksi kas = admin_kelompok (PRD §3.1).
+  // Operator produksi & admin teknis tidak pernah (uji wajib SRS §11). Setujui/tolak koreksi kas = ketua.
+  "kas.kelola": ["admin_kelompok"],
+  "kas.putuskan": ["ketua"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;
