@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { Icon } from "@/components/shell/icon";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
@@ -36,6 +37,9 @@ async function Shell({ children }: { children: React.ReactNode }) {
             <div className="truncate text-sm font-medium">{user.fullName}</div>
             <div className="truncate text-xs text-text-muted">{user.roles.map((r) => ROLE_LABEL[r]).join(", ") || "Tanpa peran"}</div>
           </div>
+          <Link href="/akun" aria-label="Akun saya & ganti kata sandi" title="Akun saya & ganti kata sandi" className="grid size-8 place-items-center rounded-md text-text-muted hover:bg-surface hover:text-text">
+            <Icon name="lock" size={17} />
+          </Link>
           <form action={logout}>
             <button type="submit" aria-label="Keluar" title="Keluar" className="grid size-8 place-items-center rounded-md text-text-muted hover:bg-surface hover:text-text">
               <Icon name="logout" size={17} />

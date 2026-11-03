@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103130000_returns.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103140000_password_change_audit.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -286,7 +286,7 @@ export type Database = {
     Functions: {
       has_role: { Args: { r: AppRole }; Returns: boolean };
       has_permission: { Args: { perm: AppPermission }; Returns: boolean };
-      log_auth_event: { Args: { p_action: "auth.login" | "auth.logout" }; Returns: undefined };
+      log_auth_event: { Args: { p_action: "auth.login" | "auth.logout" | "auth.password_changed" }; Returns: undefined };
       admin_set_roles: { Args: { p_user: string; p_roles: AppRole[]; p_reason?: string }; Returns: Json };
       admin_set_permission: { Args: { p_user: string; p_permission: AppPermission; p_granted: boolean; p_reason?: string }; Returns: Json };
       admin_set_active: { Args: { p_user: string; p_active: boolean; p_reason: string }; Returns: Json };

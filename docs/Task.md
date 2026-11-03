@@ -54,6 +54,7 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 - [x] **T1.5** Admin teknis: daftar pengguna, buat akun, ubah peran/izin, nonaktifkan (cabut sesi). Pelanggan & anggota tidak dibuatkan akun.
 - [x] **T1.6** Tabel `audit_logs` (pelaku, aksi, objek, sebelum/sesudah, alasan, waktu) + helper pencatat.
 - [x] **T1.7** Test: tiap peran hanya melihat menu & endpoint yang diizinkan (matriks PRD §3.1), termasuk **uji wajib SRS §11: `operator_produksi` tidak dapat mengubah pembayaran/kas** (UI 403 + API 403 + RPC ditolak), dan `admin_teknis` tidak dapat mencatat transaksi usaha. _Status: halaman & peran diuji (Vitest 47 uji + `supabase/tests/rbac_check.sql` 27 uji); sisi API/RPC pembayaran-kas diuji ulang saat tabelnya dibuat di M7._
+- [~] **T1.8** Ganti kata sandi sendiri (FR-AUTH-07) untuk semua peran: halaman `/akun` (tautan ikon gembok di kartu profil sidebar), verifikasi kata sandi saat ini, minimal 8 karakter, cabut sesi perangkat lain, audit `auth.password_changed`. _Status: migrasi audit diuji di proyek asli (transaksi dibatalkan); validasi 6 uji Vitest; build lulus. Belum diuji dengan login sungguhan. Minimal panjang di Supabase Dashboard harus diset 8._
 
 ## M2 — Master Data (Sprint A) · FR-MST-*
 

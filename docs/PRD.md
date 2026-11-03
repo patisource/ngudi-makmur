@@ -207,6 +207,7 @@ Format ID: `FR-<modul>-<nomor>`. Prioritas: **P0** wajib v1, **P1** sebaiknya v1
 | FR-AUTH-04 | Akun dibuat oleh `admin_teknis` (tidak ada pendaftaran mandiri). Pelanggan dan anggota tidak memiliki akun. | P0 |
 | FR-AUTH-05 | `admin_teknis` dapat mengubah peran/izin dan menonaktifkan akun; akun nonaktif tidak bisa login dan sesi aktifnya dicabut. | P0 |
 | FR-AUTH-06 | Lupa kata sandi via email reset (atau reset oleh `admin_teknis` bila pengurus tidak memakai email, lihat Q13). | P1 |
+| FR-AUTH-07 | Setiap pengguna (semua peran) dapat mengganti kata sandinya sendiri di **Akun saya**: wajib kata sandi saat ini, minimal 8 karakter, konfirmasi; sesi di perangkat lain dicabut dan kejadiannya tercatat di audit (ditambahkan atas permintaan pengguna, 3 Nov 2026). | P1 |
 
 **Kriteria penerimaan (uji wajib SRS §11):** pengguna `operator_produksi` yang membuka URL `/pembayaran` atau `/kas` melihat halaman 403, dan `POST /orders/{id}/payments` (atau aksi pengeluaran/refund/koreksi kas) dari akun tersebut mengembalikan `403` tanpa mengubah data.
 

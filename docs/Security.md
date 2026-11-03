@@ -26,7 +26,8 @@ Pelaku yang diasumsikan: orang luar tanpa akun, **pengguna sah yang melampaui pe
 ## 3. Autentikasi
 
 - Supabase Auth email + kata sandi. Pendaftaran publik **dinonaktifkan** (`enable_signup = false`); akun dibuat `admin_teknis`. Pelanggan dan anggota tidak memiliki akun.
-- Kebijakan kata sandi: minimal 10 karakter, cek terhadap daftar kata sandi bocor (fitur Supabase *leaked password protection*).
+- Kebijakan kata sandi: minimal **8** karakter (diturunkan dari 10 atas permintaan pengguna, 3 Nov 2026), maks. 72 karakter (batas bcrypt), cek terhadap daftar kata sandi bocor (fitur Supabase *leaked password protection*). Setting yang sama wajib di Supabase Dashboard → Authentication → Providers → Email (minimum length).
+- Ganti kata sandi sendiri (`/akun`, semua peran): wajib kata sandi saat ini (diverifikasi ulang ke Supabase Auth), baru ≠ lama, konfirmasi cocok; sesudah berhasil, sesi di perangkat lain dicabut dan kejadian `auth.password_changed` dicatat di audit (tanpa isi kata sandi). Kata sandi sementara dari `admin_teknis` sebaiknya langsung diganti di sini.
 - Sesi via `@supabase/ssr`: cookie `HttpOnly`, `Secure`, `SameSite=Lax`. Token tidak pernah disimpan di `localStorage`.
 - Middleware me-refresh sesi; halaman di bawah `(app)` menolak pengguna tanpa sesi.
 - Akun dinonaktifkan → `profiles.is_active = false` **dan** pemanggilan `auth.admin.signOut(userId, 'global')`. Fungsi `has_role()` juga mengembalikan `false` untuk profil nonaktif.
