@@ -84,9 +84,16 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
           </span>
         }
         actions={
-          <Link href="/penjualan" className="inline-flex h-10 items-center rounded-md border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-muted">
-            Kembali
-          </Link>
+          <>
+            <Link href="/penjualan" className="inline-flex h-10 items-center rounded-md border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-muted">
+              Kembali
+            </Link>
+            {!isDraft && (
+              <Link href={`/print/nota/${o.id}`} target="_blank" className="inline-flex h-10 items-center rounded-md border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-muted">
+                Nota
+              </Link>
+            )}
+          </>
         }
       />
       {sp.simpan === "baru" && (

@@ -120,13 +120,13 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M8 — Dashboard, Nota & Laporan (Sprint C–D) · FR-DASH-*, FR-RPT-*
 
-- [ ] **T8.1** `GET /dashboard?from&to`: agregat sesuai peran (fungsi SQL / view), rumus PRD §5.9.
-- [ ] **T8.2** Halaman dashboard: filter periode, kartu indikator, produksi tepung harian vs target ≥ 50 kg/hari, tren kg, stok di bawah minimum, aktivitas terbaru; data terbaru setelah transaksi (event/revalidasi).
-- [ ] **T8.3** `GET /orders/{id}/receipt` + layout cetak **thermal 80 mm** (utama, `@media print`), tanda "CETAK ULANG ke-n"; A5 opsional (P2). Uji dengan printer thermal nyata.
-- [ ] **T8.4** Laporan: jagung masuk, produksi & HPP, stok & mutasi, omzet per produk/jenis/saluran, piutang, kas, porsi jagung mentah, penjualan digital — tabel + filter.
-- [ ] **T8.5** Ekspor CSV di server (stream, BOM, `;`), tunduk hak akses.
-- [ ] **T8.6** Uji kecocokan: total rekap = jumlah detail untuk periode yang sama; seed DEMO menghasilkan HPP Rp6.000/kg, stok PP 40 kg & TP 45 kg, kas masuk Rp50.000, piutang Rp0.
-- [ ] **T8.7** Test (uji wajib SRS §11): cetak ulang nota → nomor sama, kas tidak berubah; printer gagal tidak menghapus pembayaran.
+- [x] **T8.1** `GET /dashboard?from&to`: agregat sesuai peran (fungsi SQL / view), rumus PRD §5.9. _Status: `GET /api/v1/dashboard` dari fungsi SQL `rpt_kpi`/`rpt_daily` (`20261103160000_reports.sql`, SECURITY INVOKER → RLS per peran); operator hanya menerima indikator produksi & stok._
+- [~] **T8.2** Halaman dashboard: filter periode, kartu indikator, produksi tepung harian vs target ≥ 50 kg/hari, tren kg, stok di bawah minimum, aktivitas terbaru; data terbaru setelah transaksi (event/revalidasi). _Status: dashboard: pemilih periode, KPI per peran (omzet, jagung masuk, produksi tepung vs target 50 kg/hari, kas, piutang), grafik produksi harian + jagung masuk vs terjual (SVG tanpa dependensi, tabel data), stok perlu perhatian, menunggu tindakan, aktivitas terbaru (ketua). Data dibaca ulang setiap permintaan. Belum diuji tampilan; CountUp menunggu T0.7._
+- [~] **T8.3** `GET /orders/{id}/receipt` + layout cetak **thermal 80 mm** (utama, `@media print`), tanda "CETAK ULANG ke-n"; A5 opsional (P2). Uji dengan printer thermal nyata. _Status: `GET /api/v1/orders/{id}/receipt` + /print/nota/[id] & /print/kuitansi/[id] (80 mm, nomor tetap, "CETAK ULANG ke-n" dari `print_logs`, tombol cetak mencatat lalu `window.print()`). Belum diuji di printer thermal nyata._
+- [~] **T8.4** Laporan: jagung masuk, produksi & HPP, stok & mutasi, omzet per produk/jenis/saluran, piutang, kas, porsi jagung mentah, penjualan digital — tabel + filter. _Status: /laporan/[jenis]: penjualan & omzet (per produk/saluran, porsi jagung mentah, digital), jagung masuk, produksi & HPP, stok & mutasi, piutang, kas — filter periode + ringkasan + tabel. Belum diuji tampilan._
+- [x] **T8.5** Ekspor CSV di server (stream, BOM, `;`), tunduk hak akses. _Status: `GET /api/v1/reports/{type}?format=csv` dibuat di server, tunduk hak akses per jenis laporan; BOM UTF-8, `;`, desimal koma, anti injeksi formula (`lib/report-utils.test.ts`)._
+- [x] **T8.6** Uji kecocokan: total rekap = jumlah detail untuk periode yang sama; seed DEMO menghasilkan HPP Rp6.000/kg, stok PP 40 kg & TP 45 kg, kas masuk Rp50.000, piutang Rp0. _Status: `supabase/tests/report_check.sql` 24/24 lulus: alur DEMO lengkap → HPP Rp6.000/kg, stok PP +40 kg & TP +45 kg, kas masuk Rp50.000, piutang Rp0; rekap = detail untuk omzet, kg, stok, kas, piutang._
+- [x] **T8.7** Test (uji wajib SRS §11): cetak ulang nota → nomor sama, kas tidak berubah; printer gagal tidak menghapus pembayaran. _Status: `report_check.sql`: cetak ulang nota → nomor sama, urutan cetak 1→2, kas/stok/status tidak berubah; cetakan gagal tidak menghapus pembayaran; nota draft ditolak; operator tidak bisa mencetak._
 
 ## M9 — Opname, Koreksi & Penyelesaian (Sprint D) · FR-STK-03/04
 

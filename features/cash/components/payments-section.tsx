@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,14 @@ export function PaymentsSection({
             {day(p.businessDate)} · {METHOD_LABEL[p.method]} · {p.accountName}
             {p.note && ` · ${p.note}`}
             {p.rejectReason && ` · ditolak: ${p.rejectReason}`}
+            {p.status === "verified" && (
+              <>
+                {" · "}
+                <Link href={`/print/kuitansi/${p.id}`} target="_blank" className="underline underline-offset-4">
+                  Kuitansi
+                </Link>
+              </>
+            )}
           </p>
           {canManage && p.status === "pending" && panel?.kind !== "verify" && panel?.kind !== "reject" && (
             <div className="flex flex-wrap gap-2">

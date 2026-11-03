@@ -1,36 +1,11 @@
 import type { Metadata } from "next";
 import { Card, PageHeader } from "@/components/ui/card";
+import { actionLabel } from "@/lib/audit-labels";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Log audit · SIM Ngudi Makmur" };
 
-const ACTION_LABEL: Record<string, string> = {
-  "auth.login": "Masuk",
-  "auth.logout": "Keluar",
-  "user.created": "Buat akun",
-  "user.roles_changed": "Ubah peran",
-  "user.permission_changed": "Ubah izin",
-  "user.activated": "Aktifkan akun",
-  "user.deactivated": "Nonaktifkan akun",
-  "user.password_reset": "Atur ulang kata sandi",
-};
-
-// Aksi master data: "<tabel>.<kata kerja>" dari trigger audit_master_row.
-const ENTITY_LABEL: Record<string, string> = {
-  members: "anggota",
-  products: "produk",
-  packagings: "jenis kemasan",
-  product_packagings: "konversi kemasan",
-  customers: "pelanggan",
-  sales_channels: "saluran",
-};
-const VERB_LABEL: Record<string, string> = { created: "Tambah", updated: "Ubah", archived: "Arsipkan", restored: "Pulihkan" };
-const actionLabel = (a: string) => {
-  if (ACTION_LABEL[a]) return ACTION_LABEL[a];
-  const [entity, verb] = a.split(".");
-  return ENTITY_LABEL[entity] && VERB_LABEL[verb] ? `${VERB_LABEL[verb]} ${ENTITY_LABEL[entity]}` : a;
-};
 const afterName = (after: unknown) => (after && typeof after === "object" && "name" in after ? String(after.name) : after && typeof after === "object" && "full_name" in after ? String(after.full_name) : null);
 
 const fmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" });

@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103150000_cash.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103160000_reports.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -22,6 +22,39 @@ export type CashAccountKind = "tunai" | "bank";
 export type PaymentMethod = "tunai" | "transfer";
 export type PaymentStatus = "pending" | "verified" | "rejected";
 export type CorrectionStatus = "pending" | "approved" | "rejected";
+export type SalesReportRow = {
+  kind: "penjualan" | "ongkir" | "retur";
+  order_id: string;
+  doc_number: string | null;
+  business_date: string;
+  customer_id: string;
+  customer_name: string;
+  channel: string;
+  channel_name: string;
+  is_digital: boolean;
+  product_id: string | null;
+  product_code: string | null;
+  product_name: string;
+  category: ProductCategory | null;
+  qty_kg: number;
+  value_rp: number;
+};
+export type StockReportRow = {
+  product_id: string;
+  code: string;
+  name: string;
+  category: ProductCategory;
+  opening_kg: number;
+  in_kg: number;
+  out_kg: number;
+  closing_kg: number;
+  on_hand_kg: number;
+  reserved_kg: number;
+  available_kg: number;
+  value_rp: number;
+  min_stock_kg: number;
+  below_min: boolean;
+};
 export type CashSourceType = "opening_balance" | "payment" | "other_income" | "expense" | "refund" | "cash_correction";
 export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
@@ -348,6 +381,7 @@ export type Database = {
           { foreignKeyName: "other_incomes_category_fkey"; columns: ["category"]; isOneToOne: false; referencedRelation: "income_categories"; referencedColumns: ["code"] },
         ]
       >;
+      print_logs: Table<{ id: number; doc_type: "order" | "payment"; doc_id: string; printed_by: string | null; printed_at: Ts }>;
       cash_corrections: Table<
         {
           id: string;
@@ -457,6 +491,11 @@ export type Database = {
       create_other_income: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string }; Returns: Json };
       request_cash_correction: { Args: { p_account: string; p_direction: CashDirection; p_amount: number; p_reason: string; p_date: string | null }; Returns: Json };
       decide_cash_correction: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
+      log_print: { Args: { p_doc_type: "order" | "payment"; p_doc_id: string }; Returns: number };
+      rpt_kpi: { Args: { p_from: string; p_to: string }; Returns: Json };
+      rpt_daily: { Args: { p_from: string; p_to: string }; Returns: { day: string; receipts_kg: number; flour_kg: number; sales_kg: number }[] };
+      rpt_sales: { Args: { p_from: string; p_to: string }; Returns: SalesReportRow[] };
+      rpt_stock: { Args: { p_from: string; p_to: string }; Returns: StockReportRow[] };
     };
     Enums: {
       app_role: AppRole;

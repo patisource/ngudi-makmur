@@ -37,7 +37,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/stok", label: "Stok", icon: "box", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: null },
   { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: null },
-  { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: "M8" },
+  { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/pengaturan/akun", label: "Akun & izin", icon: "shield", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
   { href: "/audit", label: "Log audit", icon: "history", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
