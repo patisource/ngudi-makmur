@@ -43,3 +43,10 @@ next-env.d.ts
 
 # pengaturan lokal agen/editor
 .claude/
+
+# Playwright
+/test-results/
+/playwright-report/
+
+# Backup (berisi data pribadi) — jangan di-commit
+/backups/

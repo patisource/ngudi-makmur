@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { CountUp } from "@/components/motion";
 import { BarLineChart, ColumnChart } from "@/components/shared/charts";
 import { PeriodFilter } from "@/components/shared/period-filter";
 import { Card, PageHeader } from "@/components/ui/card";
@@ -19,7 +20,7 @@ export const metadata: Metadata = { title: "Dashboard · SIM Ngudi Makmur" };
 const timeFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Jakarta" });
 const pctText = (v: number | null | undefined) => (v == null ? "—" : `${String(v).replace(".", ",")}%`);
 
-function Kpi({ label, value, children, wide }: { label: string; value: string; children?: ReactNode; wide?: boolean }) {
+function Kpi({ label, value, children, wide }: { label: string; value: ReactNode; children?: ReactNode; wide?: boolean }) {
   return (
     <Card className={`gap-1.5 ${wide ? "sm:col-span-2" : ""}`}>
       <span className="text-label text-text-muted">{label}</span>
@@ -67,26 +68,26 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             {finance && (
-              <Kpi label="Omzet" value={formatRupiah(kpi.omzet_rp)} wide>
+              <Kpi label="Omzet" value={<CountUp value={kpi.omzet_rp} format="rp" />} wide>
                 {kpi.orders_delivered} pesanan diserahkan · terjual {formatKg(dbKgToGrams(kpi.sold_kg))}
                 {kpi.returns_rp > 0 && ` · retur ${formatRupiah(kpi.returns_rp)}`}
                 <br />
                 Penjualan digital {pctText(kpi.digital_share_pct)} · porsi jagung mentah {pctText(kpi.raw_share_pct)}
               </Kpi>
             )}
-            <Kpi label="Jagung masuk" value={formatKg(dbKgToGrams(kpi.receipts_kg))}>
+            <Kpi label="Jagung masuk" value={<CountUp value={dbKgToGrams(kpi.receipts_kg) / 1000} format="kg" />}>
               {kpi.receipts_count} penerimaan{finance ? ` · ${formatRupiah(kpi.receipts_rp)}` : ""}
             </Kpi>
-            <Kpi label="Produksi tepung" value={formatKg(flourG)}>
+            <Kpi label="Produksi tepung" value={<CountUp value={flourG / 1000} format="kg" />}>
               rata-rata {formatKg(flourPerDay)}/hari vs target {FLOUR_TARGET_KG_PER_DAY} kg/hari · susut {pctText(kpi.loss_pct)}
             </Kpi>
             {finance && (
-              <Kpi label="Saldo kas" value={formatRupiah(kpi.cash_balance_rp)}>
+              <Kpi label="Saldo kas" value={<CountUp value={kpi.cash_balance_rp} format="rp" />}>
                 periode ini: masuk {formatRupiah(kpi.cash_in_rp)} · keluar {formatRupiah(kpi.cash_out_rp)}
               </Kpi>
             )}
             {finance && (
-              <Kpi label="Piutang" value={formatRupiah(kpi.receivable_rp)}>
+              <Kpi label="Piutang" value={<CountUp value={kpi.receivable_rp} format="rp" />}>
                 {kpi.receivable_orders} pesanan belum lunas{kpi.credit_rp > 0 ? ` · kelebihan bayar ${formatRupiah(kpi.credit_rp)}` : ""}
               </Kpi>
             )}

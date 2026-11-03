@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "db:types": "supabase gen types typescript --local > lib/supabase/types.ts",
-    "db:types:remote": "supabase gen types typescript --linked > lib/supabase/types.ts"
+    "db:types:remote": "supabase gen types typescript --linked > lib/supabase/types.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -23,6 +24,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

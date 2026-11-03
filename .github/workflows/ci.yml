@@ -1,0 +1,32 @@
+# CI (T0.9): lint, typecheck, dan uji unit di setiap push & pull request.
+# Uji database (supabase/tests/*_check.sql) memakai proyek Supabase dan dijalankan manual lewat scripts/db-test-all.sh,
+# karena butuh kata sandi database (tidak disimpan di GitHub).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test

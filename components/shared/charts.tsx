@@ -53,7 +53,7 @@ function Column({ cx, top, base, w, fill }: { cx: number; top: number; base: num
   if (h <= 0) return null;
   const r = Math.min(4, w / 2, h);
   const l = cx - w / 2;
-  return <path d={`M${l},${base} V${top + r} Q${l},${top} ${l + r},${top} H${l + w - r} Q${l + w},${top} ${l + w},${top + r} V${base} Z`} fill={fill} />;
+  return <path d={`M${l},${base} V${top + r} Q${l},${top} ${l + r},${top} H${l + w - r} Q${l + w},${top} ${l + w},${top + r} V${base} Z`} fill={fill} className="chart-col" />;
 }
 
 function XLabels({ data, g }: { data: DayPoint[]; g: ReturnType<typeof geometry> }) {

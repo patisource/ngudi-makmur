@@ -32,16 +32,16 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M0 — Fondasi Proyek (Sprint A)
 
-- [~] **T0.1** Inisialisasi Next.js (App Router, TS strict), Tailwind, ESLint, Prettier, pnpm.
-- [ ] **T0.2** Struktur folder sesuai [CLAUDE.md](../CLAUDE.md#struktur-folder).
-- [~] **T0.3** Supabase lokal (`supabase init`, `supabase start`), file `.env.example`, generator tipe (`pnpm db:types`).
+- [~] **T0.1** Inisialisasi Next.js (App Router, TS strict), Tailwind, ESLint, Prettier, pnpm. _Status: Next.js 16 App Router, TypeScript strict, Tailwind 4, ESLint, pnpm terpasang. Prettier belum dikonfigurasi (gaya kode dijaga ESLint)._
+- [x] **T0.2** Struktur folder sesuai [CLAUDE.md](../CLAUDE.md#struktur-folder). _Status: struktur mengikuti CLAUDE.md: app/(auth), app/(app)/<modul>, app/api/v1, app/print, components/{ui,shared,motion}, features/<modul>/{components,actions,queries}, lib/{auth,supabase,validation}, supabase/{migrations,tests}, tests/e2e. Perbedaan kecil: util format dipecah ke lib/money.ts, lib/qty.ts, lib/period.ts (bukan format.ts/dates.ts)._
+- [x] **T0.3** Supabase lokal (`supabase init`, `supabase start`), file `.env.example`, generator tipe (`pnpm db:types`). _Status: supabase/config.toml, .env.example, migrasi berurutan, seed lokal (seed.sql + seed_demo.sql). `pnpm db:types` butuh CLI ter-link; lib/supabase/types.ts masih ditulis tangan & diperbarui tiap migrasi._
 - [~] **T0.4** Design tokens (warna, tipografi, radius, spacing, motion) di `globals.css` + `tailwind` theme sesuai StyleGuide §2–§4.
 - [~] **T0.5** Komponen dasar: Button, Input, Select, Combobox, DatePicker, Textarea, Badge, Card, Dialog, Sheet, Tabs, Toast, Skeleton, EmptyState, DataTable (TanStack Table), MoneyInput, QtyInput (dengan satuan).
 - [~] **T0.6** App shell: sidebar (bisa diciutkan), topbar (pencarian, profil), breadcrumb, layout responsif.
-- [ ] **T0.7** Primitif animasi (`motion/`): `FadeIn`, `Stagger`, `CountUp`, `PresenceSwap`, hook `useReducedMotion` (StyleGuide §6).
+- [x] **T0.7** Primitif animasi (`motion/`): `FadeIn`, `Stagger`, `CountUp`, `PresenceSwap`, hook `useReducedMotion` (StyleGuide §6). _Status: components/motion: FadeIn, Stagger, PresenceSwap, CountUp (rAF, tulis langsung ke DOM, 900 ms, reduced motion → nilai akhir), useReducedMotion; token gerak §6.2 di globals.css; dipakai di KPI dashboard & kolom grafik. Tanpa pustaka Motion (§6.1 memperbolehkan)._
 - [~] **T0.8** Utilitas: format rupiah/qty/tanggal WIB, `apiResponse`, error code, `requireRole`, `withIdempotency`.
-- [ ] **T0.9** CI (GitHub Actions): lint, typecheck, test, `supabase db lint`.
-- [~] **T0.10** Vitest + Playwright terpasang dengan satu test contoh.
+- [~] **T0.9** CI (GitHub Actions): lint, typecheck, test, `supabase db lint`. _Status: .github/workflows/ci.yml: lint, typecheck, test di setiap push/PR. `supabase db lint` & uji DB tidak di CI (butuh kata sandi DB); dijalankan manual lewat scripts/db-test-all.sh. Belum terlihat jalan di GitHub Actions._
+- [x] **T0.10** Vitest + Playwright terpasang dengan satu test contoh. _Status: Vitest (128 uji) + Playwright (playwright.config.ts, `pnpm test:e2e`): smoke 18/18 lulus di laptop 1280 px & ponsel 360 px._
 
 **Keluaran:** halaman kosong ber-shell yang bisa dijalankan; Storybook-ringan halaman `/dev/ui` (hanya di development) menampilkan semua komponen.
 
@@ -64,7 +64,7 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 - [x] **T2.4** Jenis kemasan & saluran penjualan (`langsung`, `whatsapp`, `media_sosial`, `marketplace`, `lainnya`): CRUD sederhana.
 - [x] **T2.5** Pelanggan: daftar & form (dipakai di M6), mis. IRT Sekar Arum sebagai pelanggan usaha.
 - [x] **T2.6** Aturan: produk dengan stok > 0 tidak bisa diarsip; kode unik. _Status: kode unik & trigger arsip aktif; `product_on_hand()` masih 0 sampai buku stok M3._
-- [~] **T2.7** Seed dasar (`supabase/seed.sql`): 3 produk sesuai PRD §4.0 (`TK`, `PP`, `TP`, semua kg) beserta kemasan penjualan (Tepung pak 0,5 kg & 1 kg, Pipilan karung 50 kg), aturan jenis batch (pemipilan TK→PP, penepungan PP→TP), saluran penjualan, akun kas awal, kategori pengeluaran & pemasukan lain. **Seed DEMO** terpisah sesuai PRD §9.1 (Petani A, 100 kg pipilan, batch 60→50 kg tepung, pesanan 5 kg @Rp10.000, bayar Rp30.000 + Rp20.000) — tidak pernah dimuat ke data nyata.
+- [x] **T2.7** Seed dasar (`supabase/seed.sql`): 3 produk sesuai PRD §4.0 (`TK`, `PP`, `TP`, semua kg) beserta kemasan penjualan (Tepung pak 0,5 kg & 1 kg, Pipilan karung 50 kg), aturan jenis batch (pemipilan TK→PP, penepungan PP→TP), saluran penjualan, akun kas awal, kategori pengeluaran & pemasukan lain. **Seed DEMO** terpisah sesuai PRD §9.1 (Petani A, 100 kg pipilan, batch 60→50 kg tepung, pesanan 5 kg @Rp10.000, bayar Rp30.000 + Rp20.000) — tidak pernah dimuat ke data nyata. _Status: data dasar dimuat migrasi (ada di semua lingkungan); supabase/seed.sql menjelaskan hal ini; supabase/seed_demo.sql memuat 4 akun DEMO + alur PRD §9.1 lewat fungsi posting. Dicoba di transaksi yang dibatalkan: HPP Rp6.000, PP +40 kg, TP +45 kg, kas Rp50.000, piutang Rp0._
 
 ## M3 — Inti Stok & Penomoran (Sprint B) · FR-STK-01/02/05
 
@@ -132,14 +132,14 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 - [~] **T9.1** Stok opname: sesi, input fisik, selisih, posting. _Status: `save_opname_draft`/`post_opname` (`20261103170000_stock_control.sql`): selisih fisik − tercatat menjadi satu mutasi `opname_adjust` per produk (nilai rata-rata), nomor OPN; halaman /stok/opname. `stock_control_check.sql` 25/25. Belum diuji tampilan._
 - [~] **T9.2** Koreksi stok: pengajuan (admin kelompok/operator) → persetujuan ketua → mutasi; riwayat tetap ada. _Status: `request_stock_adjustment` (admin/operator) → `decide_stock_adjustment` (ketua, pengaju ≠ penyetuju, juga akun rangkap) → mutasi `correction`; riwayat tetap ada; halaman /stok/koreksi. Diuji di `stock_control_check.sql`. Belum diuji tampilan._
-- [ ] **T9.3** Audit log viewer (ketua & admin teknis).
-- [ ] **T9.4** E2E Playwright alur utama: jagung masuk → produksi → pesanan → bayar (cicilan) → serah → nota → laporan, plus skenario batal/refund, stok kurang, duplikasi, dan koreksi (bukti uji SRS §14).
-- [ ] **T9.5** Audit aksesibilitas & kinerja (Lighthouse ≥ 90 untuk Performance/Accessibility di halaman utama); uji form di ponsel nyata.
-- [ ] **T9.6** Review keamanan sesuai checklist [Security.md](Security.md#11-checklist-rilis).
-- [ ] **T9.7** **Manual bergambar** (langkah per peran dengan screenshot) dan halaman bantuan singkat.
-- [ ] **T9.8** **Backup harian** terjadwal (database + file bukti) dan **satu uji restore** ke lingkungan lain; catat hasilnya (uji wajib SRS §11).
-- [ ] **T9.9** Server uji & konfigurasi printer thermal di lokasi mitra (admin teknis).
-- [ ] **T9.10** **Pelatihan** admin kelompok & operator (data DEMO dulu, lalu transaksi nyata), UAT, dan serah terima: source, migrasi, konfigurasi contoh, manual, akun/server, hasil UAT, penanggung jawab lanjutan.
+- [x] **T9.3** Audit log viewer (ketua & admin teknis). _Status: /audit: filter jenis aksi, rentang tanggal WIB, nama pelaku, paginasi server, ringkasan dokumen/jumlah & alasan; label aksi lengkap (lib/audit-labels.ts). Ketua & admin teknis saja (RLS)._
+- [~] **T9.4** E2E Playwright alur utama: jagung masuk → produksi → pesanan → bayar (cicilan) → serah → nota → laporan, plus skenario batal/refund, stok kurang, duplikasi, dan koreksi (bukti uji SRS §14). _Status: tests/e2e/smoke.spec.ts 18/18 lulus. tests/e2e/demo-flow.spec.ts (pesanan → konfirmasi → bayar 2× → serah → nota API; ketua: laporan, CSV, 403 bayar) ditulis tetapi BELUM dijalankan: butuh lingkungan DEMO + E2E_ADMIN_EMAIL/E2E_KETUA_EMAIL/E2E_PASSWORD. Skenario jagung masuk/produksi/batal/koreksi sudah dicakup uji DB._
+- [ ] **T9.5** Audit aksesibilitas & kinerja (Lighthouse ≥ 90 untuk Performance/Accessibility di halaman utama); uji form di ponsel nyata. _Status: belum dijalankan: Lighthouse butuh unduhan paket eksternal (ditolak izin otomatis) dan halaman bersesi butuh akun. Uji ponsel nyata belum._
+- [x] **T9.6** Review keamanan sesuai checklist [Security.md](Security.md#11-checklist-rilis). _Status: docs/SecurityReview.md: checklist §11 diperiksa (RLS semua tabel, tanpa tulis langsung ke ledger, search_path fungsi, bundel klien bersih, header keamanan ditambahkan di next.config.ts, bucket privat, CSV aman, pnpm audit tanpa high). Sisa: pengaturan Auth di dashboard, backup/restore._
+- [~] **T9.7** **Manual bergambar** (langkah per peran dengan screenshot) dan halaman bantuan singkat. _Status: manual bergambar ada (manual/, dari prototipe). Perlu diperbarui dengan screenshot aplikasi nyata per peran setelah UAT._
+- [~] **T9.8** **Backup harian** terjadwal (database + file bukti) dan **satu uji restore** ke lingkungan lain; catat hasilnya (uji wajib SRS §11). _Status: scripts/backup.ps1 (+ backup-storage.mjs): dump skema/data/peran + bukti Storage + SHA256SUMS, rotasi 30; jadwal Task Scheduler & prosedur uji restore di docs/Operasional.md. BELUM dijadwalkan dan uji restore BELUM dilakukan (perlu proyek uji & keputusan admin teknis)._
+- [ ] **T9.9** Server uji & konfigurasi printer thermal di lokasi mitra (admin teknis). _Status: kegiatan lapangan (server uji & printer thermal di lokasi mitra); panduan pengaturan printer di docs/Operasional.md §5._
+- [ ] **T9.10** **Pelatihan** admin kelompok & operator (data DEMO dulu, lalu transaksi nyata), UAT, dan serah terima: source, migrasi, konfigurasi contoh, manual, akun/server, hasil UAT, penanggung jawab lanjutan. _Status: kegiatan lapangan (pelatihan, UAT, serah terima). Bahan: lingkungan DEMO (seed_demo.sql), manual, docs/Operasional.md._
 
 ---
 
