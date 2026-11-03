@@ -30,6 +30,7 @@ export const customerSchema = z
     phone: phoneSchema,
     address: optText(300, "Alamat"),
     note: optText(1000, "Catatan"),
+    creditLimitRp: optRupiah,
   })
   .strict();
 

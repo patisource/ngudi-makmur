@@ -40,3 +40,40 @@ export async function getStockProduct(productId: string) {
   const supabase = await createClient();
   return supabase.from("v_stock_balance").select("*").eq("product_id", productId).maybeSingle();
 }
+
+// ---------------------------------------------------------------- opname & koreksi stok (T9.1, T9.2)
+export async function countableProducts() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("v_stock_balance").select("product_id, name, on_hand_kg, archived_at").order("code");
+  return (data ?? []).filter((p) => !p.archived_at || p.on_hand_kg > 0).map((p) => ({ id: p.product_id, name: p.name, onHandKg: p.on_hand_kg }));
+}
+
+export async function listOpnames() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("stock_opnames")
+    .select("id, doc_number, status, business_date, note, created_by_name, posted_at, stock_opname_lines(diff_kg)")
+    .order("business_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return data ?? [];
+}
+
+export async function getOpname(id: string) {
+  const supabase = await createClient();
+  const [o, lines] = await Promise.all([
+    supabase.from("stock_opnames").select("*").eq("id", id).maybeSingle(),
+    supabase.from("stock_opname_lines").select("id, product_id, physical_kg, system_kg, diff_kg, value_rp, products(name, code)").eq("opname_id", id),
+  ]);
+  return { opname: o.data, lines: lines.data ?? [] };
+}
+
+export async function listAdjustments() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("stock_adjustments")
+    .select("id, doc_number, product_id, direction, qty_kg, reason, business_date, status, value_rp, requested_by, requested_by_name, decided_by_name, decision_note, products(name)")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return data ?? [];
+}

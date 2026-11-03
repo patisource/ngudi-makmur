@@ -21,6 +21,16 @@ export default async function StockPage() {
       <PageHeader
         title="Stok"
         description="Fisik tercatat = mutasi masuk − keluar. Tersedia = fisik tercatat − reservasi pesanan aktif. Semua dalam kg; nilai memakai rata-rata bergerak."
+        actions={
+          <>
+            <Link href="/stok/opname" className="inline-flex h-10 items-center rounded-md border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-muted">
+              Stok opname
+            </Link>
+            <Link href="/stok/koreksi" className="inline-flex h-10 items-center rounded-md border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-muted">
+              Koreksi stok
+            </Link>
+          </>
+        }
       />
       {error ? (
         <EmptyState title="Stok tidak dapat dimuat">Coba muat ulang halaman.</EmptyState>

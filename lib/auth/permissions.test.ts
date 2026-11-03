@@ -100,3 +100,22 @@ describe("UJI WAJIB SRS §11: pembayaran & kas", () => {
     for (const p of ["/kas/buku", "/kas/pembayaran", "/kas/pengeluaran", "/kas/pemasukan", "/kas/koreksi"]) expect(canOpen(["operator_produksi"], p)).toBe(false);
   });
 });
+
+describe("stok opname, koreksi stok, pembatalan batch (PRD §3.1, Security.md §4.3)", () => {
+  it("opname & ajukan koreksi: admin kelompok + operator; ketua & admin teknis tidak", () => {
+    for (const r of ["admin_kelompok", "operator_produksi"] as AppRole[]) expect(canDo([r], "stok.hitung")).toBe(true);
+    for (const r of ["ketua", "admin_teknis"] as AppRole[]) expect(canDo([r], "stok.hitung")).toBe(false);
+  });
+  it("setujui koreksi stok & pembatalan batch: ketua saja", () => {
+    expect(canDo(["ketua"], "stok.putuskan")).toBe(true);
+    expect(canDo(["ketua"], "produksi.batal.putuskan")).toBe(true);
+    for (const r of ["admin_kelompok", "operator_produksi", "admin_teknis"] as AppRole[]) {
+      expect(canDo([r], "stok.putuskan")).toBe(false);
+      expect(canDo([r], "produksi.batal.putuskan")).toBe(false);
+    }
+  });
+  it("ajukan pembatalan batch: operator produksi saja", () => {
+    expect(canDo(["operator_produksi"], "produksi.batal.ajukan")).toBe(true);
+    for (const r of ["admin_kelompok", "ketua", "admin_teknis"] as AppRole[]) expect(canDo([r], "produksi.batal.ajukan")).toBe(false);
+  });
+});

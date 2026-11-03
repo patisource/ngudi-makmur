@@ -53,19 +53,24 @@ export async function listChannels() {
  */
 export async function orderFormOptions() {
   const supabase = await createClient();
-  const [customers, channels, products, stock] = await Promise.all([
-    supabase.from("customers").select("id, name, type").is("archived_at", null).order("name").limit(1000),
+  const [customers, channels, products, stock, balances] = await Promise.all([
+    supabase.from("customers").select("id, name, type, credit_limit_rp").is("archived_at", null).order("name").limit(1000),
     supabase.from("sales_channels").select("code, name").is("archived_at", null).order("sort_order").order("name"),
     supabase
       .from("products")
       .select("id, code, name, default_price_per_kg, product_packagings(id, content_kg, default_price, archived_at, packagings(name))")
       .is("archived_at", null)
       .order("code"),
-    supabase.from("v_stock_balance").select("product_id, available_kg"),
+    supabase.from("v_stock_balance").select("product_id, available_kg, avg_cost_per_kg"),
+    // piutang berjalan per pelanggan (FR-SAL-09): sisa tagihan pesanan sah
+    supabase.from("v_order_balance").select("customer_id, outstanding_rp").in("status", ["confirmed", "delivered"]).gt("outstanding_rp", 0).limit(5000),
   ]);
   const available = new Map((stock.data ?? []).map((s) => [s.product_id, s.available_kg]));
+  const avgCost = new Map((stock.data ?? []).map((s) => [s.product_id, s.avg_cost_per_kg]));
+  const owed = new Map<string, number>();
+  for (const b of balances.data ?? []) owed.set(b.customer_id, (owed.get(b.customer_id) ?? 0) + b.outstanding_rp);
   return {
-    customers: customers.data ?? [],
+    customers: (customers.data ?? []).map((c) => ({ id: c.id, name: c.name, type: c.type, creditLimitRp: c.credit_limit_rp, outstandingRp: owed.get(c.id) ?? 0 })),
     channels: channels.data ?? [],
     products: (products.data ?? []).map((p) => ({
       id: p.id,
@@ -73,6 +78,7 @@ export async function orderFormOptions() {
       name: p.name,
       pricePerKg: p.default_price_per_kg,
       availableKg: available.get(p.id) ?? 0,
+      avgCostPerKg: avgCost.get(p.id) ?? null,
       packagings: (p.product_packagings ?? [])
         .filter((pp) => pp.archived_at === null)
         .map((pp) => ({ id: pp.id, name: pp.packagings?.name ?? "Kemasan", contentKg: pp.content_kg, price: pp.default_price }))

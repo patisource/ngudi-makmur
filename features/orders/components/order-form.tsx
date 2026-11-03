@@ -68,6 +68,18 @@ export function OrderForm({ orderId, options, defaults }: { orderId: string | nu
   const needByProduct = new Map<string, number>();
   items.forEach((r, i) => r.productId && needByProduct.set(r.productId, (needByProduct.get(r.productId) ?? 0) + summary.lines[i].grams));
   const shortages = [...needByProduct].map(([id, g]) => ({ p: productOf(id), need: g })).filter((x) => x.p && x.need > dbKgToGrams(x.p.availableKg));
+  // Peringatan P1 (T6.6): harga di bawah HPP rata-rata produk & piutang pelanggan melewati batas. Tidak memblokir.
+  const belowHpp = (row: ItemRow) => {
+    const p = productOf(row.productId);
+    const price = priceOf(row);
+    const pack = packOf(row);
+    if (!p || price == null || p.avgCostPerKg == null) return null;
+    const perKg = pack ? Math.round((price * 1000) / Math.max(1, dbKgToGrams(pack.contentKg))) : price;
+    return perKg < p.avgCostPerKg ? p.avgCostPerKg : null;
+  };
+  const customer = customers.find((c) => c.id === customerId);
+  const projectedDebt = customer ? customer.outstandingRp + summary.totalRp : 0;
+  const overLimit = customer?.creditLimitRp != null && projectedDebt > customer.creditLimitRp;
   const fe = state.fieldErrors ?? {};
 
   const setItem = (i: number, patch: Partial<ItemRow>) => setItems(items.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -98,7 +110,7 @@ export function OrderForm({ orderId, options, defaults }: { orderId: string | nu
     startQuick(async () => {
       const res = await quickAddCustomer({ name: quick.name, type: quick.type });
       if (res.error || !res.customer) return setQuick({ ...quick, error: res.error });
-      setCustomers([...customers, res.customer].sort((a, b) => a.name.localeCompare(b.name, "id")));
+      setCustomers([...customers, { ...res.customer, creditLimitRp: null, outstandingRp: 0 }].sort((a, b) => a.name.localeCompare(b.name, "id")));
       setCustomerId(res.customer.id);
       setQuick(null);
     });
@@ -251,6 +263,7 @@ export function OrderForm({ orderId, options, defaults }: { orderId: string | nu
                         "Pilih produk untuk melihat harga"
                       )}
                       {line.discountTooHigh && <span className="text-danger"> · diskon melebihi nilai baris</span>}
+                      {belowHpp(r) != null && <span className="text-warning"> · di bawah HPP rata-rata {formatRupiah(belowHpp(r) ?? 0)}/kg</span>}
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="font-medium tabular-nums">{formatRupiah(line.totalRp)}</span>
@@ -299,6 +312,12 @@ export function OrderForm({ orderId, options, defaults }: { orderId: string | nu
                 );
               })}
             </div>
+            {overLimit && customer && (
+              <p className="text-xs text-warning">
+                Piutang {customer.name} akan menjadi {formatRupiah(projectedDebt)}, melebihi batas {formatRupiah(customer.creditLimitRp ?? 0)}.
+              </p>
+            )}
+            {items.some((r) => belowHpp(r) != null) && <p className="text-xs text-warning">Ada harga jual di bawah HPP rata-rata; periksa sebelum konfirmasi.</p>}
             {shortages.length > 0 && <p className="text-xs text-warning">Jumlah melebihi stok tersedia; draft boleh disimpan, tetapi konfirmasi akan ditolak.</p>}
             {!summary.complete && summary.grams > 0 && <p className="text-xs text-warning">Ada baris tanpa harga atau dengan diskon berlebih; perbaiki sebelum menyimpan.</p>}
             <p className="text-xs text-text-subtle">Total final dihitung server dari harga katalog saat draft disimpan. Pesanan belum mengubah stok sampai dikonfirmasi.</p>

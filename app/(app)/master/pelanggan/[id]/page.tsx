@@ -30,7 +30,7 @@ export default async function EditCustomerPage({ params }: PageProps<"/master/pe
           </Link>
         </div>
       </div>
-      <CustomerForm customerId={c.id} defaults={{ name: c.name, type: c.type, phone: c.phone, address: c.address, note: c.note }} />
+      <CustomerForm customerId={c.id} defaults={{ name: c.name, type: c.type, phone: c.phone, address: c.address, note: c.note, creditLimitRp: c.credit_limit_rp }} />
     </Card>
   );
 }

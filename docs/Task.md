@@ -95,7 +95,7 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 - [~] **T5.4** Halaman detail batch terkonfirmasi (read-only) + cetak.
 - [x] **T5.5** Test HPP (rumus SRS §10): angka DEMO (60 kg PP → 50 kg TP, Rp240.000 + Rp60.000 → **Rp6.000/kg**); **output 0 → "data belum cukup", tanpa pembagian nol**; biaya batch tidak membuat baris kas.
 - [x] **T5.6** Test (uji wajib SRS §11): bahan tidak cukup ditolak; konfirmasi batch dua kali → hanya satu perubahan stok; sisa/susut tersimpan dalam kg. _Status T5.1–T5.6: `supabase/tests/production_check.sql` 33/33 lulus di proyek asli (DEMO: HPP Rp6.000/kg, PP 40 kg, TP 50 kg); `lib/production.test.ts`. T5.2 & T5.4 menunggu uji tampilan sebagai operator produksi. T5.7 menunggu keputusan Q16 (dokumen berbeda soal persetujuan ketua)._
-- [ ] **T5.7** Pembatalan batch dengan persetujuan ketua (P1).
+- [~] **T5.7** Pembatalan batch dengan persetujuan ketua (P1). _Status: `request_production_void` (operator, alasan wajib) → `decide_production_void` (ketua, pengaju ≠ penyetuju): setuju = mutasi reversal hasil keluar & bahan masuk dengan nilai semula, ditolak bila hasil sudah terpakai; tolak = kembali terkonfirmasi. Diuji di `stock_control_check.sql`. Mengikuti FR-PRD-08 & Security.md §4.3; Q16 (asumsi prototipe tanpa ketua) tetap perlu dikonfirmasi mitra. Belum diuji tampilan._
 
 ## M6 — Penjualan / Pesanan (Sprint C) · FR-SAL-*
 
@@ -104,7 +104,7 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 - [x] **T6.3** `confirm_order` (nomor INV + reservasi), `cancel_order` (lepas reservasi; catat refund bila sudah ada pembayaran terverifikasi). _Status: konfirmasi & batal diuji (`order_check.sql`); sejak M7 batal sesudah bayar mewajibkan akun refund dan mencatat refund penuh + menolak pembayaran pending dalam transaksi yang sama (`cash_check.sql`)._
 - [x] **T6.4** `POST /orders/{id}/fulfill` → `fulfill_order`: reservasi → `sale_out`, tidak bergantung status bayar. _Status: `app/api/v1/orders/[id]/fulfill/route.ts` (wajib `Idempotency-Key`, respons `{data, error}`, 401/403/409/422) + aksi UI memakai inti posting & kunci idempotensi yang sama._
 - [~] **T6.5** Daftar pesanan dengan dua badge status (barang & bayar), filter (termasuk saluran), pencarian nomor. _Status: dibangun & lolos build; belum diuji tampilan sebagai pengguna._
-- [ ] **T6.6** Peringatan harga di bawah HPP dan batas piutang (P1).
+- [~] **T6.6** Peringatan harga di bawah HPP dan batas piutang (P1). _Status: kolom `customers.credit_limit_rp` + isian di form pelanggan; form pesanan memberi peringatan (tidak memblokir) bila harga per kg di bawah HPP rata-rata produk atau piutang pelanggan + pesanan melewati batas. Belum diuji tampilan._
 - [~] **T6.7** Retur barang: `create_return` + `verify_return` (verifikasi fisik → `return_in`); retur sah mengurangi omzet. _Keputusan Q7 (3 Nov 2026): retur dicatat `admin_kelompok`, diverifikasi fisik oleh `ketua`; pencatat ≠ pemverifikasi (juga untuk akun rangkap). Status: fungsi + bagian Retur di detail pesanan selesai; `supabase/tests/return_check.sql` 30/30 lulus di proyek asli (draft tanpa efek stok, batas kg diserahkan, verifikasi ganda, dua draft bersaing, nilai persediaan = nilai saat keluar). Nilai jual retur (`sales_value_rp`) tersimpan untuk pengurang omzet di laporan M8; refund uang di T7.5. Belum diuji tampilan sebagai admin & ketua._
 - [x] **T6.8** Test (uji wajib SRS §11): **stok 5 kg, dua pesanan @4 kg dikonfirmasi bersamaan → hanya satu terkonfirmasi**; harga katalog baru tidak mengubah pesanan lama; batal melepas reservasi; barang diserahkan tidak kembali ke stok tanpa retur terverifikasi. _Status: `supabase/tests/order_check.sql` 55/55 lulus di proyek asli (transaksi dibatalkan, produk uji sementara); `lib/order.test.ts` 15 uji. Persaingan dua pesanan diuji berurutan dengan kunci saldo yang sama (seperti T3.7); uji dua sesi bersamaan sungguhan butuh database DEMO/lokal._
 
@@ -130,8 +130,8 @@ Setelah MVP, pendampingan lapangan mengikuti timeline delapan minggu SRS §13 (a
 
 ## M9 — Opname, Koreksi & Penyelesaian (Sprint D) · FR-STK-03/04
 
-- [ ] **T9.1** Stok opname: sesi, input fisik, selisih, posting.
-- [ ] **T9.2** Koreksi stok: pengajuan (admin kelompok/operator) → persetujuan ketua → mutasi; riwayat tetap ada.
+- [~] **T9.1** Stok opname: sesi, input fisik, selisih, posting. _Status: `save_opname_draft`/`post_opname` (`20261103170000_stock_control.sql`): selisih fisik − tercatat menjadi satu mutasi `opname_adjust` per produk (nilai rata-rata), nomor OPN; halaman /stok/opname. `stock_control_check.sql` 25/25. Belum diuji tampilan._
+- [~] **T9.2** Koreksi stok: pengajuan (admin kelompok/operator) → persetujuan ketua → mutasi; riwayat tetap ada. _Status: `request_stock_adjustment` (admin/operator) → `decide_stock_adjustment` (ketua, pengaju ≠ penyetuju, juga akun rangkap) → mutasi `correction`; riwayat tetap ada; halaman /stok/koreksi. Diuji di `stock_control_check.sql`. Belum diuji tampilan._
 - [ ] **T9.3** Audit log viewer (ketua & admin teknis).
 - [ ] **T9.4** E2E Playwright alur utama: jagung masuk → produksi → pesanan → bayar (cicilan) → serah → nota → laporan, plus skenario batal/refund, stok kurang, duplikasi, dan koreksi (bukti uji SRS §14).
 - [ ] **T9.5** Audit aksesibilitas & kinerja (Lighthouse ≥ 90 untuk Performance/Accessibility di halaman utama); uji form di ponsel nyata.

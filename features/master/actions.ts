@@ -64,14 +64,14 @@ export async function saveMember(memberId: string | null, _prev: FormState, fd: 
 }
 
 // ---------------------------------------------------------------- pelanggan
-const CUSTOMER_KEYS = ["name", "type", "phone", "address", "note"];
+const CUSTOMER_KEYS = ["name", "type", "phone", "address", "note", "creditLimitRp"];
 
 export async function saveCustomer(customerId: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
   await requireAction("master.kelola");
   const parsed = customerSchema.safeParse(pick(fd, CUSTOMER_KEYS));
   if (!parsed.success) return fieldErrors(parsed.error);
   const c = parsed.data;
-  const row = { name: c.name, type: c.type, phone: c.phone ?? null, address: c.address ?? null, note: c.note ?? null };
+  const row = { name: c.name, type: c.type, phone: c.phone ?? null, address: c.address ?? null, note: c.note ?? null, credit_limit_rp: c.creditLimitRp ?? null };
   const supabase = await createClient();
   const { error } = customerId ? await supabase.from("customers").update(row).eq("id", customerId) : await supabase.from("customers").insert(row);
   if (error) return dbError(error);

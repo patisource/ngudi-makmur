@@ -77,7 +77,7 @@ export function MemberForm({ memberId, defaults, canSeeContacts }: { memberId: s
 }
 
 // ---------------------------------------------------------------- pelanggan
-export type CustomerDefaults = { name?: string; type?: "perorangan" | "usaha"; phone?: string | null; address?: string | null; note?: string | null };
+export type CustomerDefaults = { name?: string; type?: "perorangan" | "usaha"; phone?: string | null; address?: string | null; note?: string | null; creditLimitRp?: number | null };
 
 export function CustomerForm({ customerId, defaults }: { customerId: string | null; defaults?: CustomerDefaults }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveCustomer.bind(null, customerId), {});
@@ -102,6 +102,9 @@ export function CustomerForm({ customerId, defaults }: { customerId: string | nu
           <Input id="address" name="address" maxLength={300} defaultValue={d.address ?? ""} />
         </Field>
       </div>
+      <Field label="Batas piutang (Rp)" htmlFor="creditLimitRp" error={fe.creditLimitRp} hint="Opsional. Form pesanan memberi peringatan bila sisa tagihan pelanggan melebihi batas ini.">
+        <Input id="creditLimitRp" name="creditLimitRp" inputMode="numeric" defaultValue={d.creditLimitRp != null ? String(d.creditLimitRp) : ""} placeholder="Kosongkan bila tanpa batas" />
+      </Field>
       <Field label="Catatan" htmlFor="note" error={fe.note}>
         <Input id="note" name="note" maxLength={1000} defaultValue={d.note ?? ""} />
       </Field>

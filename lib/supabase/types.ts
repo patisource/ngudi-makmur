@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103160000_reports.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103170000_stock_control.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -17,6 +17,7 @@ export type BatchCostCategory = "tenaga_kerja" | "kemasan" | "listrik_bbm" | "la
 export type OrderStatus = "draft" | "confirmed" | "delivered" | "cancelled";
 export type OrderPaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
 export type ReturnStatus = "draft" | "verified";
+export type OpnameStatus = "draft" | "posted";
 export type CashDirection = "in" | "out";
 export type CashAccountKind = "tunai" | "bank";
 export type PaymentMethod = "tunai" | "transfer";
@@ -113,7 +114,7 @@ export type Database = {
         [Fk<"product_packagings", "product_id", "products">, Fk<"product_packagings", "packaging_id", "packagings">]
       >;
       customers: Table<
-        Master & { id: string; code: string; name: string; type: CustomerType; phone: string | null; address: string | null; note: string | null }
+        Master & { id: string; code: string; name: string; type: CustomerType; phone: string | null; address: string | null; note: string | null; credit_limit_rp: number | null }
       >;
       sales_channels: Table<Master & { code: string; name: string; is_digital: boolean; sort_order: number }>;
       batch_type_rules: Table<
@@ -381,6 +382,45 @@ export type Database = {
           { foreignKeyName: "other_incomes_category_fkey"; columns: ["category"]; isOneToOne: false; referencedRelation: "income_categories"; referencedColumns: ["code"] },
         ]
       >;
+      stock_opnames: Table<{
+        id: string;
+        doc_number: string | null;
+        status: OpnameStatus;
+        business_date: string;
+        note: string | null;
+        created_by: string | null;
+        created_by_name: string;
+        posted_at: Ts | null;
+        posted_by: string | null;
+        created_at: Ts;
+        updated_at: Ts;
+      }>;
+      stock_opname_lines: Table<
+        { id: string; opname_id: string; product_id: string; physical_kg: number; system_kg: number | null; diff_kg: number | null; value_rp: number | null },
+        [Fk<"stock_opname_lines", "opname_id", "stock_opnames">, Fk<"stock_opname_lines", "product_id", "products">]
+      >;
+      stock_adjustments: Table<
+        {
+          id: string;
+          doc_number: string;
+          product_id: string;
+          direction: StockDirection;
+          qty_kg: number;
+          reason: string;
+          business_date: string;
+          status: CorrectionStatus;
+          value_rp: number | null;
+          requested_by: string;
+          requested_by_name: string;
+          decided_at: Ts | null;
+          decided_by: string | null;
+          decided_by_name: string | null;
+          decision_note: string | null;
+          created_at: Ts;
+          updated_at: Ts;
+        },
+        [Fk<"stock_adjustments", "product_id", "products">]
+      >;
       print_logs: Table<{ id: number; doc_type: "order" | "payment"; doc_id: string; printed_by: string | null; printed_at: Ts }>;
       cash_corrections: Table<
         {
@@ -491,6 +531,13 @@ export type Database = {
       create_other_income: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string }; Returns: Json };
       request_cash_correction: { Args: { p_account: string; p_direction: CashDirection; p_amount: number; p_reason: string; p_date: string | null }; Returns: Json };
       decide_cash_correction: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
+      save_opname_draft: { Args: { p_id: string | null; p_date: string | null; p_note: string | null; p_lines: Json }; Returns: string };
+      delete_opname_draft: { Args: { p_id: string }; Returns: undefined };
+      post_opname: { Args: { p_id: string }; Returns: Json };
+      request_stock_adjustment: { Args: { p_product: string; p_direction: StockDirection; p_qty: number; p_reason: string; p_date: string | null }; Returns: Json };
+      decide_stock_adjustment: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
+      request_production_void: { Args: { p_id: string; p_reason: string }; Returns: Json };
+      decide_production_void: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
       log_print: { Args: { p_doc_type: "order" | "payment"; p_doc_id: string }; Returns: number };
       rpt_kpi: { Args: { p_from: string; p_to: string }; Returns: Json };
       rpt_daily: { Args: { p_from: string; p_to: string }; Returns: { day: string; receipts_kg: number; flour_kg: number; sales_kg: number }[] };
@@ -518,6 +565,7 @@ export type Database = {
       payment_method: PaymentMethod;
       payment_status: PaymentStatus;
       correction_status: CorrectionStatus;
+      opname_status: OpnameStatus;
     };
     CompositeTypes: { [_ in never]: never };
   };

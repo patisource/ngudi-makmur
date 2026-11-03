@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Badge, Card, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
+import { DecisionPanel } from "@/components/shared/decision-panel";
 import { BatchActions } from "@/features/production/components/batch-actions";
+import { decideBatchVoid } from "@/features/stock/actions";
+import { BatchVoidRequest } from "@/features/stock/components/stock-forms";
 import { BatchEditor } from "@/features/production/components/batch-editor";
 import { BATCH_STATUS_LABEL, BATCH_STATUS_TONE, batchTypeOptions, getBatch } from "@/features/production/queries";
 import { canDo } from "@/lib/auth/permissions";
@@ -86,6 +89,27 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
         <Card>
           <h2 className="font-semibold">Konfirmasi</h2>
           <BatchActions id={b.id} impact={impact} canConfirm={canConfirm} canDelete={canManage} />
+        </Card>
+      )}
+
+      {(b.status === "confirmed" || b.status === "pending_void" || b.status === "void") && (b.void_reason || canDo(user.roles, "produksi.batal.ajukan")) && (
+        <Card>
+          <h2 className="font-semibold">Pembatalan batch</h2>
+          {b.status === "pending_void" && <p className="text-sm text-warning">Menunggu persetujuan ketua · alasan: {b.void_reason}</p>}
+          {b.status === "void" && (
+            <p className="text-sm text-danger">
+              Dibatalkan{b.voided_at ? ` ${timeFmt.format(new Date(b.voided_at))}` : ""} · alasan: {b.void_reason}. Hasil dikeluarkan dan bahan dikembalikan ke stok.
+            </p>
+          )}
+          {b.status === "confirmed" && canDo(user.roles, "produksi.batal.ajukan") && <BatchVoidRequest batchId={b.id} docNumber={b.doc_number ?? ""} />}
+          {b.status === "pending_void" && canDo(user.roles, "produksi.batal.putuskan") && b.void_requested_by !== user.id && (
+            <DecisionPanel
+              decide={decideBatchVoid.bind(null, b.id)}
+              approveText="Setujui pembatalan"
+              rejectText="Tolak pembatalan"
+              summary={`Batalkan ${b.doc_number}: ${outName} −${formatKg(outputG)}, ${inName} +${formatKg(inputG)} kembali ke stok.`}
+            />
+          )}
         </Card>
       )}
 

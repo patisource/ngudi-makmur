@@ -63,6 +63,12 @@ export const ACTIONS = {
   // Operator produksi & admin teknis tidak pernah (uji wajib SRS §11). Setujui/tolak koreksi kas = ketua.
   "kas.kelola": ["admin_kelompok"],
   "kas.putuskan": ["ketua"],
+  // Stok opname & ajukan koreksi stok = admin_kelompok & operator_produksi; setujui koreksi stok = ketua (PRD §3.1).
+  "stok.hitung": ["admin_kelompok", "operator_produksi"],
+  "stok.putuskan": ["ketua"],
+  // Pembatalan batch terkonfirmasi (FR-PRD-08, Security.md §4.3): diajukan operator, disetujui ketua.
+  "produksi.batal.ajukan": ["operator_produksi"],
+  "produksi.batal.putuskan": ["ketua"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;
