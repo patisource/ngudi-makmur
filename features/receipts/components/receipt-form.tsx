@@ -8,7 +8,7 @@ import { saveReceiptDraft, type ReceiptFormState } from "@/features/receipts/act
 import { PROOF_ACCEPT, uploadReceiptProof } from "@/features/receipts/proof-client";
 import { formatRupiah, parseRupiah } from "@/lib/money";
 import { parseKgToGrams } from "@/lib/qty";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 type Option = { id: string; code: string; name: string };
 export type ReceiptDefaults = {

@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ConfirmDialog, ImpactNote } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { toastResult } from "@/components/ui/toast";
 import { Badge, Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import type { FormState } from "@/features/master/actions";
@@ -10,7 +12,7 @@ import { createReturn, deleteReturnDraft, verifyReturn } from "@/features/orders
 import { formatRupiah } from "@/lib/money";
 import { formatKg, parseKgToGrams } from "@/lib/qty";
 import type { ReturnStatus } from "@/lib/supabase/types";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 export type ReturnItemOption = { id: string; name: string; soldGrams: number; returnedGrams: number };
 export type ReturnRow = {
@@ -28,7 +30,7 @@ export type ReturnRow = {
 };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
-const panelCls = "flex flex-col gap-3 rounded-lg border border-border-strong bg-surface-muted p-4";
+const panelCls = "flex flex-col gap-3 rounded-lg border border-border-strong bg-surface-muted p-4"; // form draft retur
 const inputCls = "h-11 text-base sm:h-10 sm:text-sm";
 const textareaCls = "rounded-md border border-border bg-surface px-3 py-2 text-base outline-none focus:border-border-strong focus:ring-4 focus:ring-info-soft sm:text-sm";
 
@@ -71,16 +73,16 @@ export function ReturnsSection({
   const [pending, start] = useTransition();
   const [state, setState] = useState<FormState>({});
   const [form, setForm] = useState<null | { date: string; reason: string; qty: Record<string, string> }>(null);
-  const [panel, setPanel] = useState<null | { kind: "verify" | "delete"; id: string; key: string }>(null);
+  const [panel, setPanel] = useState<null | { kind: "verify" | "delete"; id: string }>(null);
 
   const remaining = items.map((it) => ({ ...it, leftGrams: Math.max(0, it.soldGrams - it.returnedGrams) }));
   const anyLeft = remaining.some((it) => it.leftGrams > 0);
   const fe = state.fieldErrors ?? {};
 
-  // Kunci idempotensi verifikasi dibuat saat panel dibuka dan dipakai ulang untuk percobaan ulang (Security.md §6).
+  // Verifikasi/hapus lewat ConfirmDialog (kunci idempotensi dibuat saat dialog dibuka, Security.md §6).
   const openPanel = (kind: "verify" | "delete", id: string) => {
     setState({});
-    setPanel({ kind, id, key: crypto.randomUUID() });
+    setPanel({ kind, id });
   };
   const openForm = () => {
     setState({});
@@ -90,6 +92,7 @@ export function ReturnsSection({
     start(async () => {
       const res = await fn();
       setState(res);
+      toastResult(res);
       if (res.ok) {
         after();
         router.refresh();
@@ -128,7 +131,7 @@ export function ReturnsSection({
               {dateFmt.format(new Date(`${r.businessDate}T00:00:00+07:00`))} · dicatat {r.createdByName}
               {r.verifiedByName && ` · diverifikasi ${r.verifiedByName}`}
             </p>
-            {r.status === "draft" && panel?.id !== r.id && (canVerify || canRecord) && (
+            {r.status === "draft" && (canVerify || canRecord) && (
               <div className="flex flex-wrap gap-2">
                 {canVerify && !own && (
                   <Button size="sm" kind="primary" onClick={() => openPanel("verify", r.id)}>
@@ -144,32 +147,16 @@ export function ReturnsSection({
               </div>
             )}
             {panel?.id === r.id && panel.kind === "verify" && (
-              <div className={panelCls}>
-                <p className="text-sm">
-                  Barang retur <strong className="font-semibold">{formatKg(r.totalGrams)}</strong> sudah diperiksa fisik dan masuk kembali ke stok? Nomor RTR terbit dan retur dikunci.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button kind="primary" disabled={pending} onClick={() => run(() => verifyReturn(orderId, r.id, panel.key), () => setPanel(null))}>
-                    {pending ? "Memverifikasi…" : "Ya, verifikasi retur"}
-                  </Button>
-                  <Button disabled={pending} onClick={() => setPanel(null)}>
-                    Tutup
-                  </Button>
-                </div>
-              </div>
+              <ConfirmDialog title="Verifikasi retur fisik" confirmLabel="Verifikasi retur" onClose={() => setPanel(null)} onConfirm={(key) => verifyReturn(orderId, r.id, key)}>
+                <ImpactNote label="Setelah diverifikasi">
+                  Barang retur {formatKg(r.totalGrams)} sudah diperiksa fisik dan masuk kembali ke stok. Nomor RTR terbit dan retur dikunci; omzet berkurang sebesar nilai jual retur.
+                </ImpactNote>
+              </ConfirmDialog>
             )}
             {panel?.id === r.id && panel.kind === "delete" && (
-              <div className={panelCls}>
-                <p className="text-sm">Hapus draft retur ini? Draft belum mengubah stok.</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button kind="danger" disabled={pending} onClick={() => run(() => deleteReturnDraft(orderId, r.id), () => setPanel(null))}>
-                    {pending ? "Menghapus…" : "Ya, hapus draft retur"}
-                  </Button>
-                  <Button disabled={pending} onClick={() => setPanel(null)}>
-                    Tutup
-                  </Button>
-                </div>
-              </div>
+              <ConfirmDialog title="Hapus draft retur" confirmLabel="Hapus draft retur" danger onClose={() => setPanel(null)} onConfirm={() => deleteReturnDraft(orderId, r.id)}>
+                <p className="text-sm text-text-muted">Draft retur dihapus. Draft belum mengubah stok.</p>
+              </ConfirmDialog>
             )}
           </div>
         );

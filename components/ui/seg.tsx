@@ -33,7 +33,7 @@ const wrap = "relative flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-lg 
 const thumb = "seg-thumb pointer-events-none absolute left-0 top-0 rounded-md bg-surface shadow-[0_0_0_1px_var(--border),0_1px_2px_rgb(17_17_19/0.05)]";
 const item = (on: boolean, full?: boolean) =>
   cn(
-    "relative z-[1] whitespace-nowrap rounded-md px-3.5 py-1.5 text-sm transition-colors duration-150",
+    "relative z-1 whitespace-nowrap rounded-md px-3.5 py-1.5 text-sm transition-colors duration-150",
     on ? "font-medium text-text" : "text-text-muted hover:text-text",
     full && "flex-1 py-2",
   );

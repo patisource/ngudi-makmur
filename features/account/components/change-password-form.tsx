@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { changeOwnPassword, type PasswordState } from "@/features/account/actions";
-import { PASSWORD_MIN } from "@/lib/validation/account";
+import { PASSWORD_MIN } from "@/lib/auth/password-policy";
 
 const inputCls = "h-11 text-base sm:h-10 sm:text-sm";
 

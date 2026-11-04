@@ -1,6 +1,8 @@
-# CI (T0.9): lint, typecheck, dan uji unit di setiap push & pull request.
-# Uji database (supabase/tests/*_check.sql) memakai proyek Supabase dan dijalankan manual lewat scripts/db-test-all.sh,
-# karena butuh kata sandi database (tidak disimpan di GitHub).
+# CI (T0.9): setiap push & pull request.
+# - check : lint, typecheck, uji unit (Vitest)
+# - db    : migrasi + seed dasar di Supabase lokal (Docker runner), semua uji SQL supabase/tests/*_check.sql,
+#           dan uji konkurensi dua sesi (supabase/tests/concurrency.sh). Tidak menyentuh proyek Supabase asli.
+# - e2e   : Supabase lokal + seed DEMO, build produksi, Playwright (smoke + alur DEMO) di laptop 1280 px & ponsel 360 px.
 name: CI
 
 on:
@@ -30,3 +32,60 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - name: Database bersih (semua migrasi + seed dasar, tanpa DEMO)
+        run: |
+          sed -i 's#sql_paths = \["./seed.sql", "./seed_demo.sql"\]#sql_paths = ["./seed.sql"]#' supabase/config.toml
+          supabase db start
+      - name: Uji SQL (supabase/tests/*_check.sql)
+        run: bash scripts/db-test-ci.sh
+      - name: Uji konkurensi dua sesi (T3.7)
+        run: bash supabase/tests/concurrency.sh
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SITE_URL: http://localhost:3107
+      E2E_ADMIN_EMAIL: admin.demo@contoh.test
+      E2E_KETUA_EMAIL: ketua.demo@contoh.test
+      E2E_OPERATOR_EMAIL: operator.demo@contoh.test
+      E2E_TEKNIS_EMAIL: teknis.demo@contoh.test
+      E2E_PASSWORD: demo-ngudi-makmur # akun DEMO lokal (supabase/seed_demo.sql), bukan akun nyata
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - run: pnpm install --frozen-lockfile
+      - name: Supabase lokal + seed DEMO
+        run: |
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env | tr -d '"' | sed -n \
+            -e 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/p' \
+            -e 's/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/p' \
+            -e 's/^SECRET_KEY=/SUPABASE_SECRET_KEY=/p' >> "$GITHUB_ENV"
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-trace
+          path: test-results/
+          retention-days: 7

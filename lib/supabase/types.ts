@@ -545,7 +545,7 @@ export type Database = {
       decide_production_void: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
       log_print: { Args: { p_doc_type: "order" | "payment"; p_doc_id: string }; Returns: number };
       rpt_kpi: { Args: { p_from: string; p_to: string }; Returns: Json };
-      rpt_daily: { Args: { p_from: string; p_to: string }; Returns: { day: string; receipts_kg: number; flour_kg: number; sales_kg: number }[] };
+      rpt_daily: { Args: { p_from: string; p_to: string }; Returns: { day: string; receipts_kg: number; flour_kg: number; sales_kg: number; processed_kg: number }[] };
       rpt_sales: { Args: { p_from: string; p_to: string }; Returns: SalesReportRow[] };
       rpt_stock: { Args: { p_from: string; p_to: string }; Returns: StockReportRow[] };
     };

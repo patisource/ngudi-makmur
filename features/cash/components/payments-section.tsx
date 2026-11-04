@@ -8,6 +8,7 @@ import { formCls, Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
 import { Badge, Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
+import { toast, toastResult } from "@/components/ui/toast";
 import { Field, Input } from "@/components/ui/field";
 import { Seg } from "@/components/ui/seg";
 import { createRefund, recordPayment, rejectPayment, removePaymentProof, verifyPayment } from "@/features/cash/actions";
@@ -17,7 +18,7 @@ import { PROOF_ACCEPT } from "@/features/receipts/proof-client";
 import { METHOD_LABEL, PAYMENT_LABEL, PAYMENT_TONE } from "@/lib/cash";
 import { formatRupiah, parseRupiah } from "@/lib/money";
 import type { CashAccountKind, PaymentMethod, PaymentStatus } from "@/lib/supabase/types";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 export type AccountOption = { id: string; name: string; kind: CashAccountKind; balanceRp: number };
 export type ProofRow = { id: string; url: string | null; mime: string };
@@ -98,6 +99,7 @@ export function PaymentsSection({
   const close = () => setOpen(null);
   const finish = (res: FormState) => {
     setState(res);
+    toastResult(res);
     if (res.ok) {
       setOpen(null);
       startRefresh(() => router.refresh());
@@ -111,7 +113,13 @@ export function PaymentsSection({
       const res = await recordPayment(orderId, { businessDate: o.date, method: o.method, accountId: o.accountId, amountRp: o.amount, note: o.note, verified: o.verified }, o.key);
       if (res.ok && res.id && o.file) {
         const err = await uploadPaymentProof(orderId, res.id, o.file);
-        if (err) return finish({ ok: true, message: `${res.message ?? "Pembayaran dicatat."} Bukti belum terlampir: ${err} Lampirkan ulang dari daftar pembayaran.` });
+        if (err) {
+          const message = `${res.message ?? "Pembayaran dicatat."} Bukti belum terlampir: ${err} Lampirkan ulang dari daftar pembayaran.`;
+          setState({ ok: true, message });
+          toast(message, "warn");
+          setOpen(null);
+          return startRefresh(() => router.refresh());
+        }
       }
       finish(res);
     });
@@ -120,7 +128,9 @@ export function PaymentsSection({
   const addProof = (p: PaymentRow, file: File) =>
     start(async () => {
       const err = await uploadPaymentProof(orderId, p.id, file);
-      setState(err ? { error: err } : { ok: true, message: "Bukti transfer dilampirkan." });
+      const res = err ? { error: err } : { ok: true, message: "Bukti transfer dilampirkan." };
+      setState(res);
+      toastResult(res);
       startRefresh(() => router.refresh());
     });
 
@@ -240,7 +250,6 @@ export function PaymentsSection({
           ))}
         </ul>
       )}
-      {!open && <Notice state={state} />}
 
       {open?.kind === "pay" && (
         <Dialog

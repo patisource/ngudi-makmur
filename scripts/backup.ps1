@@ -1,8 +1,10 @@
 # Backup harian (T9.8, Security.md §7): skema + data database dan berkas bukti Storage ke folder backups\YYYY-MM-DD.
 # Dijalankan admin teknis (Task Scheduler Windows, lihat docs/Operasional.md). Kredensial dari .env.local; tidak dicetak.
 # Hasil berisi data pribadi (NIK, no. HP): simpan di disk terenkripsi / penyimpanan terbatas, JANGAN di-commit (backups/ di .gitignore).
-# Pemakaian:  ./scripts/backup.ps1 [-Region ap-southeast-1] [-Keep 30]
-param([string]$Region = "ap-southeast-1", [int]$Keep = 30)
+# Pemakaian:  ./scripts/backup.ps1 [-Region ap-southeast-1] [-Keep 30] [-OutDir D:\Backup-SIM]
+# -OutDir: folder induk backup (bawaan: <aplikasi>\backups). Sebaiknya di luar folder OneDrive/Google Drive agar data
+#          pribadi tidak ikut tersinkron ke cloud pribadi.
+param([string]$Region = "ap-southeast-1", [int]$Keep = 30, [string]$OutDir = "")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $env_ = @{}
@@ -11,7 +13,8 @@ $ref = $env_["SUPABASE_PROJECT_REF"]; $pw = $env_["SUPABASE_DB_PASSWORD"]
 if (-not $ref -or -not $pw) { throw "SUPABASE_PROJECT_REF dan SUPABASE_DB_PASSWORD wajib ada di .env.local" }
 $enc = [Uri]::EscapeDataString($pw)
 $stamp = (Get-Date).ToString("yyyy-MM-dd")
-$dir = Join-Path $root "backups\$stamp"
+$base = if ($OutDir) { $OutDir } else { Join-Path $root "backups" }
+$dir = Join-Path $base $stamp
 New-Item -ItemType Directory -Force $dir | Out-Null
 
 $ok = $false
@@ -38,4 +41,4 @@ Get-ChildItem $dir -Recurse -File | Get-FileHash -Algorithm SHA256 | ForEach-Obj
 Write-Host "Backup selesai: $dir"
 
 # Rotasi: simpan $Keep folder terbaru.
-Get-ChildItem (Join-Path $root "backups") -Directory | Sort-Object Name -Descending | Select-Object -Skip $Keep | Remove-Item -Recurse -Force -Confirm:$false
+Get-ChildItem $base -Directory | Where-Object { $_.Name -match '^\d{4}-\d{2}-\d{2}$' } | Sort-Object Name -Descending | Select-Object -Skip $Keep | Remove-Item -Recurse -Force -Confirm:$false

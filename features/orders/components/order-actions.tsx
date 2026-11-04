@@ -7,13 +7,14 @@ import { formCls, Notice } from "@/components/shared/notice";
 import { ReceiptDialog } from "@/components/shared/receipt-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { toastResult } from "@/components/ui/toast";
 import { Field, Input } from "@/components/ui/field";
 import type { FormState } from "@/features/master/actions";
 import { cancelOrder, confirmOrder, deleteOrderDraft, fulfillOrder } from "@/features/orders/actions";
 import { formatRupiah } from "@/lib/money";
 import type { OrderStatus } from "@/lib/supabase/types";
 import type { ThermalLine } from "@/lib/thermal";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 type Kind = "confirm" | "delete" | "fulfill" | "cancel" | "nota";
 type Open = null | { kind: Kind; key: string };
@@ -65,6 +66,7 @@ export function OrderActions({
     start(async () => {
       const res = await fn();
       setState(res);
+      toastResult(res);
       if (res.ok) {
         setOpen(null);
         if (after) after();
@@ -116,7 +118,6 @@ export function OrderActions({
           </Button>
         )}
       </div>
-      {!open && <Notice state={state} />}
 
       {open?.kind === "nota" && receipt && (
         <ReceiptDialog title={`Struk thermal ${docNumber ?? ""}`} docId={id} lines80={receipt.lines80} lines58={receipt.lines58} printed={receipt.printed} canPrint={receipt.canPrint} onClose={close} />

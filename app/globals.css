@@ -10,7 +10,7 @@
   --border-strong: #d4d4d8;
   --text: #111113;
   --text-muted: #6b6b73;
-  --text-subtle: #9a9aa2;
+  --text-subtle: #6e6e76; /* WCAG AA ≥ 4,5:1 di bg/surface/surface-muted (T9.5) */
   --primary: #111113;
   --primary-fg: #ffffff;
   --accent: #2fa84f;
@@ -34,7 +34,7 @@
     --border-strong: #3f3f46;
     --text: #f4f4f5;
     --text-muted: #a1a1aa;
-    --text-subtle: #71717a;
+    --text-subtle: #8e8e96; /* WCAG AA ≥ 4,5:1 di permukaan gelap (T9.5) */
     --primary: #f4f4f5;
     --primary-fg: #111113;
     --accent: #3dbe60;
@@ -480,4 +480,73 @@ html[data-splash] .splash {
     animation: none !important;
     transition: none !important;
   }
+}
+/* Skeleton (StyleGuide §6.3): kontras rendah, kilau pelan 1,6 s lewat transform saja; baru tampil setelah 300 ms
+   agar halaman yang cepat tidak berkedip. Reduced motion: tanpa kilau, langsung tampil. */
+@keyframes skel-appear {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes skel-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.skel-wait {
+  animation: skel-appear 160ms ease 300ms both;
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--surface) 70%, transparent), transparent);
+  animation: skel-shine 1.6s var(--in-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    display: none;
+  }
+}
+
+/* Toast (StyleGuide §6.3): masuk dari bawah kanan, garis umur 5,2 s menyusut. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.97);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.98);
+  }
+}
+@keyframes toast-life {
+  to {
+    transform: scaleX(0);
+  }
+}
+.toast {
+  animation: toast-in var(--spring-gentle-d) var(--spring-gentle) both;
+}
+.toast[data-leaving] {
+  animation: toast-out 160ms ease-in both;
+}
+.toast-life {
+  transform-origin: left;
+  animation: toast-life 5.2s linear both;
+}
+.toast:hover .toast-life,
+.toast:focus-within .toast-life {
+  animation-play-state: paused;
 }

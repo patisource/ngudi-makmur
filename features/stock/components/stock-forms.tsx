@@ -2,14 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ConfirmDialog, ImpactNote } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { toastResult } from "@/components/ui/toast";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { formCls, Notice } from "@/components/shared/notice";
 import type { FormState } from "@/features/master/actions";
 import { deleteOpname, postOpname, requestAdjustment, requestBatchVoid, saveOpname } from "@/features/stock/actions";
 import { dbKgToGrams, formatKg, parseKgToGrams } from "@/lib/qty";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 type Product = { id: string; name: string; onHandKg: number };
 
@@ -84,60 +86,29 @@ export function OpnameForm({ opnameId, products, defaults }: { opnameId: string 
 
 export function OpnameActions({ id, impact }: { id: string; impact: string }) {
   const router = useRouter();
-  const [panel, setPanel] = useState<null | { kind: "post" | "delete"; key: string }>(null);
-  const [state, setState] = useState<FormState>({});
-  const [pending, start] = useTransition();
-  const run = (fn: () => Promise<FormState>, after: () => void) =>
-    start(async () => {
-      const res = await fn();
-      setState(res);
-      if (res.ok) after();
-    });
+  const [open, setOpen] = useState<null | "post" | "delete">(null);
+  const close = () => setOpen(null);
   return (
-    <div className="flex flex-col gap-3">
-      {!panel && (
-        <div className="flex flex-wrap gap-2">
-          <Button kind="primary" onClick={() => setPanel({ kind: "post", key: crypto.randomUUID() })}>
-            Posting opname
-          </Button>
-          <Button kind="ghost" onClick={() => setPanel({ kind: "delete", key: crypto.randomUUID() })}>
-            Hapus draft
-          </Button>
-        </div>
+    <>
+      <div className="flex flex-wrap gap-2">
+        <Button kind="ghost" onClick={() => setOpen("delete")}>
+          Hapus draft
+        </Button>
+        <Button kind="primary" onClick={() => setOpen("post")}>
+          Posting opname
+        </Button>
+      </div>
+      {open === "post" && (
+        <ConfirmDialog title="Posting stok opname" description="Nomor OPN terbit; hasil hitung tidak bisa diubah lagi." confirmLabel="Posting opname" onClose={close} onConfirm={(key) => postOpname(id, key)}>
+          <ImpactNote label="Setelah diposting">{impact}. Selisih dicatat sebagai mutasi stok opname.</ImpactNote>
+        </ConfirmDialog>
       )}
-      {panel?.kind === "post" && (
-        <div className={formCls.panel}>
-          <p className="text-sm">
-            <strong className="font-semibold">{impact}</strong>. Nomor OPN terbit dan selisih dicatat sebagai mutasi stok opname; tidak bisa diubah lagi.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="primary" disabled={pending} onClick={() => run(() => postOpname(id, panel.key), () => {
-                setPanel(null);
-                router.refresh();
-              })}>
-              {pending ? "Memposting…" : "Ya, posting opname"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+      {open === "delete" && (
+        <ConfirmDialog title="Hapus draft opname" confirmLabel="Hapus draft" danger onClose={close} onConfirm={() => deleteOpname(id)} onDone={() => router.push("/stok/opname")}>
+          <p className="text-sm text-text-muted">Draft opname dihapus. Stok belum berubah.</p>
+        </ConfirmDialog>
       )}
-      {panel?.kind === "delete" && (
-        <div className={formCls.panel}>
-          <p className="text-sm">Hapus draft opname ini? Stok belum berubah.</p>
-          <div className="flex flex-wrap gap-2">
-            <Button kind="danger" disabled={pending} onClick={() => run(() => deleteOpname(id), () => router.push("/stok/opname"))}>
-              {pending ? "Menghapus…" : "Ya, hapus draft"}
-            </Button>
-            <Button disabled={pending} onClick={() => setPanel(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
-      )}
-      <Notice state={state} />
-    </div>
+    </>
   );
 }
 
@@ -200,6 +171,7 @@ export function AdjustmentForm({ products }: { products: Product[] }) {
           start(async () => {
             const res = await requestAdjustment({ productId: v.productId, direction: v.direction, qtyKg: v.qty, reason: v.reason, businessDate: v.date }, key);
             setState(res);
+            toastResult(res);
             if (res.ok) {
               setKey(crypto.randomUUID());
               setV(empty);
@@ -216,51 +188,28 @@ export function AdjustmentForm({ products }: { products: Product[] }) {
 
 // ---------------------------------------------------------------- ajukan pembatalan batch (T5.7)
 export function BatchVoidRequest({ batchId, docNumber }: { batchId: string; docNumber: string }) {
-  const router = useRouter();
-  const [open, setOpen] = useState<null | string>(null);
+  const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const [state, setState] = useState<FormState>({});
-  const [pending, start] = useTransition();
   return (
-    <div className="flex flex-col gap-2">
-      {!open ? (
-        <Button kind="ghost" className="w-fit" onClick={() => {
-            setState({});
-            setOpen(crypto.randomUUID());
-          }}>
-          Ajukan pembatalan batch
-        </Button>
-      ) : (
-        <div className={formCls.panel}>
-          <p className="text-sm">Pembatalan {docNumber} butuh persetujuan ketua. Bila disetujui, hasil batch dikeluarkan dan bahan dikembalikan ke stok; ditolak bila hasil sudah terpakai/terjual.</p>
-          <label htmlFor="void-reason" className="text-label font-medium">
-            Alasan *
-          </label>
-          <textarea id="void-reason" rows={2} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="mis. Salah pilih jenis batch" className={formCls.textarea} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              kind="danger"
-              disabled={pending || reason.trim().length < 5}
-              onClick={() =>
-                start(async () => {
-                  const res = await requestBatchVoid(batchId, reason, open);
-                  setState(res);
-                  if (res.ok) {
-                    setOpen(null);
-                    router.refresh();
-                  }
-                })
-              }
-            >
-              {pending ? "Mengajukan…" : "Ajukan pembatalan"}
-            </Button>
-            <Button disabled={pending} onClick={() => setOpen(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+    <>
+      <Button kind="ghost" className="w-fit" onClick={() => setOpen(true)}>
+        Ajukan pembatalan batch
+      </Button>
+      {open && (
+        <ConfirmDialog
+          title={`Ajukan pembatalan ${docNumber}`}
+          confirmLabel="Ajukan pembatalan"
+          danger
+          disabled={reason.trim().length < 5}
+          onClose={() => setOpen(false)}
+          onConfirm={(key) => requestBatchVoid(batchId, reason, key)}
+        >
+          <p className="text-sm text-text-muted">Butuh persetujuan ketua. Bila disetujui, hasil batch dikeluarkan dan bahan dikembalikan ke stok; ditolak bila hasil sudah terpakai/terjual.</p>
+          <Field label="Alasan *" htmlFor="void-reason">
+            <textarea id="void-reason" rows={2} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="mis. Salah pilih jenis batch" className={formCls.textarea} />
+          </Field>
+        </ConfirmDialog>
       )}
-      <Notice state={state} />
-    </div>
+    </>
   );
 }

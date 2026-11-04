@@ -3,14 +3,16 @@
 import { registerPaymentProof } from "@/features/cash/actions";
 import { prepareProof } from "@/features/receipts/proof-client";
 import { proofPath } from "@/lib/files";
-import { createClient } from "@/lib/supabase/client";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
+
+// supabase-js (±250 KB) hanya dimuat saat benar-benar mengunggah, bukan saat halaman dibuka (T9.5).
+const browserClient = async () => (await import("@/lib/supabase/client")).createClient();
 
 export async function uploadPaymentProof(orderId: string, paymentId: string, file: File): Promise<string | null> {
   const prepared = await prepareProof(file);
   if ("error" in prepared) return prepared.error;
   const path = proofPath("payments", todayWib(), crypto.randomUUID(), prepared.mime);
-  const { error } = await createClient().storage.from("proofs").upload(path, prepared.blob, { contentType: prepared.mime, upsert: false });
+  const { error } = await (await browserClient()).storage.from("proofs").upload(path, prepared.blob, { contentType: prepared.mime, upsert: false });
   if (error) return "Bukti gagal diunggah. Periksa koneksi lalu coba lagi.";
   const res = await registerPaymentProof(orderId, paymentId, path);
   return res.error ?? null;

@@ -4,6 +4,7 @@ import { Icon } from "@/components/shell/icon";
 import { CrumbProvider } from "@/components/shell/crumb";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { Topbar } from "@/components/shell/topbar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { pendingFor } from "@/features/shell/queries";
 import { navFor, ROLE_LABEL } from "@/lib/auth/permissions";
 import { requireUser } from "@/lib/auth/session";
@@ -67,11 +68,11 @@ async function Shell({ children }: { children: React.ReactNode }) {
 // Kerangka (StyleGuide: skeleton kontras rendah) selama sesi dibaca; bentuknya sama dengan shell agar tidak melompat.
 function ShellSkeleton() {
   return (
-    <div className="flex min-h-dvh" aria-busy="true" aria-label="Memuat">
+    <div className="flex min-h-dvh" role="status" aria-busy="true" aria-label="Memuat">
       <div className="hidden w-[248px] shrink-0 border-r border-border bg-surface lg:block" />
-      <div className="flex flex-1 flex-col gap-5 px-4 pt-16 sm:px-8 lg:pt-16">
-        <div className="h-8 w-56 animate-pulse rounded-md bg-surface-muted" />
-        <div className="h-28 animate-pulse rounded-xl bg-surface" />
+      <div className="skel-wait flex flex-1 flex-col gap-5 px-4 pt-16 sm:px-8 lg:pt-16">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-28 w-full rounded-xl" />
       </div>
     </div>
   );

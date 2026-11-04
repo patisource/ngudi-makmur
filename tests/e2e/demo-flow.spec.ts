@@ -22,7 +22,8 @@ test("admin: pesanan 2 kg tepung → konfirmasi → bayar 2× → serah → nota
   await login(page, ADMIN ?? "");
   await page.goto("/penjualan/baru");
   await page.getByText("Langsung", { exact: true }).click();
-  await page.locator("#customerId").selectOption({ label: "IRT Sekar Arum (usaha)" });
+  await page.locator("#customerId").fill("Sekar");
+  await page.getByRole("option", { name: /IRT Sekar Arum/ }).first().click();
   await page.getByLabel("Produk baris 1").selectOption({ index: 3 });
   await page.getByLabel(/Jumlah baris 1/).fill("2");
   await page.getByRole("button", { name: "Simpan draft" }).click();

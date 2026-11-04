@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { toastResult } from "@/components/ui/toast";
 import type { FormState } from "@/features/master/actions";
 import { confirmProduction, deleteProductionDraft } from "@/features/production/actions";
 
@@ -26,6 +27,7 @@ export function BatchActions({ id, impact, canConfirm, canDelete }: { id: string
     start(async () => {
       const res = await fn();
       setState(res);
+      toastResult(res);
       if (res.ok) {
         setOpen(null);
         after();

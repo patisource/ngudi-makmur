@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { MAX_RUPIAH, parseRupiah } from "@/lib/money";
 import { gramsToKgString, parseKgToGrams } from "@/lib/qty";
+import { todayWib } from "@/lib/today";
 
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 export const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
@@ -37,7 +38,7 @@ export const kg = (opts: { allowZero?: boolean; max?: number; label: string }) =
   );
 
 /** Tanggal hari ini di Asia/Jakarta, format YYYY-MM-DD (tanggal bisnis, CLAUDE.md aturan 8). */
-export const todayWib = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+export { todayWib };
 
 /** Tanggal transaksi: wajib, tidak melebihi hari ini (WIB). */
 export const businessDate = (label: string) =>

@@ -32,10 +32,22 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user) {
     const tooMany = error?.status === 429;
-    return { error: tooMany ? "Terlalu banyak percobaan masuk. Tunggu beberapa menit lalu coba lagi." : GENERIC, email };
+    // 5xx / jaringan putus (status kosong): jangan disebut "kata sandi salah" — pengguna jadi mengetik ulang sandi yang benar.
+    const unavailable = Boolean(error) && (!error?.status || error.status >= 500);
+    const message = tooMany
+      ? "Terlalu banyak percobaan masuk. Tunggu beberapa menit lalu coba lagi."
+      : unavailable
+        ? "Layanan masuk sedang sibuk atau tidak terjangkau. Coba lagi sebentar lagi."
+        : GENERIC;
+    return { error: message, email };
   }
 
-  const { data: profile } = await supabase.from("profiles").select("is_active").eq("id", data.user.id).maybeSingle();
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("is_active").eq("id", data.user.id).maybeSingle();
+  if (profileError) {
+    // Gangguan sementara saat membaca profil: jangan disebut "dinonaktifkan" (menyesatkan); minta coba lagi.
+    await supabase.auth.signOut();
+    return { error: "Gagal memeriksa akun. Coba masuk lagi sebentar lagi.", email };
+  }
   if (!profile?.is_active) {
     await supabase.auth.signOut();
     return { error: "Akun ini dinonaktifkan. Hubungi admin teknis.", email };

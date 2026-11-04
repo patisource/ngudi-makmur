@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { quickAddCustomer, saveOrderDraft, type OrderFormState } from "@/features/orders/actions";
@@ -11,7 +12,7 @@ import type { OrderFormOptions } from "@/features/orders/queries";
 import { formatRupiah, parseRupiah } from "@/lib/money";
 import { summarizeOrder } from "@/lib/order";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 type Options = Omit<OrderFormOptions, "error">;
 type Product = Options["products"][number];
@@ -137,15 +138,15 @@ export function OrderForm({ orderId, options, defaults }: { orderId: string | nu
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Pelanggan *" htmlFor="customerId" error={fe.customerId}>
-                <select id="customerId" value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={selectCls} aria-invalid={Boolean(fe.customerId)}>
-                  <option value="">Pilih pelanggan</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.type === "usaha" ? " (usaha)" : ""}
-                    </option>
-                  ))}
-                </select>
+                <Combobox
+                  id="customerId"
+                  value={customerId}
+                  onChange={setCustomerId}
+                  invalid={Boolean(fe.customerId)}
+                  placeholder="Ketik nama pelanggan"
+                  emptyText="Tidak ditemukan. Pakai + Pelanggan baru."
+                  options={customers.map((c) => ({ value: c.id, label: c.name, hint: c.type === "usaha" ? "usaha" : undefined }))}
+                />
               </Field>
               <Field label="Tanggal pesanan *" htmlFor="businessDate" error={fe.businessDate}>
                 <Input id="businessDate" type="date" max={todayWib()} value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />

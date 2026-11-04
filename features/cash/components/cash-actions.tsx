@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/toast";
 import { CashEntryForm, CorrectionForm, TransferForm } from "./cash-forms";
 
 type Account = { id: string; name: string; balanceRp: number };
@@ -15,10 +15,9 @@ const TITLE: Record<Kind, string> = { income: "Pemasukan lain", transfer: "Trans
 // Tombol aksi kas di header (desain 06): setiap entri lewat dialog; kas berubah hanya dari dokumen yang tersimpan.
 export function CashActions({ accounts, expenseCategories, incomeCategories }: { accounts: Account[]; expenseCategories: Category[]; incomeCategories: Category[] }) {
   const [open, setOpen] = useState<Kind | null>(null);
-  const [done, setDone] = useState<string | null>(null);
   const finish = (message: string) => {
     setOpen(null);
-    setDone(message);
+    toast(message);
   };
   return (
     <div className="flex flex-col items-end gap-2">
@@ -30,7 +29,6 @@ export function CashActions({ accounts, expenseCategories, incomeCategories }: {
           Catat pengeluaran
         </Button>
       </div>
-      {done && <Notice state={{ ok: true, message: done }} />}
       {open && (
         <Dialog title={TITLE[open]} onClose={() => setOpen(null)}>
           {open === "expense" && <CashEntryForm inDialog kind="expense" categories={expenseCategories} accounts={accounts} onDone={finish} />}

@@ -107,12 +107,13 @@ export function Topbar({ nav, pending }: { nav: NavItem[]; pending: PendingItem[
       <button
         type="button"
         onClick={() => setPalette(true)}
-        aria-label="Cari nota, anggota, produk (Ctrl K)"
+        aria-label="Cari nota, anggota, produk"
+        aria-keyshortcuts="Control+K Meta+K"
         className="flex h-10 items-center gap-2.5 rounded-lg border border-border bg-surface px-3 text-sm text-text-subtle transition-colors hover:border-border-strong sm:w-80"
       >
         <Search size={17} strokeWidth={1.75} className="shrink-0 text-text-muted" />
         <span className="hidden flex-1 text-left sm:inline">Cari nota, anggota, produk</span>
-        <kbd className="hidden rounded-sm bg-surface-muted px-1.5 py-0.5 font-sans text-[11px] text-text-muted sm:inline">Ctrl K</kbd>
+        <kbd aria-hidden="true" className="hidden rounded-sm bg-surface-muted px-1.5 py-0.5 font-sans text-[11px] text-text-muted sm:inline">Ctrl K</kbd>
       </button>
 
       <div ref={bellRef} className="relative">

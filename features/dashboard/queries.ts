@@ -66,6 +66,7 @@ export async function dashboardData(p: Period, opts: { finance?: boolean } = {})
       receipts: dbKgToGrams(d.receipts_kg),
       flour: dbKgToGrams(d.flour_kg),
       sales: dbKgToGrams(d.sales_kg),
+      processed: dbKgToGrams(d.processed_kg), // Q19: input batch pemipilan
       omzet: omzetByDay.get(d.day) ?? 0,
     })),
     sold: [...soldByProduct.values()].filter((x) => x.grams > 0).sort((a, b) => b.grams - a.grams),

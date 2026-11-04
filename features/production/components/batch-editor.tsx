@@ -13,7 +13,7 @@ import { formatRupiah, parseRupiah } from "@/lib/money";
 import { COST_CATEGORY_LABEL, summarizeBatch } from "@/lib/production";
 import { dbKgToGrams, formatKg, parseKgToGrams } from "@/lib/qty";
 import type { BatchCostCategory } from "@/lib/supabase/types";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 type Product = { id: string; code: string; name: string } | null;
 export type EditorTypeOption = {

@@ -31,7 +31,7 @@ Didefinisikan sebagai CSS variable di `app/globals.css`, dipetakan ke Tailwind l
 | `--border-strong` | `#D4D4D8` | Garis input |
 | `--text` | `#111113` | Teks utama, angka besar |
 | `--text-muted` | `#6B6B73` | Label, keterangan |
-| `--text-subtle` | `#9A9AA2` | Placeholder, metadata |
+| `--text-subtle` | `#6E6E76` (gelap `#8E8E96`) | Placeholder, metadata. Dinaikkan dari #9A9AA2/#71717A agar lulus kontras WCAG AA 4,5:1 (audit Lighthouse T9.5, 4 Nov 2026) |
 | `--primary` | `#111113` | Tombol utama (hitam, gaya Core) |
 | `--primary-fg` | `#FFFFFF` | Teks di atas primary |
 | `--accent` | `#2FA84F` | Aksen hijau: highlight grafik, indikator naik, fokus sukses |

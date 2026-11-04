@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { formCls, Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { toastResult } from "@/components/ui/toast";
 import { decideCorrection } from "@/features/cash/actions";
 import type { FormState } from "@/features/master/actions";
 import { verifyReturn } from "@/features/orders/actions";
@@ -55,6 +56,7 @@ export function Approvals({ items }: { items: Approval[] }) {
     start(async () => {
       const res = await decide(open.item, open.approve, note, open.key);
       setState(res);
+      toastResult(res);
       if (res.ok) {
         setOpen(null);
         router.refresh();

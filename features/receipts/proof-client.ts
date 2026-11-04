@@ -2,9 +2,8 @@
 // lebih kecil; PDF dikirim apa adanya. Setelah unggah, server memverifikasi isi file sebelum mencatatnya.
 import { registerProof } from "@/features/receipts/actions";
 import { PROOF_MAX_BYTES, proofPath } from "@/lib/files";
-import { createClient } from "@/lib/supabase/client";
 import type { ProofMime } from "@/lib/supabase/types";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 export const PROOF_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 const MAX_SIDE = 2000;
@@ -23,6 +22,9 @@ async function reencode(file: File): Promise<Blob> {
 }
 
 /** Siapkan file bukti: foto → JPEG tanpa EXIF, PDF apa adanya; cek ukuran. */
+// supabase-js (±250 KB) hanya dimuat saat benar-benar mengunggah, bukan saat halaman dibuka (T9.5).
+const browserClient = async () => (await import("@/lib/supabase/client")).createClient();
+
 export async function prepareProof(file: File): Promise<{ blob: Blob; mime: ProofMime } | { error: string }> {
   let blob: Blob;
   let mime: ProofMime;
@@ -50,7 +52,7 @@ export async function uploadReceiptProof(receiptId: string, file: File): Promise
   const { blob, mime } = prepared;
 
   const path = proofPath("receipts", todayWib(), crypto.randomUUID(), mime);
-  const { error } = await createClient().storage.from("proofs").upload(path, blob, { contentType: mime, upsert: false });
+  const { error } = await (await browserClient()).storage.from("proofs").upload(path, blob, { contentType: mime, upsert: false });
   if (error) return "Bukti gagal diunggah. Periksa koneksi lalu coba lagi.";
   const res = await registerProof(receiptId, path);
   return res.error ?? null;

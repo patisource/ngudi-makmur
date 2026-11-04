@@ -2,7 +2,8 @@
 // Kekuatan & daftar kata sandi bocor dicek ulang oleh Supabase Auth.
 import { z } from "zod";
 
-export const PASSWORD_MIN = 8;
+import { PASSWORD_MIN } from "@/lib/auth/password-policy";
+export { PASSWORD_MIN };
 export const PASSWORD_MAX = 72;
 
 export const changePasswordSchema = z

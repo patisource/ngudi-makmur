@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const columns: Column[] = [
       { key: "day", label: "Tanggal", type: "date" },
       { key: "receipts", label: "Jagung masuk (kg)", type: "kg" },
+      { key: "processed", label: "Jagung diolah, input pemipilan (kg)", type: "kg" },
       { key: "flour", label: "Produksi tepung (kg)", type: "kg" },
       ...(finance
         ? ([
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
           ] as Column[])
         : []),
     ];
-    const rows = daily.map((d) => ({ day: d.day, receipts: d.receipts / 1000, flour: d.flour / 1000, sales: d.sales / 1000, omzet: d.omzet }));
+    const rows = daily.map((d) => ({ day: d.day, receipts: d.receipts / 1000, processed: d.processed / 1000, flour: d.flour / 1000, sales: d.sales / 1000, omzet: d.omzet }));
     return new Response(toCsv(columns, rows), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
   return apiOk({
     period,
     kpi: finance ? { ...kpi, flour_target_kg_per_day: FLOUR_TARGET_KG_PER_DAY } : production,
-    daily: daily.map((d) => ({ day: d.day, receipts_kg: d.receipts / 1000, flour_kg: d.flour / 1000, ...(finance ? { sales_kg: d.sales / 1000 } : {}) })),
+    daily: daily.map((d) => ({ day: d.day, receipts_kg: d.receipts / 1000, processed_kg: d.processed / 1000, flour_kg: d.flour / 1000, ...(finance ? { sales_kg: d.sales / 1000 } : {}) })),
     stock: stock.map((s) => ({ code: s.code, name: s.name, on_hand_kg: s.on_hand_kg, reserved_kg: s.reserved_kg, available_kg: s.available_kg, below_min: s.below_min })),
   });
 }

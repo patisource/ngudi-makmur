@@ -36,7 +36,7 @@ function Kpi({ label, value, sub, foot, badge, className }: { label: string; val
         <span className="text-label text-text-muted">{label}</span>
         {badge}
       </div>
-      <span className="text-[22px] font-semibold leading-tight tracking-tight tabular-nums">{value}</span>
+      <span className="min-w-0 break-words text-[22px] font-semibold leading-tight tracking-tight tabular-nums">{value}</span>
       {sub && <div className="text-sm text-text-muted">{sub}</div>}
       {foot && <div className="mt-auto border-t border-border pt-3 text-xs text-text-subtle">{foot}</div>}
     </Card>
@@ -76,7 +76,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const omzetDelta = prev.kpi.omzet_rp > 0 ? ((kpi.omzet_rp - prev.kpi.omzet_rp) / prev.kpi.omzet_rp) * 100 : null;
   const tunai = cash.filter((c) => c.kind === "tunai").reduce((s, c) => s + c.balance_rp, 0);
   const bank = cash.filter((c) => c.kind === "bank").reduce((s, c) => s + c.balance_rp, 0);
-  const buckets = bucketDays(daily, (rows) => ({ a: rows.reduce((s, r) => s + r.receipts, 0), b: rows.reduce((s, r) => s + r.sales, 0) }));
+  const buckets = bucketDays(daily, (rows) => ({ a: rows.reduce((s, r) => s + r.receipts, 0), b: rows.reduce((s, r) => s + r.processed, 0) }));
   const adminTodo = pending.filter((p) => !p.approval && p.count > 0);
 
   return (
@@ -88,7 +88,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             {periodTitle(period)} · dibanding {periodTitle(prev)} · hanya transaksi sah (terkonfirmasi)
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
           <PeriodFilter period={period} basePath="/dashboard" />
           <a
             href={`/api/v1/dashboard?format=csv&${periodQuery(period)}`}
@@ -130,9 +130,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             </div>
           )}
 
-          <div className={`grid gap-3 sm:grid-cols-2 ${finance ? "xl:grid-cols-[1.45fr_1fr_1fr_1fr_1fr]" : "xl:grid-cols-3"}`}>
+          <div className={`grid gap-3 sm:grid-cols-2 ${finance ? "xl:grid-cols-[1.3fr_1fr_1fr] 2xl:grid-cols-[1.45fr_1fr_1fr_1fr_1fr]" : "xl:grid-cols-3"}`}>
             {finance && (
-              <Card className="gap-2 sm:col-span-2 xl:col-span-1">
+              <Card className="gap-2 sm:col-span-2 xl:col-span-1 xl:row-span-2 2xl:row-span-1">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-label text-text-muted">Omzet (barang diserahkan)</span>
                   <Pill tone="ok">{kpi.orders_delivered} nota</Pill>
@@ -201,7 +201,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
               <Card className="gap-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <h2 className="font-semibold">Jagung masuk vs terjual</h2>
+                    <h2 className="font-semibold">Jagung masuk vs jagung diolah</h2>
                     <p className="text-xs text-text-muted">
                       kg per {daily.length > 14 ? "minggu" : "hari"} · {periodTitle(period)}
                     </p>
@@ -209,11 +209,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
                   <ChartLegend
                     items={[
                       { label: "Jagung masuk", tone: "muted" },
-                      { label: "Terjual", tone: "accent" },
+                      { label: "Diolah (pemipilan)", tone: "accent" },
                     ]}
                   />
                 </div>
-                <GroupedBarChart title="Jagung masuk vs terjual (kg)" aLabel="Jagung masuk" bLabel="Terjual" data={buckets} />
+                <GroupedBarChart title="Jagung masuk vs jagung diolah (kg)" aLabel="Jagung masuk" bLabel="Diolah" data={buckets} />
               </Card>
             ) : (
               <Card className="gap-4">

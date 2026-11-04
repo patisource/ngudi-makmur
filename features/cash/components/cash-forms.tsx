@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
@@ -9,7 +10,7 @@ import { formCls, Notice } from "@/components/shared/notice";
 import { createExpense, createIncome, createTransfer, decideCorrection, requestCorrection, setOpeningBalance } from "@/features/cash/actions";
 import type { FormState } from "@/features/master/actions";
 import { formatRupiah } from "@/lib/money";
-import { todayWib } from "@/lib/validation/common";
+import { todayWib } from "@/lib/today";
 
 type Account = { id: string; name: string; balanceRp: number };
 type DialogProps = { inDialog?: boolean; onDone?: (message: string) => void };
@@ -223,42 +224,36 @@ export function CorrectionForm({ accounts, inDialog, onDone }: { accounts: Accou
 export function CorrectionDecision({ id, summary }: { id: string; summary: string }) {
   const [mode, setMode] = useState<null | "approve" | "reject">(null);
   const [note, setNote] = useState("");
-  const { state, pending, submit } = useSubmit();
+  const open = (m: "approve" | "reject") => {
+    setNote("");
+    setMode(m);
+  };
   return (
-    <div className="flex flex-col gap-2">
-      {!mode && (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" kind="primary" onClick={() => setMode("approve")}>
-            Setujui
-          </Button>
-          <Button size="sm" kind="ghost" onClick={() => setMode("reject")}>
-            Tolak
-          </Button>
-        </div>
-      )}
+    <>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" kind="ghost" onClick={() => open("reject")}>
+          Tolak
+        </Button>
+        <Button size="sm" kind="primary" onClick={() => open("approve")}>
+          Setujui
+        </Button>
+      </div>
       {mode && (
-        <div className={formCls.panel}>
-          <p className="text-sm">{mode === "approve" ? `Setujui koreksi ${summary}? Satu mutasi kas dicatat dan tidak bisa dibatalkan.` : `Tolak koreksi ${summary}? Saldo tidak berubah.`}</p>
-          <label htmlFor={`dec-${id}`} className="text-label font-medium">
-            {mode === "approve" ? "Catatan (opsional)" : "Alasan penolakan *"}
-          </label>
-          <textarea id={`dec-${id}`} rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} className={formCls.textarea} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              kind={mode === "approve" ? "primary" : "danger"}
-              disabled={pending || (mode === "reject" && note.trim().length < 5)}
-              onClick={() => submit((key) => decideCorrection(id, { approve: mode === "approve", note }, key), () => setMode(null))}
-            >
-              {pending ? "Menyimpan…" : mode === "approve" ? "Setujui koreksi" : "Tolak koreksi"}
-            </Button>
-            <Button disabled={pending} onClick={() => setMode(null)}>
-              Tutup
-            </Button>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={mode === "approve" ? "Setujui koreksi kas" : "Tolak koreksi kas"}
+          confirmLabel={mode === "approve" ? "Setujui koreksi" : "Tolak koreksi"}
+          danger={mode === "reject"}
+          disabled={mode === "reject" && note.trim().length < 5}
+          onClose={() => setMode(null)}
+          onConfirm={(key) => decideCorrection(id, { approve: mode === "approve", note }, key)}
+        >
+          <p className="text-sm text-text-muted">{mode === "approve" ? `Koreksi ${summary}: satu mutasi kas dicatat dan tidak bisa dibatalkan.` : `Koreksi ${summary} ditolak; saldo tidak berubah.`}</p>
+          <Field label={mode === "approve" ? "Catatan (opsional)" : "Alasan penolakan *"} htmlFor={`dec-${id}`}>
+            <textarea id={`dec-${id}`} rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} className={formCls.textarea} />
+          </Field>
+        </ConfirmDialog>
       )}
-      <Notice state={state} />
-    </div>
+    </>
   );
 }
 
