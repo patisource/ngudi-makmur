@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # dikunci: Playwright 1.56 belum mendukung ubuntu 26.04 (ubuntu-latest)
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
       - run: pnpm test
 
   db:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # dikunci: Playwright 1.56 belum mendukung ubuntu 26.04 (ubuntu-latest)
     timeout-minutes: 20
     env:
       DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -53,7 +53,7 @@ jobs:
         run: bash supabase/tests/concurrency.sh
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # dikunci: Playwright 1.56 belum mendukung ubuntu 26.04 (ubuntu-latest)
     timeout-minutes: 30
     env:
       NEXT_PUBLIC_SITE_URL: http://localhost:3107
