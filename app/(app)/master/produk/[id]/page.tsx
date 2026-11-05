@@ -8,7 +8,7 @@ import { getProduct } from "@/features/master/queries";
 import { requireAction } from "@/lib/auth/session";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Ubah produk · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Ubah produk · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Produk + tab konversi kemasan (T2.3). Isi kg kemasan terkunci setelah dibuat; ganti = arsipkan lalu buat baru.
 export default async function EditProductPage({ params }: PageProps<"/master/produk/[id]">) {

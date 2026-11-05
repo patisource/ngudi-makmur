@@ -6,7 +6,7 @@ import { ArchiveButton, CustomerForm } from "@/features/master/components/forms"
 import { getCustomer } from "@/features/master/queries";
 import { requireAction } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Ubah pelanggan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Ubah pelanggan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function EditCustomerPage({ params }: PageProps<"/master/pelanggan/[id]">) {
   await requireAction("master.kelola");

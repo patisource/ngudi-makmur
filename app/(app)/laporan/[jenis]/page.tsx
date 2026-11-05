@@ -11,7 +11,7 @@ import { formatRupiah } from "@/lib/money";
 import { parsePeriod, periodLabel, periodQuery } from "@/lib/period";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Laporan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Laporan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 const MAX_ROWS_ON_SCREEN = 500;

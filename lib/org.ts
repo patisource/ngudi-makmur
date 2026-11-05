@@ -2,6 +2,8 @@
 // Satu tempat agar mudah diganti tanpa menyentuh komponen. Isi mengikuti desain Figma (layar 00 & 04);
 // jam operasional & komoditas mohon dikonfirmasi pengurus sebelum go-live.
 export const ORG = {
+  /** Nama sistem (judul aplikasi, tab browser, sidebar, login). Permintaan pengguna 5 Nov 2026. */
+  appName: "Sistem Pengelolaan Jagung Desa Baturejo",
   shortName: "Ngudi Makmur",
   fullName: "Kelompok Tani Ngudi Makmur",
   address: "Desa Baturejo, Kec. Sukolilo, Kab. Pati, Jawa Tengah",

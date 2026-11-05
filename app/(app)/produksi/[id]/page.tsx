@@ -17,7 +17,7 @@ import { formatRupiah } from "@/lib/money";
 import { COST_CATEGORY_LABEL, summarizeBatch } from "@/lib/production";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Batch produksi · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Batch produksi · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" });
 const timeFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" });

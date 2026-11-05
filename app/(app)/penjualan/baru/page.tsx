@@ -6,7 +6,7 @@ import { OrderForm } from "@/features/orders/components/order-form";
 import { orderFormOptions } from "@/features/orders/queries";
 import { requireAction } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Catat pesanan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Catat pesanan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function NewOrderPage() {
   await requireAction("penjualan.kelola");

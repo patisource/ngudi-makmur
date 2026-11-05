@@ -6,7 +6,7 @@ import { ArchiveButton, MemberForm } from "@/features/master/components/forms";
 import { getMember } from "@/features/master/queries";
 import { requireAction } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Ubah anggota · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Ubah anggota · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function EditMemberPage({ params }: PageProps<"/master/anggota/[id]">) {
   await requireAction("master.kelola");

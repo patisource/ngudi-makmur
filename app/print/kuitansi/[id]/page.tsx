@@ -5,7 +5,7 @@ import { paymentReceipt, printCount } from "@/features/orders/receipt";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Kuitansi · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Kuitansi · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Kuitansi pembayaran 80 mm (FR-RPT-02): hanya pembayaran terverifikasi; cetak ulang bertanda, tanpa mengubah kas.
 export default async function PaymentReceiptPrintPage({ params }: PageProps<"/print/kuitansi/[id]">) {

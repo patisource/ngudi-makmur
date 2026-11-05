@@ -8,8 +8,8 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SIM Ngudi Makmur",
-  description: "Sistem informasi Kelompok Tani Ngudi Makmur, Desa Baturejo, Sukolilo, Pati",
+  title: "Sistem Pengelolaan Jagung Desa Baturejo",
+  description: "Sistem Pengelolaan Jagung Desa Baturejo — sistem informasi Kelompok Tani Ngudi Makmur, Desa Baturejo, Sukolilo, Pati",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

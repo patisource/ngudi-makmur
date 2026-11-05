@@ -12,7 +12,7 @@ import { CORRECTION_LABEL, CORRECTION_TONE } from "@/lib/cash";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Koreksi stok · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Koreksi stok · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 

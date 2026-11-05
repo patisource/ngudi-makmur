@@ -6,7 +6,7 @@ import { actionLabel, actionsMatching, AUDIT_GROUPS, describeAudit } from "@/lib
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Log audit · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Log audit · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const fmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

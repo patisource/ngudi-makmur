@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { MemberForm } from "@/features/master/components/forms";
 import { requireAction } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Tambah anggota · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Tambah anggota · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function NewMemberPage() {
   await requireAction("master.kelola");

@@ -6,7 +6,7 @@ import { ReceiptForm } from "@/features/receipts/components/receipt-form";
 import { receiptOptions } from "@/features/receipts/queries";
 import { requireAction } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Catat jagung masuk · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Catat jagung masuk · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function NewReceiptPage() {
   await requireAction("penerimaan.kelola");

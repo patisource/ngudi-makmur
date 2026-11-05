@@ -10,7 +10,7 @@ import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 import type { ReceiptStatus } from "@/lib/supabase/types";
 
-export const metadata: Metadata = { title: "Jagung masuk · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Jagung masuk · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 const inputCls = "h-10 w-full rounded-md border border-border bg-surface px-3 text-sm";

@@ -8,7 +8,7 @@ import { COST_CATEGORY_LABEL } from "@/lib/production";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 import { center, HEADER_LINES, lr, sep, wrap, type PaperCols, type ThermalLine } from "@/lib/thermal";
 
-export const metadata: Metadata = { title: "Cetak batch · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Cetak batch · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const COLS: PaperCols = 48;
 const printedAt = new Intl.DateTimeFormat("id-ID", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Jakarta" });

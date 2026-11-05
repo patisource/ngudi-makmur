@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AppPermission, AppRole } from "@/lib/supabase/types";
 import { CreateAccountForm, ManageAccount } from "./account-forms";
 
-export const metadata: Metadata = { title: "Akun & izin · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Akun & izin · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // PRD §3.1 "Pengguna, peran & izin": ketua = lihat, admin_teknis = kelola. RLS membatasi baris yang terbaca.
 export default async function AccountsPage() {

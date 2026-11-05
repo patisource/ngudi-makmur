@@ -8,7 +8,7 @@ import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Kartu stok · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Kartu stok · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 const inputCls = "h-10 rounded-md border border-border bg-surface px-3 text-sm";

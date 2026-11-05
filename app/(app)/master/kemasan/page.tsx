@@ -6,7 +6,7 @@ import { listPackagingsAndChannels } from "@/features/master/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Jenis kemasan & saluran · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Jenis kemasan & saluran · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // T2.4: jenis kemasan (pak, karung, …) & saluran penjualan. Saluran digital dipakai indikator penjualan digital (PRD §4.8).
 export default async function PackagingChannelsPage() {

@@ -1,4 +1,5 @@
 import { siteUrl } from "@/lib/env";
+import { ORG } from "@/lib/org";
 
 // Halaman sementara: memeriksa penyiapan lingkungan sebelum modul aplikasi (M1 dst.) dibangun.
 // Hanya menampilkan status tiap variabel (terisi / format salah) — nilainya tidak pernah ditampilkan.
@@ -31,7 +32,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-16">
       <div className="flex flex-col gap-1">
-        <p className="text-sm text-text-muted">SIM Kelompok Tani Ngudi Makmur</p>
+        <p className="text-sm text-text-muted">{ORG.appName}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Penyiapan proyek</h1>
         <p className="text-sm text-text-muted">
           {done === CHECKS.length

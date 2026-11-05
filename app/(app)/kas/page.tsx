@@ -15,7 +15,7 @@ import { formatRupiah } from "@/lib/money";
 import { createClient } from "@/lib/supabase/server";
 import { todayWib } from "@/lib/validation/common";
 
-export const metadata: Metadata = { title: "Pembayaran & kas · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Pembayaran & kas · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
 const day = (d: string) => dateFmt.format(new Date(`${d}T00:00:00+07:00`));

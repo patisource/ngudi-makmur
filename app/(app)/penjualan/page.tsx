@@ -10,7 +10,7 @@ import { formatRupiah } from "@/lib/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_TONE } from "@/lib/order";
 import type { OrderPaymentStatus, OrderStatus } from "@/lib/supabase/types";
 
-export const metadata: Metadata = { title: "Penjualan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Penjualan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 const inputCls = "h-10 w-full rounded-md border border-border bg-surface px-3 text-sm";

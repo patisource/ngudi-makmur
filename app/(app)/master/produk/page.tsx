@@ -8,7 +8,7 @@ import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Produk & kemasan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Produk & kemasan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Produk v1 (PRD §4.0): TK, PP, TP — semua kg. Produk baru tidak dibuat dari aplikasi (keputusan domain, CLAUDE.md).
 export default async function ProductsPage() {

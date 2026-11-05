@@ -8,7 +8,7 @@ import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Stok opname · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Stok opname · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 

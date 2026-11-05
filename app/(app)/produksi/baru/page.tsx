@@ -5,7 +5,7 @@ import { batchTypeOptions } from "@/features/production/queries";
 import { requireAction } from "@/lib/auth/session";
 import { Crumb } from "@/components/shell/crumb";
 
-export const metadata: Metadata = { title: "Catat batch · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Catat batch · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function NewBatchPage() {
   const user = await requireAction("produksi.kelola");

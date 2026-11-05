@@ -6,7 +6,7 @@ import { Icon } from "@/components/shell/icon";
 import { ORG } from "@/lib/org";
 import { LoginForm } from "./login-form";
 
-export const metadata: Metadata = { title: "Masuk · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Masuk · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const NOTICE: Record<string, string> = {
   nonaktif: "Akun ini dinonaktifkan. Hubungi admin teknis.",
@@ -20,7 +20,7 @@ async function LoginFormFromUrl({ searchParams }: { searchParams: PageProps<"/lo
   return <LoginForm next={next} notice={notice} />;
 }
 
-const TITLE = `Masuk ke SIM ${ORG.fullName}`;
+const TITLE = `Masuk ke ${ORG.appName}`;
 
 // Login (desain 00, StyleGuide §8.1): formulir kiri; panel kanan berisi foto lahan + profil kelompok yang tidak sensitif.
 // Didahului welcome splash sekali per sesi (§6.6).
@@ -35,7 +35,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
             <span className="grid size-9 place-items-center rounded-md bg-primary text-primary-fg">
               <Icon name="sprout" size={20} />
             </span>
-            <span className="text-sm font-medium">{ORG.shortName}</span>
+            <span className="text-sm font-medium">{ORG.appName}</span>
           </div>
 
           <div className="enter flex w-full max-w-[400px] flex-1 flex-col justify-center gap-7 py-12">
@@ -61,7 +61,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           </div>
 
           <p className="text-xs text-text-subtle">
-            SIM Kelompok Tani {ORG.appVersion} · {ORG.builtBy} · © 2026 {ORG.fullName}
+            {ORG.appName} {ORG.appVersion} · {ORG.builtBy} · © 2026 {ORG.fullName}
           </p>
         </div>
 

@@ -19,7 +19,7 @@ import { formatRupiah } from "@/lib/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_TONE } from "@/lib/order";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Pesanan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Pesanan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
 const timeFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });

@@ -18,7 +18,7 @@ import { formatRupiah } from "@/lib/money";
 import { bucketDays, parsePeriod, periodQuery, periodShort, periodTitle } from "@/lib/period";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Dashboard · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Dashboard · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const timeFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 const dayFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" });

@@ -10,7 +10,7 @@ import { requireRole } from "@/lib/auth/session";
 import { CASH_SOURCE_LABEL } from "@/lib/cash";
 import { formatRupiah } from "@/lib/money";
 
-export const metadata: Metadata = { title: "Buku kas · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Buku kas · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 const inputCls = "h-10 w-full rounded-md border border-border bg-surface px-3 text-sm";

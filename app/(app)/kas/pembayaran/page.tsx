@@ -9,7 +9,7 @@ import { METHOD_LABEL, PAYMENT_LABEL, PAYMENT_TONE } from "@/lib/cash";
 import { formatRupiah } from "@/lib/money";
 import type { PaymentStatus } from "@/lib/supabase/types";
 
-export const metadata: Metadata = { title: "Pembayaran · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Pembayaran · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
 

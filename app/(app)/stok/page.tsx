@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Stok · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Stok · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Daftar stok (FR-STK-01): fisik tercatat, reservasi, tersedia, nilai persediaan, tanda di bawah minimum.
 export default async function StockPage() {

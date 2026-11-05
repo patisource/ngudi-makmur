@@ -12,7 +12,7 @@ import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Jagung masuk · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Jagung masuk · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" });
 const timeFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" });

@@ -7,7 +7,7 @@ export default function GlobalError({ retry }: { error: unknown; retry: () => vo
   return (
     <html lang="id">
       <body className="bg-bg text-text">
-        <title>Galat · SIM Ngudi Makmur</title>
+        <title>Galat · Sistem Pengelolaan Jagung Desa Baturejo</title>
         <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6">
           <h1 className="text-2xl font-semibold tracking-tight">Aplikasi gagal dimuat</h1>
           <p className="text-text-muted">Terjadi galat tak terduga. Data Anda tidak berubah. Muat ulang halaman; bila terus terjadi, hubungi admin teknis.</p>

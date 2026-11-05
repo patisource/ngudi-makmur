@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/shell/icon";
 
-export const metadata: Metadata = { title: "Akses ditolak · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Akses ditolak · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Halaman 403 (PRD FR-AUTH-03): tampil saat peran tidak mengizinkan halaman/aksi. Tidak membocorkan detail.
 export default function Forbidden() {

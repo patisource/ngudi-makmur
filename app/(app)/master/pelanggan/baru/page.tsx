@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { CustomerForm } from "@/features/master/components/forms";
 import { requireAction } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Tambah pelanggan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Tambah pelanggan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function NewCustomerPage() {
   await requireAction("master.kelola");

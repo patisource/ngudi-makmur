@@ -7,7 +7,7 @@ import { cleanQuery, listMembers, PAGE_SIZE, parsePage, parseStatus } from "@/fe
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Anggota · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Anggota · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const STATUSES: Array<[string, string]> = [
   ["aktif", "Aktif"],

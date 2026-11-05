@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/shell/icon";
 
-export const metadata: Metadata = { title: "Tidak ditemukan · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Tidak ditemukan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // 404: alamat salah atau dokumen tidak ada / tidak boleh dilihat peran ini (RLS mengembalikan kosong).
 export default function NotFound() {

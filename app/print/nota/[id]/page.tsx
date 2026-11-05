@@ -5,7 +5,7 @@ import { orderReceipt, printCount } from "@/features/orders/receipt";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Nota · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Nota · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Nota thermal 80 mm (T8.3, FR-RPT-01..03b): dari transaksi tersimpan; cetak ulang = nomor sama + "CETAK ULANG ke-n".
 export default async function OrderReceiptPrintPage({ params }: PageProps<"/print/nota/[id]">) {

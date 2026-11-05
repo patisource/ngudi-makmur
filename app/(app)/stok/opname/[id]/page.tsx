@@ -10,7 +10,7 @@ import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
-export const metadata: Metadata = { title: "Stok opname · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Stok opname · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" });
 const signedKg = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${formatKg(dbKgToGrams(Math.abs(v)))}`;

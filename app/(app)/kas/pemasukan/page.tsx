@@ -5,7 +5,7 @@ import { listAccounts, listCategories, listIncomes, parseCashFilter } from "@/fe
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Pemasukan lain · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Pemasukan lain · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Pemasukan lain (FR-CSH-05a): kas masuk di luar pembayaran pesanan, mis. iuran anggota atau bantuan.
 export default async function IncomesPage({ searchParams }: PageProps<"/kas/pemasukan">) {

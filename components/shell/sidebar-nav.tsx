@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { NavItem } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
+import { ORG } from "@/lib/org";
 import { Icon } from "./icon";
 
 // Daftar menu (sudah disaring per peran di server) dengan penanda halaman aktif dan laci di ponsel.
@@ -36,13 +37,13 @@ export function SidebarNav({ items, badges = {}, children }: { items: NavItem[];
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center gap-2.5 px-2 py-2">
+        <div className="flex items-start gap-2.5 px-2 py-2">
           <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary text-primary-fg">
             <Icon name="sprout" size={20} />
           </span>
           <div className="min-w-0 leading-tight">
-            <div className="truncate font-semibold">Ngudi Makmur</div>
-            <div className="truncate text-xs text-text-muted">Kelompok Tani · Baturejo</div>
+            <div className="text-sm font-semibold text-balance">{ORG.appName}</div>
+            <div className="mt-0.5 text-xs text-text-muted">{ORG.fullName}</div>
           </div>
         </div>
         <nav aria-label="Menu utama" className="flex flex-1 flex-col gap-0.5 overflow-y-auto">

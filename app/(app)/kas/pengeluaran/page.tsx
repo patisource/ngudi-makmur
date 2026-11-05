@@ -5,7 +5,7 @@ import { listAccounts, listCategories, listExpenses, parseCashFilter } from "@/f
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Pengeluaran · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Pengeluaran · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Pengeluaran (FR-CSH-05): satu kas keluar per dokumen EXP; tidak boleh membuat saldo negatif (FR-CSH-08).
 export default async function ExpensesPage({ searchParams }: PageProps<"/kas/pengeluaran">) {

@@ -4,7 +4,7 @@ import { ChangePasswordForm } from "@/features/account/components/change-passwor
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { requireUser } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Akun saya · SIM Ngudi Makmur" };
+export const metadata: Metadata = { title: "Akun saya · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 // Akun saya: semua peran (termasuk admin teknis) boleh mengganti kata sandinya sendiri. Nama, email, dan peran
 // hanya diubah admin teknis di menu Akun & izin.
