@@ -20,5 +20,9 @@ export default defineConfig({
     { name: "laptop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
     { name: "ponsel", use: { ...devices["Pixel 5"], viewport: { width: 360, height: 780 } } },
   ],
-  webServer: process.env.E2E_BASE_URL ? undefined : { command: `pnpm start -p ${PORT}`, port: PORT, reuseExistingServer: true, timeout: 120_000 },
+  // Next dijalankan langsung (bukan lewat `pnpm start`): pembungkus pnpm meninggalkan proses anak sehingga Playwright
+  // menunggu server berhenti tanpa batas setelah semua uji selesai (CI 5 Nov 2026).
+  webServer: process.env.E2E_BASE_URL
+    ? undefined
+    : { command: `node node_modules/next/dist/bin/next start -p ${PORT}`, port: PORT, reuseExistingServer: true, timeout: 120_000, gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 } },
 });
