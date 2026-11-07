@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/card";
 import { EmptyState, Pagination, SearchBar, Sub, Table, Td, Th } from "@/components/ui/table";
+import { IrtCustomerLink } from "@/features/irt/components/link-customer";
+import { irtSettings } from "@/features/irt/queries";
 import { ArchiveButton } from "@/features/master/components/forms";
 import { cleanQuery, listCustomers, PAGE_SIZE, parsePage, parseStatus } from "@/features/master/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Pelanggan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
@@ -27,6 +30,11 @@ export default async function CustomersPage({ searchParams }: PageProps<"/master
   const { data, count, error } = await listCustomers({ q, status, page });
   const href = (p: number) => `/master/pelanggan?${new URLSearchParams({ ...(q && { q }), status, page: String(p) })}`;
   const notice = typeof sp.simpan === "string" ? NOTICE[sp.simpan] : undefined;
+  // Hubungan pelanggan ↔ IRT (M10): hanya untuk yang boleh mengatur (admin kelompok).
+  const canLinkIrt = canDo(user.roles, "irt.hubungkan");
+  const [irt, active] = canLinkIrt
+    ? await Promise.all([irtSettings(), createClient().then((sb) => sb.from("customers").select("id, name").is("archived_at", null).order("name"))])
+    : [null, null];
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,6 +43,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/master
           {notice}
         </p>
       )}
+      {irt && <IrtCustomerLink irtName={irt.name} current={irt.customer_id} customers={active?.data ?? []} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SearchBar q={q} status={status} placeholder="Cari nama atau kode pelanggan" statuses={STATUSES} />
         {canManage && (

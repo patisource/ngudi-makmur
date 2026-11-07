@@ -2,20 +2,21 @@
 // Isi mengikuti matriks PRD §3.1. Menyembunyikan menu BUKAN kontrol keamanan — database tetap menegakkan RLS.
 import type { AppPermission, AppRole } from "@/lib/supabase/types";
 
-export const ROLES: readonly AppRole[] = ["admin_kelompok", "operator_produksi", "ketua", "admin_teknis"];
+export const ROLES: readonly AppRole[] = ["admin_kelompok", "operator_produksi", "ketua", "admin_teknis", "pengurus_irt"];
 
 export const ROLE_LABEL: Record<AppRole, string> = {
   admin_kelompok: "Admin kelompok",
   operator_produksi: "Operator produksi",
   ketua: "Ketua kelompok",
   admin_teknis: "Admin teknis",
+  pengurus_irt: "Pengurus IRT",
 };
 
 export const PERMISSION_LABEL: Record<AppPermission, string> = {
   "production.confirm": "Konfirmasi batch produksi",
 };
 
-export type NavGroup = "Ringkasan" | "Operasional" | "Penjualan" | "Keuangan" | "Data" | "Sistem";
+export type NavGroup = "Ringkasan" | "Operasional" | "Penjualan" | "Keuangan" | "Data" | "IRT Sekar Arum" | "Sistem";
 
 export type NavItem = {
   href: string;
@@ -27,7 +28,7 @@ export type NavItem = {
   milestone: string | null;
 };
 
-export type IconName = "dashboard" | "inbox" | "factory" | "box" | "cart" | "wallet" | "file" | "users" | "history" | "shield";
+export type IconName = "dashboard" | "inbox" | "factory" | "box" | "cart" | "wallet" | "file" | "users" | "history" | "shield" | "store" | "tag";
 
 // Urutan = urutan di sidebar. Peran = siapa yang boleh membuka (L atau K pada matriks PRD §3.1).
 export const NAV: readonly NavItem[] = [
@@ -39,6 +40,13 @@ export const NAV: readonly NavItem[] = [
   { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: null },
   { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
+  // Modul IRT Sekar Arum (M10, PRD §4.10): dikelola pengurus_irt, dibaca ketua (pengawasan). Tanpa kas.
+  { href: "/irt", label: "Dashboard IRT", icon: "store", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
+  { href: "/irt/bahan-masuk", label: "Bahan masuk", icon: "inbox", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
+  { href: "/irt/produksi", label: "Produksi IRT", icon: "factory", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
+  { href: "/irt/stok", label: "Stok IRT", icon: "box", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
+  { href: "/irt/penjualan", label: "Penjualan IRT", icon: "cart", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
+  { href: "/irt/produk", label: "Bahan & produk", icon: "tag", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
   { href: "/pengaturan/akun", label: "Akun & izin", icon: "shield", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
   { href: "/audit", label: "Log audit", icon: "history", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
 ];
@@ -69,6 +77,10 @@ export const ACTIONS = {
   // Pembatalan batch terkonfirmasi (FR-PRD-08, Security.md §4.3): diajukan operator, disetujui ketua.
   "produksi.batal.ajukan": ["operator_produksi"],
   "produksi.batal.putuskan": ["ketua"],
+  // IRT Sekar Arum (M10): semua pencatatan IRT = pengurus_irt; ketua baca saja. Pelanggan kelompok yang = IRT
+  // dihubungkan oleh admin kelompok / admin teknis (tepung pesanannya otomatis masuk bahan IRT).
+  "irt.kelola": ["pengurus_irt"],
+  "irt.hubungkan": ["admin_kelompok", "admin_teknis"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export type ActionKey = keyof typeof ACTIONS;

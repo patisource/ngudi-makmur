@@ -42,14 +42,14 @@ Target program diukur dari data nyata, bukan dianggap otomatis tercapai setelah 
 - Aplikasi native (Android/iOS). Web responsif sudah cukup.
 - Akuntansi penuh (jurnal umum, neraca, laba-rugi formal). v1 hanya kas + rekap.
 - Multi-kelompok / multi-tenant. v1 melayani **satu** kelompok tani.
-- Modul usaha internal IRT (mis. IRT Sekar Arum). IRT hanya dicatat sebagai pelanggan.
+- ~~Modul usaha internal IRT~~ — **dibatalkan sebagai non-goal** atas keputusan pengguna 5–6 Nov 2026: modul IRT Sekar Arum dibangun (M10, §4.9). Hanya satu IRT; tetap **tanpa kas** IRT.
 - Konsinyasi atau bagi hasil, sampai aturan usahanya jelas (lihat §10).
 - Akun pelanggan / portal pelanggan. Pelanggan dicatat oleh admin dan tidak login.
 - Mode offline.
 
 ## 3. Pengguna & Peran (RBAC)
 
-Pengguna sistem adalah **pengurus/petugas** (empat peran SRS). Petani anggota dan pelanggan adalah **data master**, bukan pengguna yang login pada v1.
+Pengguna sistem adalah **pengurus/petugas** (empat peran SRS + `pengurus_irt` sejak M10). Petani anggota dan pelanggan adalah **data master**, bukan pengguna yang login pada v1.
 
 | Kode peran | Nama | Tanggung jawab utama |
 |---|---|---|
@@ -57,6 +57,7 @@ Pengguna sistem adalah **pengurus/petugas** (empat peran SRS). Petani anggota da
 | `operator_produksi` | Operator produksi | Input bahan, output, sisa/susut dan biaya batch; konfirmasi batch sesuai izin; lihat stok. **Tidak boleh** mengubah pembayaran/kas (ditegakkan di API dan database). |
 | `ketua` | Ketua kelompok | Hak baca laporan & dashboard; memeriksa dan **menyetujui koreksi stok/kas**; mengevaluasi usaha. Tidak menginput transaksi harian. |
 | `admin_teknis` | Admin teknis | Akun, hak akses, server, printer dan backup. **Bukan** pencatat transaksi usaha. |
+| `pengurus_irt` | Pengurus IRT Sekar Arum | *(M10, keputusan pengguna 6 Nov 2026)* Mencatat bahan masuk, produksi, stok, koreksi, dan penjualan **IRT** (§4.9). Membaca stok kelompok **hanya** untuk produk yang dihubungkan ke bahan IRT. Tidak melihat pesanan, pelanggan, anggota, kas, laporan, atau log audit kelompok. `ketua` membaca data IRT (pengawasan); peran kelompok lain tidak. |
 
 Satu pengguna dapat memiliki lebih dari satu peran bila pengurus terbatas (mis. ketua merangkap admin kelompok). Hak akses adalah **gabungan** dari semua perannya, tetapi aturan pemisahan tugas tetap berlaku (pengaju ≠ penyetuju; lihat [Security.md §4.3](Security.md#43-pemisahan-tugas-segregation-of-duties)).
 
@@ -192,6 +193,20 @@ Pasangan `cash_transactions(source_type, source_id)` bersifat **unik** di databa
 ### 4.8 Sumber Pasar / Saluran Penjualan
 
 Setiap pesanan wajib memiliki `channel`: `langsung`, `whatsapp`, `media_sosial`, `marketplace`, atau `lainnya` (dapat dikelola sebagai data master). Saluran **digital** = `whatsapp`, `media_sosial`, `marketplace`; dipakai indikator penjualan digital (§5.9).
+
+### 4.9 Modul IRT Sekar Arum (M10)
+
+Keputusan pengguna 5–6 Nov 2026: satu IRT (**IRT Sekar Arum**), pengurusnya punya akun sendiri (`pengurus_irt`), **tanpa kas**, produk jadi per **pcs** dan **pack**.
+
+| Aturan | Isi |
+|---|---|
+| Alur | Bahan masuk (`IBM`) → produksi (`IPR`, draft → konfirmasi) → stok produk jadi → penjualan (`IJL`); koreksi stok (`IKS`). |
+| Tepung dari kelompok | Admin menghubungkan pelanggan kelompok yang = IRT (`irt_settings.customer_id`). Saat pesanan pelanggan itu **diserahkan**, setiap item yang produknya dihubungkan ke bahan IRT (`irt_items.kelompok_product_id`) otomatis menjadi bahan masuk IRT (kg, nilai = nilai baris pesanan). Retur kelompok atas pesanan itu mengeluarkannya lagi; ditolak bila bahan sudah terpakai. |
+| Satuan | Bahan: kg, gram, liter, ml, butir, pcs. Produk jadi: **pcs** (bilangan bulat). Pack = isi pcs tetap per produk (`pack_size`); jual per pack mengurangi pack × isi pcs. Harga pack = harga pack bila diisi, selain itu isi × harga pcs. |
+| HPP | Nilai bahan keluar (rata-rata bergerak per bahan) ÷ total pcs hasil batch; nilai hasil dibagi per pcs ke tiap produk. Dikunci saat konfirmasi. |
+| Kas | **Tidak ada.** Harga beli bahan hanya untuk HPP; penjualan IRT mencatat jumlah & omzet, bukan pembayaran. Kas kelompok tidak berubah oleh apa pun di modul IRT. |
+| Koreksi & batal | Koreksi stok langsung berlaku dengan alasan wajib (tanpa persetujuan ketua); batal penjualan dengan alasan, stok kembali senilai saat keluar. Semua tercatat di `audit_logs`. |
+| Buku mutasi | `irt_movements` append-only, unik per (sumber, baris, jenis, arah); stok tidak pernah negatif (saldo dikunci saat posting). |
 
 ## 5. Kebutuhan Fungsional
 
@@ -511,6 +526,7 @@ Data uji untuk pengembangan, UAT awal, dan demonstrasi mitra. **Bukan capaian ny
 | Q20 | *Desain Figma (03):* bahan di editor produksi bisa diisi per kemasan (mis. "30 × Karung 50 kg = 1.500 kg"). PRD §4.0 & CLAUDE.md: kemasan hanya untuk penjualan, inventori & produksi kg. Aplikasi tetap **kg saja**. | ✅ Diputuskan pengguna (4 Nov 2026): **produksi tetap kg saja** sesuai §4.0; kemasan hanya untuk penjualan. |
 | Q21 | *Desain Figma (06):* banner "Biaya proses batch yang belum dibayar … bayar lewat Catat pengeluaran → Bayar biaya batch". Model saat ini tidak melacak hutang biaya batch (biaya batch hanya alokasi HPP, §4.7); pengeluaran boleh merujuk nomor PRD. Banner **belum dibuat**. | ✅ Diputuskan pengguna (4 Nov 2026): **tidak perlu**. Banner tidak dibuat; pembayaran biaya batch dicatat lewat Catat pengeluaran (boleh menyebut nomor PRD di keterangan). |
 | Q22 | ✅ Keputusan pengguna (3 Nov 2026): data uji coba dimuat ke proyek Supabase asli (`supabase/seed_uji.sql`, pelaku = akun "uji" yang tidak bisa login) dan **wajib** dibersihkan dengan `supabase/bersihkan_data_uji.sql` sebelum go-live. | Pengguna (4 Nov 2026): data uji **dibiarkan** untuk dicoba/UAT; pembersihan dijalankan **sendiri secara manual** oleh pengguna saat go-live (docs/GoLive.md §3). Tanggal go-live belum ditetapkan. |
+| Q24 | ✅ Keputusan pengguna (5–6 Nov 2026): modul IRT Sekar Arum (§4.9) — hanya satu IRT; pengurus IRT punya akun sendiri; tanpa kas (kas kelompok tetap); produk per pcs & pack (1 pack = isi pcs tetap); pengurus IRT boleh melihat stok tepung kelompok (baca saja); ketua membaca data IRT; koreksi stok IRT langsung berlaku; penghubung pelanggan IRT bisa dipasang ulang setelah data uji dibersihkan. | Daftar produk IRT, harga, isi pack, dan stok minimum resmi (diisi pengurus IRT di aplikasi). |
 | Q23 | *Desain Figma (00):* panel login menampilkan komoditas utama "Tongkol, pipilan & tepung" dan jam operasional gudang "Senin–Sabtu, 07.00–16.00" (disimpan di `lib/org.ts`), plus foto lahan sementara dari Unsplash. | Apakah jam operasional benar, dan foto gudang/lahan asli mana yang dipakai? |
 
 ## 11. Rilis

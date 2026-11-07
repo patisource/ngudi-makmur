@@ -8,6 +8,7 @@
 --   operator.demo@contoh.test operator_produksi (+ izin production.confirm)
 --   ketua.demo@contoh.test    ketua
 --   teknis.demo@contoh.test   admin_teknis
+--   irt.demo@contoh.test      pengurus_irt (IRT Sekar Arum, M10)
 --
 -- Alur transaksi dijalankan lewat fungsi posting yang sama dengan aplikasi, sehingga hasilnya harus:
 --   HPP Rp6.000/kg · stok PP 40 kg & TP 45 kg · kas masuk Rp50.000 · piutang Rp0 (uji: supabase/tests/report_check.sql).
@@ -32,7 +33,8 @@ from (values
   ('0d000000-0000-4000-8000-000000000001'::uuid, 'admin.demo@contoh.test', 'Admin Demo'),
   ('0d000000-0000-4000-8000-000000000002'::uuid, 'operator.demo@contoh.test', 'Operator Demo'),
   ('0d000000-0000-4000-8000-000000000003'::uuid, 'ketua.demo@contoh.test', 'Ketua Demo'),
-  ('0d000000-0000-4000-8000-000000000004'::uuid, 'teknis.demo@contoh.test', 'Teknis Demo')
+  ('0d000000-0000-4000-8000-000000000004'::uuid, 'teknis.demo@contoh.test', 'Teknis Demo'),
+  ('0d000000-0000-4000-8000-000000000005'::uuid, 'irt.demo@contoh.test', 'Pengurus IRT Demo')
 ) as u (id, email, full_name);
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select gen_random_uuid(), u.id, u.id::text, jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true), 'email', now(), now(), now()
@@ -41,7 +43,8 @@ insert into public.user_roles (user_id, role) values
   ('0d000000-0000-4000-8000-000000000001', 'admin_kelompok'),
   ('0d000000-0000-4000-8000-000000000002', 'operator_produksi'),
   ('0d000000-0000-4000-8000-000000000003', 'ketua'),
-  ('0d000000-0000-4000-8000-000000000004', 'admin_teknis');
+  ('0d000000-0000-4000-8000-000000000004', 'admin_teknis'),
+  ('0d000000-0000-4000-8000-000000000005', 'pengurus_irt');
 insert into public.user_permissions (user_id, permission) values ('0d000000-0000-4000-8000-000000000002', 'production.confirm');
 
 -- ---------- alur DEMO lewat fungsi posting ----------
@@ -59,6 +62,18 @@ select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-0000000
 select public.confirm_production(public.save_production_draft(null, 'penepungan', null, 'DEMO PRD §9.1', 0, array[60]::numeric[], array[50]::numeric[],
   '[{"category":"tenaga_kerja","amount_rp":60000,"note":"upah giling"}]'::jsonb));
 
+-- 2b) IRT Sekar Arum (M10): admin menghubungkan pelanggan; pengurus IRT menyiapkan bahan & produk. Tepung dari
+--     pesanan langkah 3 lalu otomatis masuk ke bahan IRT saat diserahkan (angka DEMO kelompok tidak berubah).
+select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
+select public.irt_set_customer(id) from public.customers where name = 'IRT Sekar Arum';
+select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000005","role":"authenticated"}', false);
+select public.irt_save_item(null, 'bahan', 'Tepung jagung', 'kg', null, null, null, 2, (select id from public.irt_kelompok_products() where code = 'TP'));
+select public.irt_save_item(null, 'bahan', 'Gula pasir', 'kg', null, null, null, 1, null);
+select public.irt_save_item(null, 'bahan', 'Telur ayam', 'butir', null, null, null, 10, null);
+select public.irt_save_item(null, 'bahan', 'Plastik kemasan', 'pcs', null, null, null, 20, null);
+select public.irt_save_item(null, 'produk', 'Kue kering jagung', 'pcs', 10, 1500, 14000, 20, null);
+select public.irt_save_item(null, 'produk', 'Stik jagung', 'pcs', 20, 1000, 18000, 20, null);
+
 -- 3) admin: pesanan 5 kg TP @Rp10.000 (IRT Sekar Arum), bayar Rp30.000 + Rp20.000 (terverifikasi), serah barang
 select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 select public.save_order_draft(null, null, c.id, 'langsung', 'DEMO PRD §9.1', 0, jsonb_build_array(jsonb_build_object('product_id', p.id, 'qty', '5')))
@@ -67,6 +82,25 @@ select public.confirm_order(id) from public.orders where note = 'DEMO PRD §9.1'
 select public.record_payment(o.id, null, 'tunai', a.id, 30000, 'DEMO cicilan 1', true) from public.orders o, public.cash_accounts a where o.note = 'DEMO PRD §9.1' and a.code = 'TUNAI';
 select public.record_payment(o.id, null, 'transfer', a.id, 20000, 'DEMO cicilan 2', true) from public.orders o, public.cash_accounts a where o.note = 'DEMO PRD §9.1' and a.code = 'BANK';
 select public.fulfill_order(id, 'IRT Sekar Arum', null) from public.orders where note = 'DEMO PRD §9.1';
+
+-- 4) pengurus IRT: beli bahan lain, produksi, jual per pack & pcs (tanpa kas)
+select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000005","role":"authenticated"}', false);
+select public.irt_receive(null, 'Toko Makmur', 'DEMO IRT', jsonb_build_array(
+  jsonb_build_object('item_id', (select id from public.irt_items where name = 'Gula pasir'), 'qty', 2, 'value_rp', 34000),
+  jsonb_build_object('item_id', (select id from public.irt_items where name = 'Telur ayam'), 'qty', 30, 'value_rp', 60000),
+  jsonb_build_object('item_id', (select id from public.irt_items where name = 'Plastik kemasan'), 'qty', 100, 'value_rp', 15000)));
+select public.irt_confirm_batch(public.irt_save_batch_draft(null, null, 'DEMO IRT',
+  jsonb_build_array(
+    jsonb_build_object('item_id', (select id from public.irt_items where name = 'Tepung jagung'), 'qty', 3),
+    jsonb_build_object('item_id', (select id from public.irt_items where name = 'Gula pasir'), 'qty', 1),
+    jsonb_build_object('item_id', (select id from public.irt_items where name = 'Telur ayam'), 'qty', 20),
+    jsonb_build_object('item_id', (select id from public.irt_items where name = 'Plastik kemasan'), 'qty', 6)),
+  jsonb_build_array(
+    jsonb_build_object('item_id', (select id from public.irt_items where name = 'Kue kering jagung'), 'qty', 40),
+    jsonb_build_object('item_id', (select id from public.irt_items where name = 'Stik jagung'), 'qty', 40))));
+select public.irt_create_sale(null, 'Warung Bu Sri', 'DEMO IRT', jsonb_build_array(
+  jsonb_build_object('item_id', (select id from public.irt_items where name = 'Kue kering jagung'), 'unit', 'pack', 'qty', 2),
+  jsonb_build_object('item_id', (select id from public.irt_items where name = 'Stik jagung'), 'unit', 'pcs', 'qty', 5)));
 
 reset role;
 select set_config('request.jwt.claims', '', false);

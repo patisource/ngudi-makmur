@@ -24,6 +24,10 @@ const SEGMENT: Record<string, string> = {
   produk: "Produk",
   kemasan: "Kemasan",
   akun: "Akun",
+  "bahan-masuk": "Bahan masuk",
+  produksi: "Produksi",
+  penjualan: "Penjualan",
+  stok: "Stok",
 };
 
 function useCrumbs(): Array<{ label: string; href?: string }> {

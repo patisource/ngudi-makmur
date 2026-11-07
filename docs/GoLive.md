@@ -14,6 +14,8 @@ yang tidak bisa dikerjakan dari kode. Centang setiap baris dan catat tanggal & p
       pengeluaran (Q15), ambang susut per jenis batch (Q17), jam gudang & foto panel login (Q23, `lib/org.ts`).
 - [ ] **Akun nyata**: satu akun per pengurus dengan peran yang benar (Pengaturan → Akun & izin). Kata sandi awal diberikan
       langsung; minta setiap orang menggantinya di **Akun saya**. Nonaktifkan akun yang tidak dipakai.
+- [ ] **Akun pengurus IRT Sekar Arum** (peran `pengurus_irt`, PRD §4.9). Pengurus IRT mengisi **Bahan & produk**: produk jadi
+      dengan harga per pcs, isi per pack, harga pack, stok minimum; bahan termasuk *Tepung jagung* yang dihubungkan ke produk kelompok.
 
 ## 2. Konfigurasi Supabase (Dashboard proyek asli)
 
@@ -30,9 +32,11 @@ Proyek asli saat ini berisi data uji ±5 minggu (PRD Q22). **Wajib dibersihkan s
 - [ ] Jalankan `supabase/bersihkan_data_uji.sql` sebagai `postgres` (SQL Editor Supabase). Hasil akhir menampilkan ringkasan;
       semua transaksi = 0, akun nyata/produk/kemasan/kategori/akun kas tetap.
 - [ ] Storage → bucket `proofs` → hapus semua berkas (bukti foto data uji).
+- [ ] Di aplikasi: **Anggota & produk → Pelanggan** — buat pelanggan nyata *IRT Sekar Arum* lalu pilih di kartu
+      "Pelanggan yang merupakan IRT Sekar Arum" (penghubung lama ikut terlepas saat pelanggan uji dihapus).
 - [ ] Di aplikasi: **Pembayaran & kas** → isi **saldo awal** Kas tunai & Rekening bank per tanggal mulai (Q14: siapa yang
       memverifikasi angkanya). Stok awal nyata dicatat lewat **Jagung masuk** atau **Stok opname**.
-- [ ] Jalankan semua uji DB terhadap proyek asli (`RUNNER=… sh scripts/db-test-all.sh`): setelah dibersihkan **semua 11 suite
+- [ ] Jalankan semua uji DB terhadap proyek asli (`RUNNER=… sh scripts/db-test-all.sh`): setelah dibersihkan **semua 12 suite
       harus lulus** (selama data uji ada, 3 suite memang gagal karena menganggap stok kosong).
 
 ## 4. Backup (hari H)

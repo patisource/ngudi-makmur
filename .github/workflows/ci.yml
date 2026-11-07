@@ -61,6 +61,7 @@ jobs:
       E2E_KETUA_EMAIL: ketua.demo@contoh.test
       E2E_OPERATOR_EMAIL: operator.demo@contoh.test
       E2E_TEKNIS_EMAIL: teknis.demo@contoh.test
+      E2E_IRT_EMAIL: irt.demo@contoh.test
       E2E_PASSWORD: demo-ngudi-makmur # akun DEMO lokal (supabase/seed_demo.sql), bukan akun nyata
     steps:
       - uses: actions/checkout@v4

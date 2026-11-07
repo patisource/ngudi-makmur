@@ -155,6 +155,19 @@ Sumber: ekspor PNG di `desain/` (00 login, 01 dashboard, 02 penjualan & pembayar
 - [x] **D.6** Data uji coba ± 5 minggu (`supabase/seed_uji.sql`) dimuat ke proyek asli atas keputusan pengguna; **wajib** `supabase/bersihkan_data_uji.sql` sebelum go-live (docs/Operasional.md §6). Pembersih sudah dicoba di proyek asli dalam transaksi yang dibatalkan.
 - [x] **D.7** Belum mengikuti desain karena butuh keputusan domain: grafik "jagung diolah" (Q19), satuan kemasan di input produksi (Q20), banner biaya batch belum dibayar (Q21). _Status: keputusan pengguna 4 Nov 2026: Q19 grafik 'Jagung masuk vs jagung diolah' (diolah = input batch pemipilan; migrasi 20261104090000, juga di CSV dashboard); Q20 produksi tetap kg; Q21 banner biaya batch tidak dibuat._
 
+## M10 — Modul IRT Sekar Arum (6–7 Nov 2026) · PRD §4.9
+
+_Keputusan pengguna (PRD Q24): satu IRT, pengurus IRT punya akun sendiri, **tanpa kas**, produk per pcs & pack, pengurus IRT boleh melihat stok tepung kelompok, ketua membaca data IRT, koreksi IRT langsung berlaku._
+
+- [x] **T10.1** Peran `pengurus_irt` (migrasi `20261106090000_irt_role.sql`), menu & matriks akses (`lib/auth/permissions.ts`; uji Vitest: pengurus IRT hanya menu IRT, mendarat di `/irt`, tidak bisa membuka kas/penjualan/anggota/laporan kelompok). _Status: permissions.test.ts 98+ uji lulus._
+- [x] **T10.2** Skema IRT (`20261106090100_irt.sql`): `irt_settings`, `irt_items` (bahan/produk, pack_size, harga, produk kelompok terhubung), `irt_stock_balances`, `irt_movements` (append-only, unik per sumber), `irt_receipts`, `irt_batches`, `irt_sales`, `irt_adjustments`, nomor IBM/IPR/IJL/IKS; RLS di semua tabel; policy stok kelompok untuk pengurus IRT hanya produk terhubung.
+- [x] **T10.3** Fungsi posting (security definer, cek peran, kunci saldo, audit): `irt_save_item`, `irt_receive`, `irt_save_batch_draft`/`irt_confirm_batch` (HPP per pcs), `irt_create_sale` (harga server, pcs/pack), `irt_void_sale`, `irt_adjust`, `irt_set_customer`; trigger tepung otomatis saat pesanan IRT diserahkan dan keluar lagi saat retur diverifikasi. Fungsi posting kelompok tidak diubah.
+- [x] **T10.4** Uji DB `supabase/tests/irt_check.sql` 40/40: tepung otomatis, beli bahan, HPP (Rp45.000 ÷ 40 pcs = Rp1.125), jual 2 pack + 3 pcs, tolak pecahan/stok kurang/pack tanpa isi, batal (stok kembali senilai), koreksi, retur (ditolak bila bahan terpakai), laporan, penjualan tanpa kas, isolasi menyeluruh (pengurus IRT tidak membaca tabel kelompok lain; admin & operator tidak membaca IRT; ketua baca saja). Semua 11 suite lama tetap lulus.
+- [x] **T10.5** Halaman `/irt` (dashboard tanpa kas + Unduh CSV `/api/v1/irt/report`), `/irt/bahan-masuk`, `/irt/produksi` (+ baru, detail/draft), `/irt/stok` (+ kartu stok, koreksi, stok tepung kelompok baca saja), `/irt/penjualan` (+ baru per pcs/pack, detail + batal), `/irt/produk`; kartu "Pelanggan yang merupakan IRT" di `/master/pelanggan` (admin). Dijelajahi pengurus IRT 360/1280 px terang & gelap tanpa galat; satu overflow ponsel diperbaiki.
+- [x] **T10.6** Helper pcs/pack `lib/irt.ts` + Vitest (5 uji); skema Zod `lib/validation/irt.ts`; server action `features/irt/actions.ts` (idempotensi untuk semua posting).
+- [x] **T10.7** Data DEMO: akun `irt.demo@contoh.test`, bahan & produk contoh, tepung otomatis dari pesanan DEMO, satu produksi & satu penjualan (angka DEMO kelompok tidak berubah). Pembersih data uji ikut mengosongkan transaksi IRT (master IRT tetap). E2E `tests/e2e/irt.spec.ts` (lulus lokal) + CI.
+- [ ] **T10.8** UAT dengan pengurus IRT Sekar Arum: isi daftar produk, harga, isi pack, dan stok minimum resmi; buat akun nyata pengurus IRT; hubungkan pelanggan IRT di proyek asli setelah data uji dibersihkan. _Kegiatan lapangan._
+
 ## Urutan & Ketergantungan
 
 ```

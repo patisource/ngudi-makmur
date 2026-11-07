@@ -4,9 +4,9 @@ Panduan kerja untuk AI (Claude Code) dan kontributor di repositori **Sistem Mana
 
 ## Konteks Singkat
 
-Aplikasi web responsif internal untuk pengurus kelompok tani: jagung masuk → pemipilan/penepungan → stok → pesanan → pembayaran & kas → nota thermal & laporan. Satu kelompok tani, empat peran: `admin_kelompok` (master, jagung masuk, pesanan, pembayaran, kas, nota), `operator_produksi` (batch produksi, lihat stok; **tidak boleh** menyentuh pembayaran/kas), `ketua` (baca laporan, setujui koreksi stok/kas), `admin_teknis` (akun, izin, server, backup; bukan pencatat transaksi). Pelanggan (termasuk IRT Sekar Arum) tidak punya akun.
+Aplikasi web responsif internal untuk pengurus kelompok tani: jagung masuk → pemipilan/penepungan → stok → pesanan → pembayaran & kas → nota thermal & laporan. Satu kelompok tani, empat peran: `admin_kelompok` (master, jagung masuk, pesanan, pembayaran, kas, nota), `operator_produksi` (batch produksi, lihat stok; **tidak boleh** menyentuh pembayaran/kas), `ketua` (baca laporan, setujui koreksi stok/kas), `admin_teknis` (akun, izin, server, backup; bukan pencatat transaksi). Pelanggan tidak punya akun. Sejak M10 ada peran kelima `pengurus_irt` untuk modul **IRT Sekar Arum** (PRD §4.9): bahan masuk → produksi → stok → penjualan IRT, **tanpa kas**, produk jadi dalam **pcs** (pack = isi pcs tetap); pengurus IRT hanya melihat data IRT + stok kelompok untuk produk yang dihubungkan; `ketua` membaca data IRT. Data IRT terpisah dari stok/kas kelompok (tabel `irt_*`); jembatan satu-satunya adalah trigger tepung masuk saat pesanan pelanggan IRT diserahkan.
 
-Produk v1 hanya tiga, semua inventori dalam **kg**: **Tongkol (`TK`) → pemipilan → Pipilan (`PP`) → penepungan → Tepung (`TP`)** (PRD §4.0). Kemasan (mis. pak 0,5 kg, karung 50 kg) hanya untuk penjualan dengan konversi kg eksplisit. Nama produk masih sementara (merek belum final), jadi jangan pernah meng-*hardcode* nama produk di kode; rujuk lewat `products.code` (`TK`, `PP`, `TP`), kategori (`mentah`/`olahan`), atau `id`.
+Produk **kelompok** v1 hanya tiga, semua inventori kelompok dalam **kg** (produk IRT dikelola terpisah di `irt_items`, pcs/pack): **Tongkol (`TK`) → pemipilan → Pipilan (`PP`) → penepungan → Tepung (`TP`)** (PRD §4.0). Kemasan (mis. pak 0,5 kg, karung 50 kg) hanya untuk penjualan dengan konversi kg eksplisit. Nama produk masih sementara (merek belum final), jadi jangan pernah meng-*hardcode* nama produk di kode; rujuk lewat `products.code` (`TK`, `PP`, `TP`), kategori (`mentah`/`olahan`), atau `id`.
 
 Sebelum mengerjakan apa pun, baca bagian yang relevan dari:
 
@@ -144,11 +144,11 @@ Form (client) ──▶ Server Action / Route Handler
 ## Hal yang Harus Ditanyakan, Bukan Diputuskan Sendiri
 
 - Perubahan aturan domain (metode HPP, rumus laporan, alur status, aturan pembatalan/retur).
-- Menambah peran atau mengubah matriks hak akses (empat peran SRS bersifat tetap).
+- Menambah peran atau mengubah matriks hak akses (empat peran SRS + `pengurus_irt` bersifat tetap).
 - Menambah produk, jenis batch, atau satuan inventori selain kg.
 - Cara penerimaan hasil panen anggota/biaya perolehan, konsinyasi, bagi hasil (belum diputuskan; PRD §10).
 - Menambah dependensi besar atau layanan pihak ketiga.
-- Apa pun yang termasuk Non-Goals PRD §2 (marketplace, payment gateway, aplikasi native, modul usaha IRT).
+- Apa pun yang termasuk Non-Goals PRD §2 (marketplace, payment gateway, aplikasi native). Modul IRT sudah dikeluarkan dari Non-Goals (Q24), tetapi **kas IRT, IRT kedua, atau menghubungkan IRT ke kas kelompok** tetap harus ditanyakan.
 
 ## Glosarium
 

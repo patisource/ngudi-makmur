@@ -48,6 +48,20 @@ const ACTION_LABEL: Record<string, string> = {
   "stock_adjustment.rejected": "Tolak koreksi stok",
   "opname.created": "Buat stok opname",
   "opname.posted": "Posting stok opname",
+  "irt.customer_linked": "Hubungkan pelanggan IRT",
+  "irt.item.created": "Tambah bahan/produk IRT",
+  "irt.item.updated": "Ubah bahan/produk IRT",
+  "irt.item.archived": "Arsipkan bahan/produk IRT",
+  "irt.item.restored": "Aktifkan bahan/produk IRT",
+  "irt.receipt.created": "Bahan masuk IRT",
+  "irt.receipt.auto": "Tepung masuk IRT (dari pesanan)",
+  "irt.batch.draft_created": "Draft produksi IRT",
+  "irt.batch.draft_updated": "Ubah draft produksi IRT",
+  "irt.batch.draft_deleted": "Hapus draft produksi IRT",
+  "irt.batch.confirmed": "Konfirmasi produksi IRT",
+  "irt.sale.created": "Penjualan IRT",
+  "irt.sale.voided": "Batalkan penjualan IRT",
+  "irt.stock.adjusted": "Koreksi stok IRT",
 };
 
 // Aksi master data: "<tabel>.<kata kerja>" dari trigger audit_master_row.
@@ -84,6 +98,7 @@ export const AUDIT_GROUPS: Array<[string, string]> = [
   ["cash_correction", "Koreksi kas"],
   ["stock_adjustment", "Koreksi stok"],
   ["opname", "Stok opname"],
+  ["irt", "IRT Sekar Arum"],
 ];
 
 // ---------------------------------------------------------------- ringkasan baris audit (desain 01/07/08)
@@ -112,6 +127,7 @@ const ICON_BY_PREFIX: Record<string, AuditIcon> = {
   cash_transfer: "cash",
   user: "user",
   auth: "user",
+  irt: "box",
 };
 
 const OUT_ACTIONS = new Set(["expense.created", "refund.created"]);

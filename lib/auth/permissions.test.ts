@@ -5,16 +5,23 @@ import type { AppRole } from "@/lib/supabase/types";
 // Matriks PRD §3.1 (kolom L/K = boleh membuka halaman). Diuji per peran agar perubahan konfigurasi
 // yang tidak sengaja membuka akses langsung ketahuan.
 const MATRIX: Record<string, Record<AppRole, boolean>> = {
-  "/dashboard": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
-  "/jagung-masuk": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
-  "/produksi": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
-  "/stok": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
-  "/penjualan": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false },
-  "/kas": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false },
-  "/laporan": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
-  "/master": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false },
-  "/audit": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true },
-  "/pengaturan/akun": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true },
+  "/dashboard": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/jagung-masuk": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/produksi": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/stok": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/penjualan": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/kas": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/laporan": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/master": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/audit": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true, pengurus_irt: false },
+  "/pengaturan/akun": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true, pengurus_irt: false },
+  // IRT Sekar Arum (M10): pengurus IRT kelola, ketua baca; peran kelompok lain tidak.
+  "/irt": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
+  "/irt/bahan-masuk": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
+  "/irt/produksi/baru": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
+  "/irt/stok": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
+  "/irt/penjualan": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
+  "/irt/produk": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
 };
 
 describe("matriks hak akses halaman (PRD §3.1)", () => {
@@ -37,10 +44,27 @@ describe("uji wajib SRS §11 — sisi aplikasi", () => {
   });
 });
 
+describe("modul IRT (M10)", () => {
+  it("pengurus IRT hanya mendapat menu IRT dan mendarat di Dashboard IRT", () => {
+    const hrefs = navFor(["pengurus_irt"]).map((n) => n.href);
+    expect(hrefs.every((h) => h.startsWith("/irt"))).toBe(true);
+    expect(homeFor(["pengurus_irt"])).toBe("/irt");
+  });
+  it("pengurus IRT tidak bisa membuka kas, penjualan, anggota, laporan kelompok", () => {
+    for (const p of ["/dashboard", "/kas", "/penjualan", "/master/anggota", "/laporan/penjualan", "/stok", "/audit"]) expect(canOpen(["pengurus_irt"], p)).toBe(false);
+  });
+  it("hanya pengurus IRT yang mencatat data IRT; hubungkan pelanggan oleh admin kelompok/teknis", () => {
+    expect(canDo(["pengurus_irt"], "irt.kelola")).toBe(true);
+    for (const r of ["admin_kelompok", "operator_produksi", "ketua", "admin_teknis"] as AppRole[]) expect(canDo([r], "irt.kelola")).toBe(false);
+    for (const r of ["admin_kelompok", "admin_teknis"] as AppRole[]) expect(canDo([r], "irt.hubungkan")).toBe(true);
+    for (const r of ["pengurus_irt", "ketua", "operator_produksi"] as AppRole[]) expect(canDo([r], "irt.hubungkan")).toBe(false);
+  });
+});
+
 describe("aksi kelola akun", () => {
   it("hanya admin_teknis", () => {
     expect(canDo(["admin_teknis"], "akun.kelola")).toBe(true);
-    for (const r of ["admin_kelompok", "operator_produksi", "ketua"] as AppRole[]) expect(canDo([r], "akun.kelola")).toBe(false);
+    for (const r of ["admin_kelompok", "operator_produksi", "ketua", "pengurus_irt"] as AppRole[]) expect(canDo([r], "akun.kelola")).toBe(false);
   });
 });
 
@@ -90,7 +114,7 @@ describe("aksi retur (PRD Q7: catat admin_kelompok, verifikasi ketua)", () => {
 describe("UJI WAJIB SRS §11: pembayaran & kas", () => {
   it("hanya admin_kelompok mencatat pembayaran/pengeluaran/refund; operator & admin teknis tidak pernah", () => {
     expect(canDo(["admin_kelompok"], "kas.kelola")).toBe(true);
-    for (const r of ["operator_produksi", "ketua", "admin_teknis"] as AppRole[]) expect(canDo([r], "kas.kelola")).toBe(false);
+    for (const r of ["operator_produksi", "ketua", "admin_teknis", "pengurus_irt"] as AppRole[]) expect(canDo([r], "kas.kelola")).toBe(false);
   });
   it("koreksi kas diputuskan ketua saja", () => {
     expect(canDo(["ketua"], "kas.putuskan")).toBe(true);

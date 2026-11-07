@@ -1,8 +1,8 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261103180000_payment_proofs_transfers.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261106090100_irt.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type AppRole = "admin_kelompok" | "operator_produksi" | "ketua" | "admin_teknis";
+export type AppRole = "admin_kelompok" | "operator_produksi" | "ketua" | "admin_teknis" | "pengurus_irt";
 export type AppPermission = "production.confirm";
 export type ProductCategory = "mentah" | "olahan";
 export type CustomerType = "perorangan" | "usaha";
@@ -56,6 +56,10 @@ export type StockReportRow = {
   min_stock_kg: number;
   below_min: boolean;
 };
+export type IrtItemKind = "bahan" | "produk";
+export type IrtUnit = "kg" | "gram" | "liter" | "ml" | "butir" | "pcs";
+export type IrtMovementType = "bahan_masuk" | "retur_kelompok" | "produksi_bahan" | "produksi_hasil" | "penjualan" | "penjualan_batal" | "koreksi";
+export type IrtReportRow = { item_id: string; name: string; pack_size: number | null; produced_pcs: number; sold_pcs: number; omzet_rp: number; hpp_rp: number; stock_pcs: number };
 export type CashSourceType = "opening_balance" | "payment" | "other_income" | "expense" | "refund" | "cash_correction" | "transfer_out" | "transfer_in";
 export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
@@ -293,6 +297,68 @@ export type Database = {
         { id: string; doc_number: string; business_date: string; from_account_id: string; to_account_id: string; amount_rp: number; note: string; created_by: string; created_at: Ts },
         [Fk<"cash_transfers", "from_account_id", "cash_accounts">, Fk<"cash_transfers", "to_account_id", "cash_accounts">]
       >;
+      irt_settings: Table<{ id: number; name: string; customer_id: string | null; updated_at: Ts; updated_by: string | null }, [Fk<"irt_settings", "customer_id", "customers">]>;
+      irt_items: Table<{
+        id: string;
+        kind: IrtItemKind;
+        name: string;
+        unit: IrtUnit;
+        pack_size: number | null;
+        price_pcs: number | null;
+        price_pack: number | null;
+        min_stock: number;
+        kelompok_product_id: string | null;
+      } & Master>;
+      irt_stock_balances: Table<{ item_id: string; on_hand: number; value_rp: number; updated_at: Ts }, [{ foreignKeyName: "irt_stock_balances_item_id_fkey"; columns: ["item_id"]; isOneToOne: true; referencedRelation: "irt_items"; referencedColumns: ["id"] }]>;
+      irt_movements: Table<
+        { id: number; item_id: string; movement_type: IrtMovementType; direction: StockDirection; qty: number; value_rp: number; balance_after: number; source_type: string; source_id: string; source_line: string; doc_number: string | null; business_date: string; note: string | null; created_by: string | null; created_at: Ts },
+        [Fk<"irt_movements", "item_id", "irt_items">]
+      >;
+      irt_receipts: Table<
+        { id: string; doc_number: string; source: "kelompok" | "beli"; order_id: string | null; order_doc_number: string | null; business_date: string; supplier: string | null; note: string | null; total_value_rp: number; created_by: string | null; created_by_name: string; created_at: Ts }
+      >;
+      irt_receipt_lines: Table<{ id: string; receipt_id: string; item_id: string; qty: number; value_rp: number; sort_order: number }, [Fk<"irt_receipt_lines", "receipt_id", "irt_receipts">, Fk<"irt_receipt_lines", "item_id", "irt_items">]>;
+      irt_batches: Table<{
+        id: string;
+        doc_number: string | null;
+        status: "draft" | "confirmed";
+        business_date: string;
+        note: string | null;
+        input_value_rp: number | null;
+        output_pcs: number | null;
+        hpp_per_pcs: number | null;
+        created_by: string | null;
+        created_by_name: string;
+        confirmed_at: Ts | null;
+        confirmed_by: string | null;
+        created_at: Ts;
+        updated_at: Ts;
+      }>;
+      irt_batch_lines: Table<{ id: string; batch_id: string; item_id: string; role: "bahan" | "hasil"; qty: number; value_rp: number | null; sort_order: number }, [Fk<"irt_batch_lines", "batch_id", "irt_batches">, Fk<"irt_batch_lines", "item_id", "irt_items">]>;
+      irt_sales: Table<{
+        id: string;
+        doc_number: string;
+        status: "confirmed" | "void";
+        business_date: string;
+        buyer_name: string | null;
+        note: string | null;
+        total_pcs: number;
+        total_rp: number;
+        created_by: string | null;
+        created_by_name: string;
+        created_at: Ts;
+        void_reason: string | null;
+        voided_at: Ts | null;
+        voided_by: string | null;
+      }>;
+      irt_sale_lines: Table<
+        { id: string; sale_id: string; item_id: string; unit: "pcs" | "pack"; qty_input: number; qty_pcs: number; price_snapshot: number; line_total_rp: number; sort_order: number },
+        [Fk<"irt_sale_lines", "sale_id", "irt_sales">, Fk<"irt_sale_lines", "item_id", "irt_items">]
+      >;
+      irt_adjustments: Table<
+        { id: string; doc_number: string; business_date: string; item_id: string; direction: StockDirection; qty: number; reason: string; value_rp: number; created_by: string | null; created_by_name: string; created_at: Ts },
+        [Fk<"irt_adjustments", "item_id", "irt_items">]
+      >;
       cash_accounts: Table<{
         id: string;
         code: string;
@@ -484,6 +550,25 @@ export type Database = {
         };
         Relationships: [];
       };
+      v_irt_stock: {
+        Row: {
+          item_id: string;
+          kind: IrtItemKind;
+          name: string;
+          unit: IrtUnit;
+          pack_size: number | null;
+          price_pcs: number | null;
+          price_pack: number | null;
+          min_stock: number;
+          kelompok_product_id: string | null;
+          archived_at: Ts | null;
+          on_hand: number;
+          value_rp: number;
+          avg_cost: number | null;
+          below_min: boolean;
+        };
+        Relationships: [];
+      };
       v_cash_balance: {
         Row: { account_id: string; code: string; name: string; kind: CashAccountKind; balance_rp: number; opening_set_at: Ts | null; archived_at: Ts | null; sort_order: number };
         Relationships: [];
@@ -545,6 +630,21 @@ export type Database = {
       decide_production_void: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
       log_print: { Args: { p_doc_type: "order" | "payment"; p_doc_id: string }; Returns: number };
       rpt_kpi: { Args: { p_from: string; p_to: string }; Returns: Json };
+      irt_save_item: {
+        Args: { p_id: string | null; p_kind: IrtItemKind; p_name: string; p_unit: IrtUnit; p_pack_size: number | null; p_price_pcs: number | null; p_price_pack: number | null; p_min_stock: number; p_kelompok_product: string | null };
+        Returns: string;
+      };
+      irt_archive_item: { Args: { p_id: string; p_archive: boolean }; Returns: undefined };
+      irt_kelompok_products: { Args: Record<string, never>; Returns: { id: string; code: string; name: string }[] };
+      irt_set_customer: { Args: { p_customer: string | null }; Returns: undefined };
+      irt_receive: { Args: { p_date: string | null; p_supplier: string | null; p_note: string | null; p_lines: Json }; Returns: Json };
+      irt_save_batch_draft: { Args: { p_id: string | null; p_date: string | null; p_note: string | null; p_inputs: Json; p_outputs: Json }; Returns: string };
+      irt_delete_batch_draft: { Args: { p_id: string }; Returns: undefined };
+      irt_confirm_batch: { Args: { p_id: string }; Returns: Json };
+      irt_create_sale: { Args: { p_date: string | null; p_buyer: string | null; p_note: string | null; p_lines: Json }; Returns: Json };
+      irt_void_sale: { Args: { p_id: string; p_reason: string }; Returns: Json };
+      irt_adjust: { Args: { p_date: string | null; p_item: string; p_direction: StockDirection; p_qty: number; p_reason: string }; Returns: Json };
+      irt_report: { Args: { p_from: string; p_to: string }; Returns: IrtReportRow[] };
       rpt_daily: { Args: { p_from: string; p_to: string }; Returns: { day: string; receipts_kg: number; flour_kg: number; sales_kg: number; processed_kg: number }[] };
       rpt_sales: { Args: { p_from: string; p_to: string }; Returns: SalesReportRow[] };
       rpt_stock: { Args: { p_from: string; p_to: string }; Returns: StockReportRow[] };

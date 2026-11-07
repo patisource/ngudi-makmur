@@ -29,7 +29,9 @@ begin
                            'production_batches', 'production_lines', 'batch_costs', 'orders', 'order_items', 'order_returns',
                            'order_return_items', 'stock_reservations', 'stock_opnames', 'stock_opname_lines', 'stock_adjustments',
                            'payments', 'refunds', 'expenses', 'other_incomes', 'cash_corrections', 'print_logs', 'members',
-                           'member_contacts', 'customers', 'stock_balances', 'cash_accounts'] loop
+                           'member_contacts', 'customers', 'stock_balances', 'cash_accounts',
+                           'irt_movements', 'irt_receipts', 'irt_receipt_lines', 'irt_batches', 'irt_batch_lines', 'irt_sales',
+                           'irt_sale_lines', 'irt_adjustments', 'irt_stock_balances'] loop
     execute format('alter table public.%I disable trigger user', t);
   end loop;
 end $$;
@@ -38,11 +40,15 @@ truncate public.attachments, public.print_logs, public.order_return_items, publi
          public.refunds, public.payments, public.order_items, public.orders, public.batch_costs, public.production_lines,
          public.production_batches, public.receipts, public.stock_opname_lines, public.stock_opnames, public.stock_adjustments,
          public.expenses, public.other_incomes, public.cash_corrections, public.cash_transfers, public.cash_transactions,
-         public.stock_movements, public.idempotency_keys, public.document_sequences
+         public.stock_movements, public.idempotency_keys, public.document_sequences,
+         -- modul IRT (M10): transaksi IRT; master bahan/produk IRT tetap
+         public.irt_adjustments, public.irt_sale_lines, public.irt_sales, public.irt_batch_lines, public.irt_batches,
+         public.irt_receipt_lines, public.irt_receipts, public.irt_movements
   restart identity;
 
 update public.stock_balances set on_hand_kg = 0, value_rp = 0, updated_at = now();
 update public.cash_accounts set balance_rp = 0, opening_set_at = null, updated_at = now();
+update public.irt_stock_balances set on_hand = 0, value_rp = 0, updated_at = now();
 
 -- master & akun contoh
 delete from public.members where id in (select id from uji.baris where jenis = 'member');
@@ -65,7 +71,9 @@ begin
                            'production_batches', 'production_lines', 'batch_costs', 'orders', 'order_items', 'order_returns',
                            'order_return_items', 'stock_reservations', 'stock_opnames', 'stock_opname_lines', 'stock_adjustments',
                            'payments', 'refunds', 'expenses', 'other_incomes', 'cash_corrections', 'print_logs', 'members',
-                           'member_contacts', 'customers', 'stock_balances', 'cash_accounts'] loop
+                           'member_contacts', 'customers', 'stock_balances', 'cash_accounts',
+                           'irt_movements', 'irt_receipts', 'irt_receipt_lines', 'irt_batches', 'irt_batch_lines', 'irt_sales',
+                           'irt_sale_lines', 'irt_adjustments', 'irt_stock_balances'] loop
     execute format('alter table public.%I enable trigger user', t);
   end loop;
 end $$;
