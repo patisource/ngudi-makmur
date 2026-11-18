@@ -70,11 +70,19 @@ export function Splash() {
           <Logo size={88} className="rounded-2xl" />
         </div>
         <div className="sp-word">
-          {ORG.shortName.split("").map((c, i) => (
-            <span key={i} style={{ ["--i" as string]: i }}>
-              {c}
-            </span>
-          ))}
+          {/* per kata (tidak terpotong di tengah kata saat membungkus di ponsel), huruf beranimasi berurutan */}
+          {ORG.splashTitle.split(" ").map((word, w, words) => {
+            const start = words.slice(0, w).reduce((n, x) => n + x.length, 0);
+            return (
+              <span key={w} className="sp-w">
+                {word.split("").map((c, i) => (
+                  <span key={i} style={{ ["--i" as string]: start + i }}>
+                    {c}
+                  </span>
+                ))}
+              </span>
+            );
+          })}
         </div>
         <div className="sp-sub">{ORG.splashSubtitle}</div>
       </div>

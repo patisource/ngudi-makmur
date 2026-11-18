@@ -5,6 +5,8 @@ export const ORG = {
   /** Nama sistem (judul aplikasi, tab browser, sidebar, login). Permintaan pengguna 5 Nov 2026. */
   appName: "Sistem Pengelolaan Jagung Desa Baturejo",
   shortName: "Ngudi Makmur",
+  /** Judul besar welcome splash (permintaan pengguna 19 Nov 2026). */
+  splashTitle: "Sistem Pengelolaan Jagung",
   fullName: "Kelompok Tani Ngudi Makmur",
   address: "Desa Baturejo, Kec. Sukolilo, Kab. Pati, Jawa Tengah",
   splashSubtitle: "Kelompok Tani · Desa Baturejo, Sukolilo, Pati",

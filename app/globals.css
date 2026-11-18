@@ -292,14 +292,23 @@ html[data-splash] .splash {
 
 .sp-word {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.28em;
+  max-width: min(92vw, 760px);
   overflow: hidden;
   padding-bottom: 4px;
-  font-size: clamp(36px, 6vw, 52px);
+  text-align: center;
+  font-size: clamp(30px, 5.5vw, 52px);
   font-weight: 650;
   letter-spacing: -0.03em;
   line-height: 1.1;
 }
-.sp-word span {
+.sp-w {
+  display: inline-flex;
+  white-space: nowrap;
+}
+.sp-word .sp-w span {
   display: inline-block;
   white-space: pre;
   animation: sp-letter 0.9s var(--expo) both;
