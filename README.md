@@ -48,7 +48,8 @@ Halaman awal menampilkan variabel lingkungan mana yang sudah terisi.
 4. **Deploy**. Setiap push ke `main` akan otomatis ter-deploy.
 5. **Domain sendiri** (Vercel → Project → Settings → Domains → Add `panenkita-baturejo.web.id`, lalu juga `www.panenkita-baturejo.web.id`
    dengan *Redirect to* domain utama). Di panel DNS penyedia domain buat record yang ditampilkan Vercel, biasanya:
-   `A  @  76.76.21.21` dan `CNAME  www  cname.vercel-dns.com`. Sertifikat HTTPS dibuat otomatis oleh Vercel setelah DNS aktif.
+   `A  @  216.198.79.1` (nilai yang ditampilkan Vercel untuk proyek ini). Untuk `www`, tambahkan dulu di Vercel lalu pakai CNAME yang ditampilkannya.
+   DNS dikelola di MyDomaiNesia (nameserver DomaiNesia); aktifkan DNS Management bila belum. HTTPS dibuat otomatis oleh Vercel setelah DNS aktif.
    Jadikan domain ini *Primary*, lalu **Redeploy** agar aplikasi memakai domain baru sebagai alamatnya.
 6. Di Supabase → **Authentication → URL Configuration**: *Site URL* = `https://panenkita-baturejo.web.id`;
    *Redirect URLs* tambahkan `https://panenkita-baturejo.web.id/**` (alamat Vercel lama boleh tetap ada selama masa peralihan).

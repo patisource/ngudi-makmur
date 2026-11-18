@@ -25,7 +25,7 @@ yang tidak bisa dikerjakan dari kode. Centang setiap baris dan catat tanggal & p
 
 ## 2b. Domain `panenkita-baturejo.web.id` (dibeli 18 Nov 2026)
 
-- [ ] Panel penyedia domain: DNS aktif (zona dibuat) dengan record dari Vercel — biasanya `A @ 76.76.21.21` dan `CNAME www cname.vercel-dns.com`.
+- [ ] MyDomaiNesia → DNS Management aktif, record `A @ 216.198.79.1` (dari Vercel); hapus record A lain untuk `@`. `www` opsional: tambahkan di Vercel dulu, pakai CNAME yang ditampilkan.
 - [ ] Vercel → Settings → Domains: tambah domain + `www` (redirect ke domain utama), jadikan *Primary*, tunggu status *Valid Configuration* & HTTPS aktif.
 - [ ] Vercel → Deployments → **Redeploy** produksi (alamat aplikasi otomatis ikut domain utama).
 - [ ] Cek: buka https://panenkita-baturejo.web.id, login, ganti kata sandi (memastikan sesi & cookie benar di domain baru).
