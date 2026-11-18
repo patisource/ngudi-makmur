@@ -55,7 +55,7 @@ function Kpi({ tone, label, value, valueCls, sub, meter, foot }: { tone: Tone; l
       <span className="text-label font-medium text-text-muted">{label}</span>
       <span className={`min-w-0 break-words text-[26px] font-semibold leading-tight tracking-tight tabular-nums ${valueCls ?? ""}`}>{value}</span>
       {sub && <div className="text-sm text-text-muted">{sub}</div>}
-      {meter}
+      {meter && <div className="mt-1">{meter}</div>}
       {foot && <div className="mt-auto border-t border-border pt-3 text-xs text-text-subtle">{foot}</div>}
     </div>
   );
@@ -108,7 +108,7 @@ export function DashboardView({
   const adminTodo = pending.filter((p) => !p.approval && p.count > 0);
 
   return (
-    <>
+    <div className="@container flex flex-col gap-5">
       {isKetua && approvals.length > 0 && (
         <Card className="gap-4">
           <div className="flex items-start justify-between gap-3">
@@ -134,9 +134,9 @@ export function DashboardView({
         </div>
       )}
 
-      <div className={`grid gap-3 sm:grid-cols-2 ${finance ? "xl:grid-cols-[1.3fr_1fr_1fr] 2xl:grid-cols-[1.45fr_1fr_1fr_1fr_1fr]" : "xl:grid-cols-4"}`}>
+      <div className={`grid gap-3 @xl:grid-cols-2 ${finance ? "@4xl:grid-cols-[1.25fr_1fr_1fr]" : "@4xl:grid-cols-4"}`}>
         {finance && (
-          <div className="flex min-w-0 flex-col gap-2 rounded-xl bg-leaf-deep p-5 text-white sm:col-span-2 xl:col-span-1 xl:row-span-2 2xl:row-span-1">
+          <div className="flex min-w-0 flex-col gap-3 rounded-xl bg-leaf-deep p-5 text-white @xl:col-span-2 @4xl:col-span-1 @4xl:row-span-2">
             <div className="flex items-start justify-between gap-2">
               <span className="text-label font-medium text-white/80">Omzet (barang diserahkan)</span>
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-white/15 px-2 py-0.5 text-xs font-medium tabular-nums">
@@ -146,25 +146,34 @@ export function DashboardView({
             </div>
             <span className="flex items-baseline gap-1.5 font-semibold tracking-tight tabular-nums">
               <span className="text-base text-white/70">Rp</span>
-              <span className="text-[34px] leading-tight sm:text-[40px]">
+              <span className="text-[34px] leading-tight @md:text-[40px]">
                 <CountUp value={kpi.omzet_rp} format="int" />
               </span>
             </span>
             {daily.length > 1 && (
               <MiniBars onDark values={daily.map((d) => d.omzet)} labels={daily.map((d) => dayFmt.format(new Date(`${d.day}T00:00:00Z`)))} title="Omzet harian" format={formatRupiah} />
             )}
-            <p className="text-xs leading-relaxed text-white/85">
-              {sold.length > 0 && `${sold.slice(0, 2).map((s) => `${s.name} ${kgShort(s.grams)}`).join(" · ")} · `}
-              vs {prevLabel}: {formatRupiah(prev.kpi.omzet_rp)}
-              {omzetDelta != null && (
-                <span className="ml-1.5 inline-flex items-center gap-1 rounded-sm bg-white/15 px-1.5 py-0.5 font-medium text-corn">
-                  {omzetDelta >= 0 ? <TrendingUp size={13} strokeWidth={2} /> : <TrendingDown size={13} strokeWidth={2} />}
-                  {omzetDelta >= 0 ? "+" : "−"}
-                  {pctText(Math.abs(Math.round(omzetDelta * 10) / 10))}
+            <div className="flex flex-col gap-1.5 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-white/75">vs {prevLabel}</span>
+                <span className="flex items-center gap-2 tabular-nums">
+                  {formatRupiah(prev.kpi.omzet_rp)}
+                  {omzetDelta != null && (
+                    <span className="inline-flex items-center gap-1 rounded-sm bg-white/15 px-1.5 py-0.5 font-medium text-corn">
+                      {omzetDelta >= 0 ? <TrendingUp size={13} strokeWidth={2} /> : <TrendingDown size={13} strokeWidth={2} />}
+                      {omzetDelta >= 0 ? "+" : "−"}
+                      {pctText(Math.abs(Math.round(omzetDelta * 10) / 10))}
+                    </span>
+                  )}
                 </span>
+              </div>
+              {kpi.returns_rp > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/75">Retur sah</span>
+                  <span className="tabular-nums">−{formatRupiah(kpi.returns_rp)}</span>
+                </div>
               )}
-              {kpi.returns_rp > 0 && ` · retur ${formatRupiah(kpi.returns_rp)}`}
-            </p>
+            </div>
             {sold.length > 0 && (
               <div className="mt-auto flex flex-col gap-2.5 border-t border-white/15 pt-3.5">
                 <span className="text-xs font-medium text-white/80">Terjual bersih per produk</span>
@@ -188,7 +197,7 @@ export function DashboardView({
           label="Jagung masuk"
           value={<CountUp value={receiptsG / 1000} format="kg" />}
           sub={finance ? formatRupiah(kpi.receipts_rp) : `${kpi.receipts_count} penerimaan`}
-          meter={receiptsG > 0 ? <Meter tone="corn" ratio={processedG / receiptsG} label={`Diolah (pemipilan) ${kgShort(processedG)} · ${pctText(Math.round((processedG / receiptsG) * 1000) / 10)}`} /> : undefined}
+          meter={<Meter tone="corn" ratio={receiptsG > 0 ? processedG / receiptsG : 0} label={`Diolah ${kgShort(processedG)}${receiptsG > 0 ? ` · ${pctText(Math.round((processedG / receiptsG) * 1000) / 10)}` : ""}`} />}
           foot={`${prevLabel}: ${formatKg(dbKgToGrams(prev.kpi.receipts_kg ?? 0))}`}
         />
         <Kpi
@@ -196,7 +205,8 @@ export function DashboardView({
           label="Produksi tepung"
           value={<CountUp value={flourG / 1000} format="kg" />}
           sub={`${kpi.batches} batch · susut ${pctText(kpi.loss_pct)}`}
-          meter={<Meter tone="leaf" ratio={flourPerDay / (FLOUR_TARGET_KG_PER_DAY * 1000)} label={`Rata-rata ${kgOne(flourPerDay)}/hari dari target ${FLOUR_TARGET_KG_PER_DAY} kg`} />}
+          meter={<Meter tone="leaf" ratio={flourPerDay / (FLOUR_TARGET_KG_PER_DAY * 1000)} label={`${kgOne(flourPerDay)}/hari · target ${FLOUR_TARGET_KG_PER_DAY} kg`} />}
+          foot={`${prevLabel}: ${formatKg(dbKgToGrams(prev.kpi.flour_kg ?? 0))}`}
         />
         <Kpi
           tone="clay"
@@ -206,21 +216,21 @@ export function DashboardView({
           sub={`per kg · pipilan ${hpp.pipilan != null ? `${formatRupiah(hpp.pipilan)}/kg` : "—"}`}
           foot={
             <Link href="/hpp" className="inline-flex items-center gap-1 font-medium text-text-muted underline-offset-4 hover:underline">
-              Bahan + BBM + tenaga + biaya tetap <ArrowRight size={13} strokeWidth={1.75} />
+              Rincian HPP & parameter <ArrowRight size={13} strokeWidth={1.75} />
             </Link>
           }
         />
         <Kpi
           tone={lowStock.length > 0 ? "danger" : "leaf"}
           label="Stok di bawah minimum"
-          value={lowStock.length > 0 ? String(lowStock.length) : "Aman"}
+          value={lowStock.length > 0 ? `${lowStock.length} produk` : "Aman"}
           valueCls={lowStock.length > 0 ? "text-danger" : "text-leaf"}
           sub={`dari ${stock.length} produk aktif`}
-          foot="Tersedia = fisik − reservasi"
+          foot={finance ? `${kpi.orders_to_deliver} pesanan menunggu diserahkan` : "Tersedia = fisik − reservasi"}
         />
       </div>
 
-      <div className="grid items-stretch gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="grid items-stretch gap-5 @4xl:grid-cols-[minmax(0,1fr)_340px] @7xl:grid-cols-[minmax(0,1fr)_400px]">
         {finance ? (
           <Card className="gap-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -250,44 +260,51 @@ export function DashboardView({
         )}
 
         <Card className="gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-0.5">
-              <h2 className="font-semibold">Stok perlu perhatian</h2>
-              <p className="text-xs text-text-muted">Tersedia = fisik − reservasi · di bawah minimum</p>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Stok tersedia</h2>
+              {lowStock.length > 0 ? <Pill tone="warn">{lowStock.length} di bawah minimum</Pill> : <Pill tone="ok">Aman</Pill>}
             </div>
-            {lowStock.length > 0 && <Pill tone="warn">{lowStock.length} produk</Pill>}
+            <p className="text-xs text-text-muted">Fisik − reservasi · garis = stok minimum</p>
           </div>
-          {lowStock.length === 0 ? (
-            <p className="rounded-lg bg-leaf-soft px-3.5 py-3 text-sm text-text">Semua produk di atas stok minimum.</p>
+          {stock.length === 0 ? (
+            <p className="text-sm text-text-muted">Belum ada produk aktif.</p>
           ) : (
-            <ul className="flex flex-col divide-y divide-border">
-              {lowStock.map((s) => {
-                const avail = dbKgToGrams(s.available_kg);
-                const min = dbKgToGrams(s.min_stock_kg);
-                const ratio = min > 0 ? Math.max(0, Math.min(1, avail / min)) : 0;
-                return (
-                  <li key={s.product_id} className="flex flex-col gap-2 py-3.5 first:pt-0">
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <Link href={`/stok/${s.product_id}`} className="font-medium underline-offset-4 hover:underline">
-                        {s.name}
-                      </Link>
-                      <span className="text-xs text-text-muted tabular-nums">
-                        {kgShort(Math.max(avail, 0))} / {kgShort(min)}
-                      </span>
-                    </div>
-                    <div
-                      className="h-2 overflow-hidden rounded-full bg-surface-muted"
-                      role="meter"
-                      aria-valuemin={0}
-                      aria-valuemax={min / 1000}
-                      aria-valuenow={avail / 1000}
-                      aria-label={`${s.name}: tersedia ${formatKg(avail)} dari minimum ${formatKg(min)}`}
-                    >
-                      <div className={`bar-fill h-full rounded-full ${ratio < 0.5 ? "bg-clay" : "bg-corn"}`} style={{ ["--p" as string]: Math.round(ratio * 100) }} />
-                    </div>
-                  </li>
-                );
-              })}
+            <ul className="flex flex-col gap-4">
+              {[...stock]
+                .sort((x, y) => Number(y.below_min) - Number(x.below_min))
+                .map((s) => {
+                  const avail = Math.max(dbKgToGrams(s.available_kg), 0);
+                  const min = dbKgToGrams(s.min_stock_kg);
+                  const scale = Math.max(avail, min * 1.5, 1);
+                  const fill = s.below_min ? (min > 0 && avail / min < 0.5 ? "bg-clay" : "bg-corn") : "bg-leaf";
+                  return (
+                    <li key={s.product_id} className="flex flex-col gap-1.5">
+                      <div className="flex items-baseline justify-between gap-3 text-sm">
+                        <Link href={`/stok/${s.product_id}`} className="font-medium underline-offset-4 hover:underline">
+                          {s.name}
+                        </Link>
+                        <span className={`text-xs tabular-nums ${s.below_min ? "font-medium text-danger" : "text-text-muted"}`}>
+                          {kgShort(avail)}
+                          {min > 0 && <span className="font-normal text-text-subtle"> / min {kgShort(min)}</span>}
+                        </span>
+                      </div>
+                      <div
+                        className="relative h-2 rounded-full bg-surface-muted"
+                        role="meter"
+                        aria-valuemin={0}
+                        aria-valuemax={scale / 1000}
+                        aria-valuenow={avail / 1000}
+                        aria-label={`${s.name}: tersedia ${formatKg(avail)}${min > 0 ? `, minimum ${formatKg(min)}` : ""}`}
+                      >
+                        <div className="h-full overflow-hidden rounded-full">
+                          <div className={`bar-fill h-full rounded-full ${fill}`} style={{ ["--p" as string]: Math.round((avail / scale) * 100) }} />
+                        </div>
+                        {min > 0 && <span aria-hidden className="absolute -top-1 h-4 w-0.5 rounded-full bg-text-muted" style={{ left: `${Math.round((min / scale) * 100)}%` }} />}
+                      </div>
+                    </li>
+                  );
+                })}
             </ul>
           )}
           <Link href="/stok" className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline">
@@ -330,6 +347,6 @@ export function DashboardView({
           </ul>
         </Card>
       )}
-    </>
+    </div>
   );
 }

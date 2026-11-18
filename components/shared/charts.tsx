@@ -170,21 +170,22 @@ export function GroupedBarChart({ data, aLabel, bLabel, title }: { data: BucketP
   // 3 langkah sumbu dengan angka bulat (1/2/2,5/5 × 10^n kg).
   const step = niceMax(Math.max(1, ...data.map((d) => Math.max(d.a, d.b))) / 3);
   const max = step * 3;
-  const plotW = W - PAD.left - PAD.right;
-  const slot = plotW / Math.max(data.length, 1);
-  const bar = Math.min(28, Math.max(4, (slot - 16) / 2));
-  const gap = Math.min(6, bar / 3);
   const base = GH - PAD.bottom;
   const y = (g: number) => PAD.top + (base - PAD.top) * (1 - Math.min(g, max) / max);
   const ticks = [0, step, 2 * step, max];
   const labelEvery = Math.ceil(data.length / 10);
-  return (
-    <figure className="flex flex-col gap-2">
-      <div className="-mx-1 overflow-x-auto px-1">
-      <svg viewBox={`0 0 ${W} ${GH}`} role="img" aria-label={title} className="h-auto w-full min-w-[520px] overflow-visible">
+  // Satu kanvas per lebar: ponsel/area sempit memakai kanvas 420 (teks tetap terbaca, tanpa geser bila ≤ 6 kelompok);
+  // area grafik ≥ 576 px memakai kanvas 640. Yang tidak tampil disembunyikan (display:none → tidak dibaca pembaca layar).
+  const plot = (vw: number, cls: string) => {
+    const plotW = vw - PAD.left - PAD.right;
+    const slot = plotW / Math.max(data.length, 1);
+    const bar = Math.min(28, Math.max(4, (slot - 16) / 2));
+    const gap = Math.min(6, bar / 3);
+    return (
+      <svg viewBox={`0 0 ${vw} ${GH}`} role="img" aria-label={title} className={`h-auto w-full overflow-visible ${cls}`}>
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeDasharray={t === 0 ? undefined : "3 4"} />
+            <line x1={PAD.left} x2={vw - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeDasharray={t === 0 ? undefined : "3 4"} />
             <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize="10" fill="var(--text-subtle)">
               {kgFmt.format(Math.round(t / 1000))}
             </text>
@@ -207,6 +208,14 @@ export function GroupedBarChart({ data, aLabel, bLabel, title }: { data: BucketP
           );
         })}
       </svg>
+    );
+  };
+  const narrowMin = data.length > 6 ? "min-w-[520px]" : "";
+  return (
+    <figure className="@container flex flex-col gap-2">
+      <div className="-mx-1 overflow-x-auto px-1">
+        {plot(420, `@xl:hidden ${narrowMin}`)}
+        {plot(W, "hidden @xl:block")}
       </div>
       <details className="text-xs text-text-muted">
         <summary className="cursor-pointer select-none">Lihat tabel data</summary>
