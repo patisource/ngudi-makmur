@@ -67,6 +67,42 @@
   }
 }
 
+/* Pilihan tema manual (tombol Terang/Gelap/Sistem, 19 Nov 2026): data-theme="dark" memaksa gelap walau sistem terang;
+   data-theme="light" memaksa terang (lihat :not() di atas); tanpa atribut = ikuti sistem. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0e0e10;
+  --surface: #18181b;
+  --surface-muted: #1f1f23;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --text: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-subtle: #8e8e96; /* WCAG AA ≥ 4,5:1 di permukaan gelap (T9.5) */
+  --primary: #f4f4f5;
+  --primary-fg: #111113;
+  --accent: #3dbe60;
+  --accent-soft: #163a22;
+  --danger: #f2555a;
+  --danger-soft: #3b1a1b;
+  --warning: #f0a830;
+  --warning-soft: #3a2c12;
+  --info: #6b9bff;
+  --info-soft: #16233f;
+  --corn: #f5b82e;
+  --corn-soft: #3a2e0e;
+  --leaf: #3dbe60;
+  --leaf-deep: #12452a;
+  --leaf-soft: #15301f;
+  --clay: #ec7a55;
+  --clay-soft: #3a1f16;
+  --scrim: rgb(0 0 0 / 0.6);
+  --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -568,4 +604,63 @@ html[data-splash] .splash {
 .toast:hover .toast-life,
 .toast:focus-within .toast-life {
   animation-play-state: paused;
+}
+
+/* ---------- Login (19 Nov 2026): pita lajur ladang + masuk berurutan sekali. Gerak mati saat reduced motion. ---------- */
+.login-band {
+  border-bottom-left-radius: 50% 40px;
+  border-bottom-right-radius: 50% 40px;
+  background-image:
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 26px),
+    radial-gradient(120% 90% at 50% 0%, rgb(240 165 0 / 0.16), transparent 60%);
+  background-size: 300px 300px, 100% 100%;
+  animation: band-drift 38s linear infinite;
+}
+@keyframes band-drift {
+  to {
+    background-position: 300px 0, 0 0;
+  }
+}
+.login-logo {
+  animation: logo-pop 0.8s var(--expo) 0.1s both;
+}
+@keyframes logo-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.72) rotate(-8deg);
+  }
+}
+.login-fade {
+  animation: enter 0.7s var(--expo) 0.22s both;
+}
+.login-card {
+  animation: card-rise 0.75s var(--expo) 0.3s both;
+}
+@keyframes card-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0) scale(0.98);
+  }
+}
+.login-stagger form > * {
+  animation: enter 0.6s var(--expo) both;
+}
+.login-stagger form > :nth-child(1) { animation-delay: 0.45s; }
+.login-stagger form > :nth-child(2) { animation-delay: 0.52s; }
+.login-stagger form > :nth-child(3) { animation-delay: 0.59s; }
+.login-stagger form > :nth-child(n + 4) { animation-delay: 0.66s; }
+.login-stagger button[type="submit"] {
+  transition: transform 0.2s var(--expo), box-shadow 0.2s var(--expo);
+}
+.login-stagger button[type="submit"]:not(:disabled):hover {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: var(--shadow-pop);
+}
+.login-fade-late {
+  animation: enter 0.7s var(--expo) 0.75s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-band {
+    animation: none;
+  }
 }

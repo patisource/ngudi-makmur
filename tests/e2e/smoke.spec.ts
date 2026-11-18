@@ -46,3 +46,14 @@ test.describe("welcome splash (StyleGuide §6.6)", () => {
     await expect(page.locator(".splash")).toBeHidden();
   });
 });
+
+test("pengalih tema terlihat di login; mode gelap tersimpan setelah muat ulang", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Mode gelap" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("button", { name: "Mode gelap" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Ikuti sistem" }).click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
+});

@@ -276,6 +276,8 @@ Pola yang membuat dashboard tampak generik atau buatan template AI. **Jangan dip
 
 ### 8.1 Login
 
+> **Pembaruan 19 Nov 2026 (permintaan pengguna):** login memakai satu kartu di tengah tanpa foto. Latar = pita `leaf-deep` dengan lajur ladang diagonal yang bergeser pelan (dekoratif, mati saat *reduced motion*); logo, nama sistem, judul "Selamat datang" per kata, kartu, dan isian masuk berurutan sekali. Pengalih tema **Terang · Gelap · Sistem** tampil di pojok kanan atas login dan di topbar aplikasi (`components/shell/theme-toggle.tsx`; pilihan per perangkat di localStorage `tema`, dipasang sebelum render oleh `THEME_BOOT`).
+
 - Dua kolom ≥ 1024 px: kiri form (lebar 400 px, rata kiri vertikal-tengah), kanan panel `--surface-muted` berisi **ringkasan nyata yang tidak sensitif**: nama kelompok tani (Kelompok Tani Ngudi Makmur), alamat (Desa Baturejo, Kec. Sukolilo, Kab. Pati), dan satu foto lahan/gudang asli (bukan ilustrasi stok). Di layar kecil hanya form. Nama & alamat diambil dari pengaturan, bukan di-*hardcode*.
 - Judul "Masuk ke [Nama Kelompok]" (mis. "Masuk ke Kelompok Tani Ngudi Makmur") dengan efek blur per kata (sekali, §6.3).
 - Didahului welcome splash sekali per sesi (§6.6); tautan kecil "Putar ulang intro" di bawah form.

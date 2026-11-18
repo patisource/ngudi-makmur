@@ -1,8 +1,9 @@
+import { Clock, Wheat } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Fragment, Suspense } from "react";
 import { ReplaySplash, Splash, SPLASH_BOOT } from "@/components/motion/splash";
 import { Logo } from "@/components/shell/logo";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { ORG } from "@/lib/org";
 import { LoginForm } from "./login-form";
 
@@ -20,71 +21,69 @@ async function LoginFormFromUrl({ searchParams }: { searchParams: PageProps<"/lo
   return <LoginForm next={next} notice={notice} />;
 }
 
-const TITLE = `Masuk ke ${ORG.appName}`;
+const TITLE = "Selamat datang";
 
-// Login (desain 00, StyleGuide §8.1): formulir kiri; panel kanan berisi foto lahan + profil kelompok yang tidak sensitif.
-// Didahului welcome splash sekali per sesi (§6.6).
+// Login (permintaan pengguna 19 Nov 2026): kartu di tengah tanpa foto. Pita hijau daun di atas bermotif lajur ladang
+// yang bergeser pelan; logo, judul per kata, kartu, dan isian masuk berurutan sekali. Semua gerak mati saat
+// prefers-reduced-motion (globals.css). Didahului welcome splash sekali per sesi (§6.6).
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: SPLASH_BOOT }} />
       <Splash />
-      <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,608px)]">
-        <div className="flex min-h-dvh flex-col px-6 py-10 sm:px-12 lg:px-24">
-          <div className="flex items-center gap-2.5">
-            <Logo size={40} className="rounded-lg" />
-            <span className="text-sm font-medium">{ORG.appName}</span>
+      <div className="relative flex min-h-dvh flex-col items-center overflow-hidden px-4 pb-8 pt-20 sm:pt-16">
+        {/* pita latar: hijau daun tua + lajur ladang diagonal (dekoratif) */}
+        <div aria-hidden className="login-band absolute inset-x-0 top-0 h-[46vh] min-h-[320px] bg-leaf-deep" />
+        <ThemeToggle className="absolute right-4 top-4 z-10 shadow-pop sm:right-6 sm:top-6" />
+
+        <div className="relative flex w-full max-w-[420px] flex-1 flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-3 text-center text-white">
+            <div className="login-logo rounded-2xl bg-white/10 p-1.5 ring-1 ring-white/20">
+              <Logo size={64} className="rounded-xl" />
+            </div>
+            <div className="login-fade flex flex-col gap-1">
+              <span className="text-lg font-semibold leading-snug tracking-tight text-balance">{ORG.appName}</span>
+              <span className="text-sm text-white/75">{ORG.address.split(", ").slice(0, 3).join(" · ")}</span>
+            </div>
           </div>
 
-          <div className="enter flex w-full max-w-[400px] flex-1 flex-col justify-center gap-7 py-12">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-[28px] font-semibold leading-tight tracking-tight" aria-label={TITLE}>
+          <div className="login-card w-full rounded-2xl border border-border bg-surface p-6 shadow-pop sm:p-8">
+            <div className="mb-6 flex flex-col gap-1.5">
+              <h1 className="text-[26px] font-semibold leading-tight tracking-tight" aria-label={TITLE}>
                 {TITLE.split(" ").map((w, i) => (
                   <Fragment key={i}>
-                    <span aria-hidden className="word" style={{ ["--w" as string]: i }}>
+                    <span aria-hidden className="word" style={{ ["--w" as string]: i + 4 }}>
                       {w}
                     </span>{" "}
                   </Fragment>
                 ))}
               </h1>
-              <p className="text-sm text-text-muted">Gunakan akun yang dibuat oleh admin kelompok.</p>
+              <p className="text-sm text-text-muted">Masuk dengan akun yang dibuat oleh admin kelompok.</p>
             </div>
-            <Suspense fallback={<LoginForm />}>
-              <LoginFormFromUrl searchParams={searchParams} />
-            </Suspense>
-            <div className="flex flex-col gap-2">
-              <p className="text-xs text-text-subtle">Belum punya akun? Hubungi admin teknis kelompok.</p>
-              <ReplaySplash />
+            <div className="login-stagger">
+              <Suspense fallback={<LoginForm />}>
+                <LoginFormFromUrl searchParams={searchParams} />
+              </Suspense>
             </div>
+            <p className="mt-5 border-t border-border pt-4 text-center text-xs text-text-subtle">Belum punya akun? Hubungi admin teknis kelompok.</p>
           </div>
 
-          <p className="text-xs text-text-subtle">
-            {ORG.appName} {ORG.appVersion} · {ORG.builtBy} · © 2026 {ORG.fullName}
-          </p>
-        </div>
+          <div className="login-fade-late flex flex-wrap justify-center gap-2 text-xs text-text-muted">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
+              <Wheat size={14} strokeWidth={1.75} className="text-warning" />
+              {ORG.commodities}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
+              <Clock size={14} strokeWidth={1.75} className="text-leaf" />
+              Gudang {ORG.warehouseHours}
+            </span>
+          </div>
 
-        <div className="hidden p-4 lg:flex">
-          <div className="flex flex-1 flex-col gap-7 rounded-2xl bg-surface-muted p-10">
-            <figure className="relative m-0 min-h-[360px] flex-1 overflow-hidden rounded-xl bg-border">
-              <Image src="/img/login-ladang-jagung.jpg" alt="Ladang jagung" fill priority sizes="528px" className="object-cover object-[center_30%]" />
-              <figcaption className="absolute bottom-3 left-3 rounded-full bg-scrim px-3 py-1 text-[11px] text-primary-fg">
-                Foto sementara (Unsplash) · ganti dengan foto gudang/lahan kelompok
-              </figcaption>
-            </figure>
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xl font-semibold tracking-tight">{ORG.fullName}</span>
-              <span className="text-sm text-text-muted">{ORG.address}</span>
-            </div>
-            <dl className="grid grid-cols-2 gap-6">
-              <div className="flex flex-col gap-0.5">
-                <dt className="order-2 text-xs text-text-subtle">Komoditas utama</dt>
-                <dd className="text-sm font-medium">{ORG.commodities}</dd>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="order-2 text-xs text-text-subtle">Jam operasional gudang</dt>
-                <dd className="text-sm font-medium">{ORG.warehouseHours}</dd>
-              </div>
-            </dl>
+          <div className="mt-auto flex flex-col items-center gap-2 pt-6 text-center">
+            <ReplaySplash />
+            <p className="text-xs text-text-subtle">
+              {ORG.appVersion} · {ORG.builtBy} · © 2026 {ORG.fullName}
+            </p>
           </div>
         </div>
       </div>

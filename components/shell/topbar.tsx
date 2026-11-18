@@ -8,6 +8,7 @@ import type { PendingItem } from "@/features/shell/queries";
 import { navItemFor, type NavItem } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
 import { useCrumb } from "./crumb";
+import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./palette";
 
 // Label segmen URL yang bukan menu utama (remah kedua). Segmen id dokumen memakai <Crumb>, atau "Detail".
@@ -116,6 +117,8 @@ export function Topbar({ nav, pending }: { nav: NavItem[]; pending: PendingItem[
         <span className="hidden flex-1 text-left sm:inline">Cari nota, anggota, produk</span>
         <kbd aria-hidden="true" className="hidden rounded-sm bg-surface-muted px-1.5 py-0.5 font-sans text-[11px] text-text-muted sm:inline">Ctrl K</kbd>
       </button>
+
+      <ThemeToggle />
 
       <div ref={bellRef} className="relative">
         <button
