@@ -9,7 +9,7 @@ import { ORG } from "@/lib/org";
 // pertama sehingga halaman login tidak sempat berkedip; komponen ini hanya mengatur keluar (tirai) & putar ulang.
 export const SPLASH_KEY = "ngudi-makmur-splash";
 export const SPLASH_BOOT = `try{if(!sessionStorage.getItem("${SPLASH_KEY}")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.dataset.splash="1"}}catch(e){}`;
-const STEPS = ["Jagung masuk", "Pemipilan & penepungan", "Stok & penjualan", "Pembayaran & kas", "Nota & laporan"];
+const STEPS = ["Jagung masuk", "Pemipilan & penepungan", "Stok & penjualan", "HPP & harga", "Nota & laporan"];
 
 export function Splash() {
   const [phase, setPhase] = useState<"in" | "out" | "done">("in");

@@ -16,7 +16,7 @@ export const PERMISSION_LABEL: Record<AppPermission, string> = {
   "production.confirm": "Konfirmasi batch produksi",
 };
 
-export type NavGroup = "Ringkasan" | "Operasional" | "Penjualan" | "Keuangan" | "Data" | "IRT Sekar Arum" | "Sistem";
+export type NavGroup = "Ringkasan" | "Operasional" | "Penjualan" | "Biaya" | "Data" | "IRT Sekar Arum" | "Sistem";
 
 export type NavItem = {
   href: string;
@@ -37,7 +37,8 @@ export const NAV: readonly NavItem[] = [
   { href: "/produksi", label: "Produksi", icon: "factory", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/stok", label: "Stok", icon: "box", group: "Operasional", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/penjualan", label: "Penjualan & nota", icon: "cart", group: "Penjualan", roles: ["admin_kelompok", "ketua"], milestone: null },
-  { href: "/kas", label: "Pembayaran & kas", icon: "wallet", group: "Keuangan", roles: ["admin_kelompok", "ketua"], milestone: null },
+  // HPP (19 Nov 2026): parameter & ringkasan HPP kelompok. Sistem tanpa kas — tidak ada menu pembayaran/kas.
+  { href: "/hpp", label: "HPP & parameter", icon: "wallet", group: "Biaya", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/laporan", label: "Laporan", icon: "file", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   { href: "/master", label: "Anggota & produk", icon: "users", group: "Data", roles: ["admin_kelompok", "operator_produksi", "ketua"], milestone: null },
   // Modul IRT Sekar Arum (M10, PRD §4.10): dikelola pengurus_irt, dibaca ketua (pengawasan). Tanpa kas.
@@ -47,6 +48,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/irt/stok", label: "Stok IRT", icon: "box", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
   { href: "/irt/penjualan", label: "Penjualan IRT", icon: "cart", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
   { href: "/irt/produk", label: "Bahan & produk", icon: "tag", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
+  { href: "/irt/hpp", label: "HPP & resep", icon: "wallet", group: "IRT Sekar Arum", roles: ["pengurus_irt", "ketua"], milestone: null },
   { href: "/pengaturan/akun", label: "Akun & izin", icon: "shield", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
   { href: "/audit", label: "Log audit", icon: "history", group: "Sistem", roles: ["ketua", "admin_teknis"], milestone: null },
 ];
@@ -67,10 +69,8 @@ export const ACTIONS = {
   // Retur (PRD §3.1, Q7): dicatat admin_kelompok, diverifikasi fisik ketua (pencatat ≠ pemverifikasi, dicek database).
   "retur.catat": ["admin_kelompok"],
   "retur.verifikasi": ["ketua"],
-  // Pembayaran, pengeluaran, pemasukan lain, refund, saldo awal, ajukan koreksi kas = admin_kelompok (PRD §3.1).
-  // Operator produksi & admin teknis tidak pernah (uji wajib SRS §11). Setujui/tolak koreksi kas = ketua.
-  "kas.kelola": ["admin_kelompok"],
-  "kas.putuskan": ["ketua"],
+  // Parameter HPP kelompok (harga bensin, upah, biaya tetap bulanan, …) = admin_kelompok; operator & ketua lihat.
+  "hpp.kelola": ["admin_kelompok"],
   // Stok opname & ajukan koreksi stok = admin_kelompok & operator_produksi; setujui koreksi stok = ketua (PRD §3.1).
   "stok.hitung": ["admin_kelompok", "operator_produksi"],
   "stok.putuskan": ["ketua"],

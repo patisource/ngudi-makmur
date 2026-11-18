@@ -168,6 +168,15 @@ _Keputusan pengguna (PRD Q24): satu IRT, pengurus IRT punya akun sendiri, **tanp
 - [x] **T10.7** Data DEMO: akun `irt.demo@contoh.test`, bahan & produk contoh, tepung otomatis dari pesanan DEMO, satu produksi & satu penjualan (angka DEMO kelompok tidak berubah). Pembersih data uji ikut mengosongkan transaksi IRT (master IRT tetap). E2E `tests/e2e/irt.spec.ts` (lulus lokal) + CI.
 - [ ] **T10.8** UAT dengan pengurus IRT Sekar Arum: isi daftar produk, harga, isi pack, dan stok minimum resmi; buat akun nyata pengurus IRT; hubungkan pelanggan IRT di proyek asli setelah data uji dibersihkan. _Kegiatan lapangan._
 
+## M11 — HPP rumus baru & sistem tanpa kas (19 Nov 2026) · PRD §4.4, §4.7, §4.9, Q25
+
+- [x] **T11.1** Hapus kas (migrasi `20261119090000_hapus_kas.sql`): arsip ke skema `arsip_kas`, hapus tabel/fungsi/view kas, status bayar, bukti pembayaran, kuitansi; `cancel_order` tanpa refund; `rpt_kpi` tanpa kas; `v_order_balance` = nilai penjualan − retur. Aplikasi: menu/halaman/API kas & pembayaran dihapus, pesanan & nota tanpa status bayar/piutang, dashboard & laporan tanpa kas.
+- [x] **T11.2** Parameter HPP & mesin hitung ulang kelompok (`20261119090100_hpp_kelompok.sql`): `hpp_settings`, biaya batch jumlah × harga satuan, alokasi biaya tetap bulanan, `_hpp_recalc` + log, jagung masuk per karung, biaya kemasan per satuan kemasan; migrasi data lama (BBM & tenaga default untuk batch tanpa biaya itu, lalu hitung ulang semua).
+- [x] **T11.3** HPP IRT (`20261119090200_hpp_irt.sql`): resep, gas/upah/kemasan/lain per batch, harga standar bahan, target markup, `irt_hpp_summary`, `_irt_recalc`; master default mie jagung 90 g & tepung kemas 1 kg.
+- [x] **T11.4** UI: menu **HPP & parameter** (`/hpp`), **HPP & resep** IRT (`/irt/hpp`), laporan **Rincian HPP**, kartu HPP tepung di dashboard, kalkulator BBM & tenaga di editor batch, resep & biaya non-bahan di editor produksi IRT, input karung di jagung masuk.
+- [x] **T11.5** Uji: `supabase/tests/hpp_check.sql` (karung, biaya server, alokasi bulanan, hitung ulang otomatis, log, buku mutasi terkunci, resep IRT, tanpa kas); suite lain disesuaikan (uji kas dihapus); Vitest `lib/hpp.test.ts`, `lib/production.test.ts`, `lib/validation/hpp-irt.test.ts`; e2e diperbarui.
+- [ ] **T11.6** UAT bersama pengurus: rendemen, upah, harga bahan, biaya kemasan nyata; perbarui manual pengguna (bab kas dihapus, bab HPP baru). _Kegiatan lapangan & dokumentasi._
+
 ## Urutan & Ketergantungan
 
 ```

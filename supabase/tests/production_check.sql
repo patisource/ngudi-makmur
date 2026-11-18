@@ -4,6 +4,10 @@
 -- =====================================================================
 begin;
 
+-- HPP: biaya tetap bulanan 0 & nilai lama diselaraskan dulu, supaya angka uji tidak terpengaruh alokasi bulanan.
+update public.hpp_settings set biaya_tetap_bulanan = 0;
+select public._hpp_recalc('uji: biaya tetap 0');
+
 create temp table _hasil (no serial primary key, uji text not null, lulus boolean not null) on commit drop;
 create temp table _id (k text primary key, id uuid not null) on commit drop;
 create temp table _k (k text primary key, r jsonb not null) on commit drop;
@@ -181,7 +185,7 @@ do $$ begin
   insert into _hasil (uji, lulus) values ('kunci DB: baris batch terkonfirmasi tidak bisa diubah', false);
 exception when others then insert into _hasil (uji, lulus) values ('kunci DB: baris batch terkonfirmasi tidak bisa diubah', true);
 end $$;
-insert into _hasil (uji, lulus) select 'biaya batch tidak membuat kas (FR-PRD-05)', not exists (select 1 from public.cash_transactions where source_id in (select id from _id));
+insert into _hasil (uji, lulus) select 'biaya batch tidak membuat kas (FR-PRD-05)', to_regclass('public.cash_transactions') is null;
 insert into _hasil (uji, lulus) select 'audit: draft dibuat & konfirmasi tercatat',
   exists (select 1 from public.audit_logs where action = 'production.draft_created' and entity_id = (select id from _id where k = 'b1')::text)
   and exists (select 1 from public.audit_logs where action = 'production.confirmed' and entity_id = (select id from _id where k = 'b1')::text)

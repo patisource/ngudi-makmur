@@ -121,7 +121,7 @@ export const REPORTS = {
           ...sumBy(rows, (r) => `Sumber: ${r.source_type === "anggota" ? "anggota" : "luar"}`, (r) => g(r.weight_kg)).map(([k, v]) => [k, formatKg(v)] as [string, string]),
           ...sumBy(rows, (r) => `Jenis: ${r.products?.name ?? "-"}`, (r) => g(r.weight_kg)).map(([k, v]) => [k, formatKg(v)] as [string, string]),
         ],
-        note: "Hanya penerimaan terkonfirmasi; yang dibatalkan tidak dihitung. Biaya perolehan bukan kas (pembayaran ke pemasok ada di laporan kas).",
+        note: "Hanya penerimaan terkonfirmasi; yang dibatalkan tidak dihitung. Biaya perolehan menjadi nilai bahan HPP.",
       };
     },
   },
@@ -167,7 +167,7 @@ export const REPORTS = {
           ["Total biaya", formatRupiah(cost)],
           ...sumBy(rows, (r) => `Output ${r.batch_type_rules?.name ?? r.batch_type}`, (r) => g(r.output_kg)).map(([k, v]) => [k, formatKg(v)] as [string, string]),
         ],
-        note: "HPP = (bahan terpakai + biaya batch) ÷ output layak jual; batch yang dibatalkan tidak dihitung.",
+        note: "HPP = (bahan + BBM + tenaga + kemasan & lain + biaya tetap bulanan) ÷ output layak jual; batch yang dibatalkan tidak dihitung. Rincian per komponen: laporan Rincian HPP.",
       };
     },
   },
@@ -201,90 +201,74 @@ export const REPORTS = {
       };
     },
   },
-  piutang: {
-    label: "Piutang",
-    roles: FINANCE,
-    usesPeriod: false,
-    async load() {
-      const supabase = await createClient();
-      const rows = await fetchAll((a, b) =>
-        supabase.from("v_order_balance").select("order_id, doc_number, status, bill_rp, paid_rp, refunded_rp, outstanding_rp").in("status", ["confirmed", "delivered"]).gt("outstanding_rp", 0).order("doc_number").range(a, b),
-      );
-      const ids = rows.map((r) => r.order_id);
-      const orders = ids.length ? ((await supabase.from("orders").select("id, business_date, customer_name").in("id", ids)).data ?? []) : [];
-      const byId = new Map(orders.map((o) => [o.id, o]));
-      const today = new Date();
-      const age = (d?: string) => (d ? Math.max(0, Math.floor((today.getTime() - new Date(`${d}T00:00:00+07:00`).getTime()) / 86_400_000)) : null);
-      const total = rows.reduce((s, r) => s + r.outstanding_rp, 0);
-      return {
-        columns: [
-          { key: "doc", label: "Nomor", type: "text" },
-          { key: "date", label: "Tanggal pesanan", type: "date" },
-          { key: "customer", label: "Pelanggan", type: "text" },
-          { key: "bill", label: "Tagihan (Rp)", type: "rp" },
-          { key: "paid", label: "Dibayar bersih (Rp)", type: "rp" },
-          { key: "left", label: "Sisa (Rp)", type: "rp" },
-          { key: "age", label: "Umur (hari)", type: "int" },
-        ],
-        rows: rows.map((r) => {
-          const o = byId.get(r.order_id);
-          return { doc: r.doc_number, date: o?.business_date, customer: o?.customer_name, bill: r.bill_rp, paid: r.paid_rp - r.refunded_rp, left: r.outstanding_rp, age: age(o?.business_date) };
-        }),
-        summary: [
-          ["Total piutang", formatRupiah(total)],
-          ["Pesanan belum lunas", String(rows.length)],
-          ...sumBy(rows, (r) => `Pelanggan: ${byId.get(r.order_id)?.customer_name ?? "-"}`, (r) => r.outstanding_rp).map(([k, v]) => [k, formatRupiah(v)] as [string, string]),
-        ],
-        note: "Posisi saat ini: tagihan pesanan sah (− retur) dikurangi pembayaran terverifikasi bersih refund.",
-      };
-    },
-  },
-  kas: {
-    label: "Kas",
-    roles: FINANCE,
+  hpp: {
+    label: "Rincian HPP",
+    roles: ALL,
     usesPeriod: true,
     async load(p) {
       const supabase = await createClient();
       const rows = await fetchAll((a, b) =>
         supabase
-          .from("cash_transactions")
-          .select("id, business_date, doc_number, source_type, direction, amount_rp, balance_after_rp, note, cash_accounts(name)")
+          .from("production_batches")
+          .select("doc_number, business_date, batch_type, input_kg, output_kg, material_cost, other_cost, fixed_cost_rp, total_cost, hpp_per_kg, batch_type_rules(name), batch_costs(category, amount_rp)")
+          .in("status", ["confirmed", "pending_void"])
           .gte("business_date", p.from)
           .lte("business_date", p.to)
-          .order("id")
+          .order("business_date")
+          .order("doc_number")
           .range(a, b),
       );
-      const inRp = rows.filter((r) => r.direction === "in").reduce((s, r) => s + r.amount_rp, 0);
-      const outRp = rows.filter((r) => r.direction === "out").reduce((s, r) => s + r.amount_rp, 0);
-      const LABEL: Record<string, string> = { opening_balance: "Saldo awal", payment: "Pembayaran", other_income: "Pemasukan lain", expense: "Pengeluaran", refund: "Refund", cash_correction: "Koreksi" };
+      const cost = (r: (typeof rows)[number], cats: string[]) => (r.batch_costs ?? []).filter((c) => cats.includes(c.category)).reduce((s, c) => s + c.amount_rp, 0);
+      const byType = new Map<string, { name: string; outG: number; inG: number; total: number }>();
+      for (const r of rows) {
+        const cur = byType.get(r.batch_type) ?? { name: r.batch_type_rules?.name ?? r.batch_type, outG: 0, inG: 0, total: 0 };
+        cur.outG += g(r.output_kg);
+        cur.inG += g(r.input_kg);
+        cur.total += r.total_cost ?? 0;
+        byType.set(r.batch_type, cur);
+      }
+      const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0);
       return {
         columns: [
           { key: "date", label: "Tanggal", type: "date" },
-          { key: "doc", label: "Dokumen", type: "text" },
-          { key: "source", label: "Sumber", type: "text" },
-          { key: "account", label: "Akun", type: "text" },
-          { key: "in", label: "Masuk (Rp)", type: "rp" },
-          { key: "out", label: "Keluar (Rp)", type: "rp" },
-          { key: "balance", label: "Saldo akun (Rp)", type: "rp" },
-          { key: "note", label: "Keterangan", type: "text" },
+          { key: "doc", label: "Nomor", type: "text" },
+          { key: "type", label: "Jenis", type: "text" },
+          { key: "input", label: "Input (kg)", type: "kg" },
+          { key: "output", label: "Output (kg)", type: "kg" },
+          { key: "yield", label: "Rendemen", type: "text" },
+          { key: "material", label: "Bahan (Rp)", type: "rp" },
+          { key: "bbm", label: "BBM (Rp)", type: "rp" },
+          { key: "labor", label: "Tenaga (Rp)", type: "rp" },
+          { key: "other", label: "Kemasan & lain (Rp)", type: "rp" },
+          { key: "fixed", label: "Biaya tetap (Rp)", type: "rp" },
+          { key: "total", label: "Total (Rp)", type: "rp" },
+          { key: "hpp", label: "HPP/kg (Rp)", type: "rp" },
         ],
         rows: rows.map((r) => ({
           date: r.business_date,
           doc: r.doc_number,
-          source: LABEL[r.source_type],
-          account: r.cash_accounts?.name,
-          in: r.direction === "in" ? r.amount_rp : null,
-          out: r.direction === "out" ? r.amount_rp : null,
-          balance: r.balance_after_rp,
-          note: r.note,
+          type: r.batch_type_rules?.name ?? r.batch_type,
+          input: r.input_kg,
+          output: r.output_kg,
+          yield: pct(g(r.output_kg), g(r.input_kg)),
+          material: r.material_cost,
+          bbm: cost(r, ["listrik_bbm"]),
+          labor: cost(r, ["tenaga_kerja"]),
+          other: cost(r, ["kemasan", "lain"]),
+          fixed: r.fixed_cost_rp,
+          total: r.total_cost,
+          hpp: r.hpp_per_kg,
         })),
         summary: [
-          ["Kas masuk", formatRupiah(inRp)],
-          ["Kas keluar", formatRupiah(outRp)],
-          ["Bersih periode", formatRupiah(inRp - outRp)],
-          ...sumBy(rows, (r) => `${r.direction === "in" ? "Masuk" : "Keluar"}: ${LABEL[r.source_type]}`, (r) => r.amount_rp).map(([k, v]) => [k, formatRupiah(v)] as [string, string]),
+          ...[...byType.values()].map((t) => [`HPP rata-rata ${t.name}`, `${t.outG > 0 ? formatRupiah(Math.round((t.total * 1000) / t.outG)) : "—"}/kg · rendemen ${pct(t.outG, t.inG)}`] as [string, string]),
+          ["Bahan", formatRupiah(sum((r) => r.material_cost ?? 0))],
+          ["BBM", formatRupiah(sum((r) => cost(r, ["listrik_bbm"])))],
+          ["Tenaga", formatRupiah(sum((r) => cost(r, ["tenaga_kerja"])))],
+          ["Kemasan & lain", formatRupiah(sum((r) => cost(r, ["kemasan", "lain"])))],
+          ["Biaya tetap bulanan", formatRupiah(sum((r) => r.fixed_cost_rp))],
+          ["Total biaya", formatRupiah(sum((r) => r.total_cost ?? 0))],
         ],
-        note: "Kas = saldo awal + pembayaran terverifikasi + pemasukan lain − pengeluaran − refund ± koreksi disetujui.",
+        note: "HPP/kg = (bahan + BBM + tenaga + kemasan & lain + biaya tetap bulanan) ÷ output. Biaya tetap dibagi ke semua batch di bulan yang sama sebanding kg hasil, jadi HPP bulan berjalan bisa berubah saat ada batch baru.",
       };
     },
   },

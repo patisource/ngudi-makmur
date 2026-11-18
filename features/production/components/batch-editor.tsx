@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Calculator, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { saveProductionDraft, type BatchFormState } from "@/features/production/actions";
 import { formatRupiah, parseRupiah } from "@/lib/money";
-import { COST_CATEGORY_LABEL, summarizeBatch } from "@/lib/production";
+import { COST_CATEGORY_LABEL, COST_UNIT_LABEL, COST_UNITS, costLineAmount, defaultBatchCosts, summarizeBatch, type HppParams } from "@/lib/production";
 import { dbKgToGrams, formatKg, parseKgToGrams } from "@/lib/qty";
-import type { BatchCostCategory } from "@/lib/supabase/types";
+import type { BatchCostCategory, BatchCostUnit } from "@/lib/supabase/types";
 import { todayWib } from "@/lib/today";
 
 type Product = { id: string; code: string; name: string } | null;
@@ -25,7 +25,11 @@ export type EditorTypeOption = {
   inputAvailableKg: number;
   inputAvgCost: number | null;
 };
-type CostRow = { category: BatchCostCategory; amount: string; sourceRef: string; note: string };
+type CostRow = { category: BatchCostCategory; amount: string; qty: string; unit: BatchCostUnit | ""; unitPrice: string; sourceRef: string; note: string };
+const emptyCost = (category: BatchCostCategory): CostRow => ({ category, amount: "", qty: "", unit: COST_UNITS[category][0], unitPrice: "", sourceRef: "", note: "" });
+const isDetail = (c: CostRow) => c.qty.trim() !== "" || c.unitPrice.trim() !== "";
+const rowAmount = (c: CostRow) => costLineAmount(isDetail(c) ? parseKgToGrams(c.qty) : null, isDetail(c) ? parseRupiah(c.unitPrice) : null, parseRupiah(c.amount));
+const decimal = (n: number) => String(n).replace(".", ",");
 export type BatchDefaults = { batchType: string; businessDate: string; note: string; residueKg: string; inputs: string[]; outputs: string[]; costs: CostRow[] };
 
 const selectCls = "h-11 w-full rounded-md border border-border bg-surface px-3 text-base outline-none focus:border-border-strong focus:ring-4 focus:ring-info-soft sm:h-10 sm:text-sm";
@@ -56,9 +60,12 @@ export function BatchEditor({
   defaults,
   header,
   actions,
+  params,
 }: {
   batchId: string | null;
   options: EditorTypeOption[];
+  /** parameter HPP (bensin, upah, …) untuk isi otomatis BBM & tenaga; null bila tidak terbaca */
+  params?: HppParams | null;
   defaults?: BatchDefaults;
   header: { title: string; subtitle: string };
   /** tombol tambahan di header (hapus draft, konfirmasi) — hanya untuk draft yang sudah tersimpan */
@@ -76,7 +83,7 @@ export function BatchEditor({
   const [costs, setCosts] = useState<CostRow[]>(defaults?.costs ?? []);
 
   const opt = options.find((o) => o.batchType === type);
-  const s = summarizeBatch(inputs.map(grams), outputs.map(grams), costs.map((c) => parseRupiah(c.amount) ?? 0), opt?.inputAvgCost ?? null);
+  const s = summarizeBatch(inputs.map(grams), outputs.map(grams), costs.map(rowAmount), opt?.inputAvgCost ?? null);
   const residueG = grams(residue);
   const lossTooHigh = opt?.maxLossPct != null && s.lossPct != null && s.lossPct > opt.maxLossPct;
   const availableG = dbKgToGrams(opt?.inputAvailableKg ?? 0);
@@ -95,7 +102,13 @@ export function BatchEditor({
         // baris kosong di akhir diabaikan agar operator bisa menyimpan sebagian
         inputs: inputs.filter((v) => v.trim() !== ""),
         outputs: outputs.filter((v) => v.trim() !== ""),
-        costs: costs.filter((c) => c.amount.trim() !== "").map((c) => ({ category: c.category, amountRp: c.amount, sourceRef: c.sourceRef, note: c.note })),
+        costs: costs
+          .filter((c) => c.amount.trim() !== "" || isDetail(c))
+          .map((c) =>
+            isDetail(c)
+              ? { category: c.category, amountRp: "", qty: c.qty, unit: c.unit || undefined, unitPrice: c.unitPrice, sourceRef: c.sourceRef, note: c.note }
+              : { category: c.category, amountRp: c.amount, unitPrice: "", sourceRef: c.sourceRef, note: c.note },
+          ),
       });
       setState(res);
       if (res.error || !res.id) return;
@@ -103,6 +116,13 @@ export function BatchEditor({
       else router.push(`/produksi/${res.id}?simpan=baru`);
     });
   }
+
+  // Isi otomatis BBM & tenaga dari parameter HPP (baris BBM/tenaga lama diganti; kemasan & lain tetap).
+  const autoCosts = () => {
+    if (!params) return;
+    const auto = defaultBatchCosts(type, s.inputGrams, params).map((d) => ({ ...emptyCost(d.category), qty: decimal(d.qty), unit: d.unit, unitPrice: String(d.unitPrice), note: d.note }));
+    setCosts([...auto, ...costs.filter((c) => c.category !== "listrik_bbm" && c.category !== "tenaga_kerja")]);
+  };
 
   const lineValue = (v: string) => (v.trim() !== "" && opt?.inputAvgCost != null ? formatRupiah(Math.round((grams(v) * opt.inputAvgCost) / 1000)) : "—");
 
@@ -249,62 +269,76 @@ export function BatchEditor({
           </section>
 
           <section className={card}>
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="font-semibold">Biaya produksi</h2>
-              <span className="text-xs text-text-subtle">Alokasi HPP — tidak menambah atau mengurangi kas</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-col gap-0.5">
+                <h2 className="font-semibold">Biaya produksi</h2>
+                <span className="text-xs text-text-subtle">Isi jumlah × harga satuan (liter, orang-hari, kg borongan) atau nilai langsung. Hanya untuk HPP.</span>
+              </div>
+              {params && (
+                <Button size="sm" kind="secondary" onClick={autoCosts} disabled={s.inputGrams <= 0}>
+                  <Calculator size={15} /> Hitung BBM & tenaga
+                </Button>
+              )}
             </div>
-            {costs.length > 0 && (
-              <div className="hidden grid-cols-[160px_minmax(0,1fr)_140px_40px] gap-3 border-b border-border pb-2 text-xs text-text-muted sm:grid">
-                <span>Komponen</span>
-                <span>Keterangan</span>
-                <span>Jumlah</span>
-                <span />
-              </div>
+            {params && (
+              <p className="text-xs text-text-muted">
+                Parameter: bensin {formatRupiah(params.harga_bensin_liter)}/liter ·{" "}
+                {type === "pemipilan" ? `1 liter per ${decimal(params.karung_per_liter_pipil)} karung (${decimal(params.kg_per_karung)} kg)` : `${decimal(params.liter_per_100kg_giling)} liter per 100 kg`} · upah{" "}
+                {formatRupiah(params.upah_harian)}/hari × {type === "pemipilan" ? params.pekerja_pipil : params.pekerja_giling} orang
+              </p>
             )}
-            {costs.length === 0 && <p className="text-sm text-text-muted">Belum ada biaya. Tambahkan tenaga kerja, solar/listrik, kemasan, atau alokasi lain.</p>}
-            {costs.map((c, i) => (
-              <div key={i} className="flex flex-col gap-1 border-b border-border pb-3">
-                <div className="grid grid-cols-[minmax(0,1fr)_40px] items-start gap-3 sm:grid-cols-[160px_minmax(0,1fr)_140px_40px]">
-                  <select
-                    aria-label={`Komponen biaya ${i + 1}`}
-                    value={c.category}
-                    onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, category: e.target.value as BatchCostCategory } : x)))}
-                    className={selectCls}
-                  >
-                    {(Object.keys(COST_CATEGORY_LABEL) as BatchCostCategory[]).map((k) => (
-                      <option key={k} value={k}>
-                        {COST_CATEGORY_LABEL[k]}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" className={`${iconBtn} sm:hidden`} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
-                    <Trash2 size={17} strokeWidth={1.75} />
-                  </button>
-                  <Input
-                    value={c.note}
-                    maxLength={500}
-                    onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))}
-                    placeholder="mis. 2 orang × 1 hari"
-                    aria-label={`Keterangan biaya ${i + 1}`}
-                    className={`${inputCls} col-span-2 sm:col-span-1`}
-                  />
-                  <Input
-                    inputMode="numeric"
-                    value={c.amount}
-                    onChange={(e) => setCosts(costs.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))}
-                    placeholder="Rp"
-                    aria-label={`Jumlah biaya ${i + 1} (Rp)`}
-                    aria-invalid={Boolean(fe[`costs.${i}.amountRp`])}
-                    className={`${inputCls} col-span-2 sm:col-span-1`}
-                  />
-                  <button type="button" className={`${iconBtn} hidden sm:grid`} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
-                    <Trash2 size={17} strokeWidth={1.75} />
-                  </button>
+            {costs.length === 0 && <p className="text-sm text-text-muted">Belum ada biaya. Klik Hitung BBM & tenaga, atau tambahkan baris.</p>}
+            {costs.map((c, i) => {
+              const detail = isDetail(c);
+              const set = (patch: Partial<CostRow>) => setCosts(costs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              const err = fe[`costs.${i}.amountRp`] ?? fe[`costs.${i}.qty`] ?? fe[`costs.${i}.unitPrice`] ?? fe[`costs.${i}.unit`];
+              return (
+                <div key={i} className="flex flex-col gap-2 border-b border-border pb-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_40px] items-start gap-3 sm:grid-cols-[160px_minmax(0,1fr)_40px]">
+                    <select
+                      aria-label={`Komponen biaya ${i + 1}`}
+                      value={c.category}
+                      onChange={(e) => {
+                        const cat = e.target.value as BatchCostCategory;
+                        set({ category: cat, unit: COST_UNITS[cat].includes(c.unit as BatchCostUnit) ? c.unit : COST_UNITS[cat][0] });
+                      }}
+                      className={selectCls}
+                    >
+                      {(Object.keys(COST_CATEGORY_LABEL) as BatchCostCategory[]).map((k) => (
+                        <option key={k} value={k}>
+                          {COST_CATEGORY_LABEL[k]}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className={`${iconBtn} sm:hidden`} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
+                      <Trash2 size={17} strokeWidth={1.75} />
+                    </button>
+                    <Input value={c.note} maxLength={200} onChange={(e) => set({ note: e.target.value })} placeholder="Keterangan, mis. 2 orang × 1 hari" aria-label={`Keterangan biaya ${i + 1}`} className={`${inputCls} col-span-2 sm:col-span-1`} />
+                    <button type="button" className={`${iconBtn} hidden sm:grid`} onClick={() => setCosts(costs.filter((_, j) => j !== i))} aria-label={`Hapus biaya ${i + 1}`}>
+                      <Trash2 size={17} strokeWidth={1.75} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[110px_130px_150px_minmax(0,1fr)]">
+                    <Input inputMode="decimal" value={c.qty} onChange={(e) => set({ qty: e.target.value })} placeholder="Jumlah" aria-label={`Jumlah biaya ${i + 1}`} aria-invalid={Boolean(fe[`costs.${i}.qty`])} className={inputCls} />
+                    <select aria-label={`Satuan biaya ${i + 1}`} value={c.unit} onChange={(e) => set({ unit: e.target.value as BatchCostUnit })} className={selectCls}>
+                      {COST_UNITS[c.category].map((u) => (
+                        <option key={u} value={u}>
+                          {COST_UNIT_LABEL[u]}
+                        </option>
+                      ))}
+                    </select>
+                    <Input inputMode="numeric" value={c.unitPrice} onChange={(e) => set({ unitPrice: e.target.value })} placeholder="Harga/satuan (Rp)" aria-label={`Harga satuan biaya ${i + 1} (Rp)`} aria-invalid={Boolean(fe[`costs.${i}.unitPrice`])} className={inputCls} />
+                    {detail ? (
+                      <span className="text-right text-sm font-medium tabular-nums">= {formatRupiah(rowAmount(c))}</span>
+                    ) : (
+                      <Input inputMode="numeric" value={c.amount} onChange={(e) => set({ amount: e.target.value })} placeholder="atau nilai (Rp)" aria-label={`Nilai biaya ${i + 1} (Rp)`} aria-invalid={Boolean(fe[`costs.${i}.amountRp`])} className={inputCls} />
+                    )}
+                  </div>
+                  {err && <p className="text-xs text-danger">{err}</p>}
                 </div>
-                {fe[`costs.${i}.amountRp`] && <p className="text-xs text-danger">{fe[`costs.${i}.amountRp`]}</p>}
-              </div>
-            ))}
-            <Button size="sm" kind="ghost" className="w-fit" disabled={costs.length >= 20} onClick={() => setCosts([...costs, { category: "tenaga_kerja", amount: "", sourceRef: "", note: "" }])}>
+              );
+            })}
+            <Button size="sm" kind="ghost" className="w-fit" disabled={costs.length >= 20} onClick={() => setCosts([...costs, emptyCost("lain")])}>
               <Plus size={15} /> Tambah baris
             </Button>
           </section>
@@ -343,7 +377,7 @@ export function BatchEditor({
               ) : (
                 <span className="block py-1 text-sm">Data belum cukup untuk menghitung HPP</span>
               )}
-              <span className="block text-xs text-text-subtle">Perkiraan · dikunci saat konfirmasi</span>
+              <span className="block text-xs text-text-subtle">Perkiraan · belum termasuk biaya tetap bulanan{params ? ` (${formatRupiah(params.biaya_tetap_bulanan)}/bulan)` : ""} yang dibagi ke semua batch bulan ini sebanding kg hasil</span>
             </div>
             {s.outputExceedsInput && <p className="text-xs text-danger">Output melebihi input — periksa timbangan.</p>}
             {s.inputGrams > availableG && <p className="text-xs text-warning">Input melebihi stok tersedia; konfirmasi akan ditolak.</p>}
@@ -360,7 +394,7 @@ export function BatchEditor({
 
           <div className="rounded-xl bg-surface-muted px-5 py-4 text-sm">
             <span className="block text-xs text-text-muted">Catatan</span>
-            {options.map((o) => `${o.name}: ${o.input?.name ?? "?"} → ${o.output?.name ?? "?"}`).join(". ")}. Biaya batch hanya alokasi HPP dan tidak membuat kas.
+            {options.map((o) => `${o.name}: ${o.input?.name ?? "?"} → ${o.output?.name ?? "?"}`).join(". ")}. Biaya batch hanya untuk perhitungan HPP (sistem tanpa kas).
           </div>
         </div>
       </div>

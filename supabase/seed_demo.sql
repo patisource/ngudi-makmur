@@ -11,10 +11,12 @@
 --   irt.demo@contoh.test      pengurus_irt (IRT Sekar Arum, M10)
 --
 -- Alur transaksi dijalankan lewat fungsi posting yang sama dengan aplikasi, sehingga hasilnya harus:
---   HPP Rp6.000/kg · stok PP 40 kg & TP 45 kg · kas masuk Rp50.000 · piutang Rp0 (uji: supabase/tests/report_check.sql).
+--   HPP Rp6.000/kg · stok PP 40 kg & TP 45 kg · penjualan Rp50.000 (uji: supabase/tests/report_check.sql).
+-- Sistem tanpa kas (19 Nov 2026): tidak ada pembayaran/saldo kas. Biaya tetap bulanan DEMO = 0 supaya HPP DEMO tetap Rp6.000/kg.
 -- =====================================================================
 
 -- ---------- master contoh ----------
+update public.hpp_settings set biaya_tetap_bulanan = 0;
 update public.products set default_price_per_kg = 10000, min_stock_kg = 30 where code = 'TP';
 update public.products set min_stock_kg = 20 where code = 'PP';
 update public.product_packagings pp set default_price = case when pp.content_kg = 0.5 then 5500 else 10000 end
@@ -48,10 +50,9 @@ insert into public.user_roles (user_id, role) values
 insert into public.user_permissions (user_id, permission) values ('0d000000-0000-4000-8000-000000000002', 'production.confirm');
 
 -- ---------- alur DEMO lewat fungsi posting ----------
--- 1) admin: saldo awal kas 0 (diisi), jagung masuk 100 kg PP dari Petani A, biaya perolehan Rp400.000
+-- 1) admin: jagung masuk 100 kg PP dari Petani A, biaya perolehan Rp400.000
 select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 set role authenticated;
-select public.set_opening_balance(id, 0, null) from public.cash_accounts where code in ('TUNAI', 'BANK');
 insert into public.receipts (business_date, source_type, member_id, product_id, weight_kg, acquisition_cost, note)
 select (now() at time zone 'Asia/Jakarta')::date, 'anggota', m.id, p.id, 100, 400000, 'DEMO PRD §9.1'
 from public.members m, public.products p where m.name = 'Petani A' and p.code = 'PP';
@@ -67,20 +68,17 @@ select public.confirm_production(public.save_production_draft(null, 'penepungan'
 select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 select public.irt_set_customer(id) from public.customers where name = 'IRT Sekar Arum';
 select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000005","role":"authenticated"}', false);
-select public.irt_save_item(null, 'bahan', 'Tepung jagung', 'kg', null, null, null, 2, (select id from public.irt_kelompok_products() where code = 'TP'));
+-- Tepung jagung (terhubung ke TP) & Telur ayam sudah dibuat migrasi HPP IRT sebagai master default.
 select public.irt_save_item(null, 'bahan', 'Gula pasir', 'kg', null, null, null, 1, null);
-select public.irt_save_item(null, 'bahan', 'Telur ayam', 'butir', null, null, null, 10, null);
 select public.irt_save_item(null, 'bahan', 'Plastik kemasan', 'pcs', null, null, null, 20, null);
 select public.irt_save_item(null, 'produk', 'Kue kering jagung', 'pcs', 10, 1500, 14000, 20, null);
 select public.irt_save_item(null, 'produk', 'Stik jagung', 'pcs', 20, 1000, 18000, 20, null);
 
--- 3) admin: pesanan 5 kg TP @Rp10.000 (IRT Sekar Arum), bayar Rp30.000 + Rp20.000 (terverifikasi), serah barang
+-- 3) admin: pesanan 5 kg TP @Rp10.000 (IRT Sekar Arum), serah barang
 select set_config('request.jwt.claims', '{"sub":"0d000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 select public.save_order_draft(null, null, c.id, 'langsung', 'DEMO PRD §9.1', 0, jsonb_build_array(jsonb_build_object('product_id', p.id, 'qty', '5')))
 from public.customers c, public.products p where c.name = 'IRT Sekar Arum' and p.code = 'TP';
 select public.confirm_order(id) from public.orders where note = 'DEMO PRD §9.1';
-select public.record_payment(o.id, null, 'tunai', a.id, 30000, 'DEMO cicilan 1', true) from public.orders o, public.cash_accounts a where o.note = 'DEMO PRD §9.1' and a.code = 'TUNAI';
-select public.record_payment(o.id, null, 'transfer', a.id, 20000, 'DEMO cicilan 2', true) from public.orders o, public.cash_accounts a where o.note = 'DEMO PRD §9.1' and a.code = 'BANK';
 select public.fulfill_order(id, 'IRT Sekar Arum', null) from public.orders where note = 'DEMO PRD §9.1';
 
 -- 4) pengurus IRT: beli bahan lain, produksi, jual per pack & pcs (tanpa kas)

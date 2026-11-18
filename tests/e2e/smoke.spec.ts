@@ -20,7 +20,7 @@ test("login salah memberi pesan generik (tidak membocorkan email terdaftar)", as
   await expect(page.getByText("Email atau kata sandi salah.")).toBeVisible();
 });
 
-for (const path of ["/dashboard", "/penjualan", "/kas/buku", "/laporan/penjualan", "/stok/opname", "/akun"]) {
+for (const path of ["/dashboard", "/penjualan", "/hpp", "/laporan/penjualan", "/stok/opname", "/akun"]) {
   test(`tanpa sesi ${path} dialihkan ke login`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(path).replace(/%/g, "%")}`));
@@ -29,7 +29,7 @@ for (const path of ["/dashboard", "/penjualan", "/kas/buku", "/laporan/penjualan
 
 test("API posting tanpa sesi → 401 JSON { data: null, error }", async ({ request }) => {
   const id = "3f1c2b8e-5d6a-4c1e-9f0a-1b2c3d4e5f60";
-  const res = await request.post(`/api/v1/orders/${id}/payments`, { headers: { "Idempotency-Key": id }, data: { amountRp: 1 } });
+  const res = await request.post(`/api/v1/orders/${id}/fulfill`, { headers: { "Idempotency-Key": id }, data: {} });
   expect(res.status()).toBe(401);
   expect(await res.json()).toEqual({ data: null, error: { code: "UNAUTHENTICATED", message: "Sesi berakhir. Silakan masuk lagi." } });
 });

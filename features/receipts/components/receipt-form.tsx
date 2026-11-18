@@ -18,6 +18,7 @@ export type ReceiptDefaults = {
   supplierName: string | null;
   productId: string;
   weightKg: string;
+  sackCount?: string;
   moisturePct: string;
   acquisitionCost: string;
   note: string;
@@ -29,18 +30,39 @@ const chipCls =
 
 // Form jagung masuk (FR-RCV-01, StyleGuide §8): satu kolom di ponsel, dua kolom di layar lebar. Simpan = draft;
 // stok baru berubah setelah konfirmasi. Bukti (opsional) diunggah setelah draft tersimpan.
-export function ReceiptForm({ receiptId, members, products, defaults }: { receiptId: string | null; members: Option[]; products: Option[]; defaults?: ReceiptDefaults }) {
+export function ReceiptForm({
+  receiptId,
+  members,
+  products,
+  defaults,
+  sack,
+}: {
+  receiptId: string | null;
+  members: Option[];
+  products: Option[];
+  defaults?: ReceiptDefaults;
+  /** parameter HPP: kg per karung & harga standar tongkol per kg (Tahap F) */
+  sack?: { kgPerSack: number; tongkolPricePerKg: number } | null;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [state, setState] = useState<ReceiptFormState>({});
   const [source, setSource] = useState<"anggota" | "luar">(defaults?.sourceType ?? "anggota");
   const [weight, setWeight] = useState(defaults?.weightKg ?? "");
   const [cost, setCost] = useState(defaults?.acquisitionCost ?? "");
+  const [sacks, setSacks] = useState(defaults?.sackCount ?? "");
+  const [productId, setProductId] = useState(defaults?.productId ?? products[0]?.id ?? "");
   const [proof, setProof] = useState<{ file: File; preview: string | null } | null>(null);
 
   useEffect(() => () => void (proof?.preview && URL.revokeObjectURL(proof.preview)), [proof]);
 
-  const grams = parseKgToGrams(weight);
+  // karung → kg (sama dengan trigger database: karung × kg per karung, 3 desimal)
+  const sackNum = sacks.trim() === "" ? null : Number(sacks.trim().replace(",", "."));
+  const sackGrams = sack && sackNum != null && Number.isFinite(sackNum) && sackNum > 0 ? Math.round(sackNum * sack.kgPerSack * 1000) : null;
+  const weightShown = sackGrams != null ? String(sackGrams / 1000).replace(".", ",") : weight;
+  const grams = sackGrams ?? parseKgToGrams(weight);
+  const isTongkol = products.find((p) => p.id === productId)?.code === "TK";
+  const stdCost = sack && grams ? Math.round((grams * sack.tongkolPricePerKg) / 1000) : null;
   const rupiah = parseRupiah(cost);
   const perKg = grams && rupiah !== null ? Math.round((rupiah * 1000) / grams) : null;
   const fe = state.fieldErrors ?? {};
@@ -108,7 +130,7 @@ export function ReceiptForm({ receiptId, members, products, defaults }: { receip
         <div className="grid grid-cols-2 gap-2 sm:max-w-sm">
           {products.map((p, i) => (
             <label key={p.id} className={chipCls}>
-              <input type="radio" name="productId" value={p.id} defaultChecked={d ? d.productId === p.id : i === 0} className="sr-only" />
+              <input type="radio" name="productId" value={p.id} defaultChecked={d ? d.productId === p.id : i === 0} onChange={() => setProductId(p.id)} className="sr-only" />
               {p.name}
             </label>
           ))}
@@ -120,17 +142,27 @@ export function ReceiptForm({ receiptId, members, products, defaults }: { receip
         )}
       </fieldset>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Berat (kg)" htmlFor="weightKg" error={fe.weightKg} hint="Timbangan bersih, maks. 3 desimal.">
-          <Input id="weightKg" name="weightKg" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="mis. 100" aria-invalid={Boolean(fe.weightKg)} />
+      <div className="grid gap-4 sm:grid-cols-4">
+        {sack && (
+          <Field label="Jumlah karung" htmlFor="sackCount" error={fe.sackCount} hint={`Opsional · 1 karung = ${String(sack.kgPerSack).replace(".", ",")} kg`}>
+            <Input id="sackCount" name="sackCount" inputMode="decimal" value={sacks} onChange={(e) => setSacks(e.target.value)} placeholder="mis. 20" aria-invalid={Boolean(fe.sackCount)} />
+          </Field>
+        )}
+        <Field label="Berat (kg)" htmlFor="weightKg" error={fe.weightKg} hint={sackGrams != null ? "Dihitung dari jumlah karung." : "Timbangan bersih, maks. 3 desimal."}>
+          <Input id="weightKg" name="weightKg" inputMode="decimal" value={weightShown} readOnly={sackGrams != null} onChange={(e) => setWeight(e.target.value)} placeholder="mis. 100" aria-invalid={Boolean(fe.weightKg)} />
         </Field>
         <Field
           label="Biaya perolehan (Rp)"
           htmlFor="acquisitionCost"
           error={fe.acquisitionCost}
-          hint={perKg !== null ? `${formatRupiah(perKg)}/kg · tidak menambah kas` : "Isi 0 bila tanpa biaya. Tidak menambah kas."}
+          hint={perKg !== null ? `${formatRupiah(perKg)}/kg · dasar HPP` : "Isi 0 bila tanpa biaya. Dasar nilai bahan HPP."}
         >
           <Input id="acquisitionCost" name="acquisitionCost" inputMode="numeric" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="mis. 400000" aria-invalid={Boolean(fe.acquisitionCost)} />
+          {isTongkol && stdCost != null && sack && (
+            <button type="button" onClick={() => setCost(String(stdCost))} className="mt-1 w-fit text-xs font-medium text-accent underline-offset-4 hover:underline">
+              Pakai harga standar {formatRupiah(sack.tongkolPricePerKg)}/kg = {formatRupiah(stdCost)}
+            </button>
+          )}
         </Field>
         <Field label="Kadar air (%)" htmlFor="moisturePct" error={fe.moisturePct} hint="Opsional.">
           <Input id="moisturePct" name="moisturePct" inputMode="decimal" defaultValue={d?.moisturePct ?? ""} placeholder="mis. 14" aria-invalid={Boolean(fe.moisturePct)} />

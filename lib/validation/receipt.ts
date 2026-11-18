@@ -19,6 +19,11 @@ export const receiptSchema = z
     supplierName: optText(120, "Nama pemasok"),
     productId: z.uuid("Pilih jenis jagung"),
     weightKg: kg({ label: "Berat" }),
+    // Tahap F (19 Nov 2026): jumlah karung opsional; bila diisi, berat = karung × kg per karung (dihitung database).
+    sackCount: z.preprocess(
+      (v) => (blankToUndefined(v) === undefined ? undefined : String(v).trim().replace(",", ".")),
+      z.string().regex(/^\d{1,5}(\.\d{1,2})?$/, "Jumlah karung maksimal 2 desimal").refine((s) => Number(s) > 0, "Jumlah karung harus lebih dari 0").optional(),
+    ),
     moisturePct: moisture,
     acquisitionCost: rupiah("Biaya perolehan"),
     note: optText(1000, "Catatan"),

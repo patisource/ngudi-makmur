@@ -4,7 +4,7 @@ import { dbKgToGrams } from "@/lib/qty";
 import { createClient } from "@/lib/supabase/server";
 
 // Data dashboard (FR-DASH, PRD §5.9) dari fungsi SQL yang sama dengan laporan (rpt_kpi, rpt_daily, rpt_stock),
-// jadi angka dashboard = angka laporan. RLS membatasi per peran (operator: tanpa penjualan/kas).
+// jadi angka dashboard = angka laporan. RLS membatasi per peran (operator: tanpa penjualan). Sistem tanpa kas.
 export type Kpi = {
   days: number;
   omzet_rp: number;
@@ -19,14 +19,6 @@ export type Kpi = {
   flour_kg: number;
   batches: number;
   loss_pct: number | null;
-  cash_in_rp: number;
-  cash_out_rp: number;
-  cash_balance_rp: number;
-  receivable_rp: number;
-  receivable_orders: number;
-  credit_rp: number;
-  pending_payments: number;
-  pending_corrections: number;
   pending_returns: number;
   pending_batch_voids: number;
   orders_to_deliver: number;
@@ -38,13 +30,14 @@ export const FLOUR_TARGET_KG_PER_DAY = 50; // target proposal (G6), pembanding �
 export async function dashboardData(p: Period, opts: { finance?: boolean } = {}) {
   const supabase = await createClient();
   const prev = previousPeriod(p);
-  const [kpi, prevKpi, daily, stock, sales, cash] = await Promise.all([
+  const [kpi, prevKpi, daily, stock, sales, batches] = await Promise.all([
     supabase.rpc("rpt_kpi", { p_from: p.from, p_to: p.to }),
     supabase.rpc("rpt_kpi", { p_from: prev.from, p_to: prev.to }),
     supabase.rpc("rpt_daily", { p_from: p.from, p_to: p.to }),
     supabase.from("v_stock_balance").select("product_id, code, name, on_hand_kg, reserved_kg, available_kg, min_stock_kg, below_min").is("archived_at", null).order("code"),
     opts.finance ? supabase.rpc("rpt_sales", { p_from: p.from, p_to: p.to }) : Promise.resolve({ data: [], error: null }),
-    opts.finance ? supabase.from("v_cash_balance").select("account_id, name, kind, balance_rp").is("archived_at", null).order("sort_order") : Promise.resolve({ data: [], error: null }),
+    // HPP rata-rata tertimbang per jenis batch (rumus HPP 19 Nov 2026: bahan + BBM + tenaga + lain + biaya tetap)
+    supabase.from("production_batches").select("batch_type, output_kg, total_cost").in("status", ["confirmed", "pending_void"]).gte("business_date", p.from).lte("business_date", p.to),
   ]);
   const k = (kpi.data ?? {}) as unknown as Kpi;
   // Omzet per hari (penjualan + ongkir − retur, sama dengan rpt_kpi) & kg terjual per produk (bersih retur).
@@ -58,8 +51,14 @@ export async function dashboardData(p: Period, opts: { finance?: boolean } = {})
       soldByProduct.set(r.product_id, cur);
     }
   }
+  const hpp = (type: string) => {
+    const rows = (batches.data ?? []).filter((b) => b.batch_type === type && b.total_cost != null);
+    const g = rows.reduce((s, b) => s + dbKgToGrams(b.output_kg), 0);
+    return g > 0 ? Math.round((rows.reduce((s, b) => s + (b.total_cost ?? 0), 0) * 1000) / g) : null;
+  };
   return {
     kpi: k,
+    hpp: { tepung: hpp("penepungan"), pipilan: hpp("pemipilan") },
     prev: { ...prev, kpi: (prevKpi.data ?? {}) as unknown as Kpi },
     daily: (daily.data ?? []).map((d) => ({
       day: d.day,
@@ -70,9 +69,8 @@ export async function dashboardData(p: Period, opts: { finance?: boolean } = {})
       omzet: omzetByDay.get(d.day) ?? 0,
     })),
     sold: [...soldByProduct.values()].filter((x) => x.grams > 0).sort((a, b) => b.grams - a.grams),
-    cash: cash.data ?? [],
     stock: stock.data ?? [],
-    error: kpi.error ?? daily.error ?? stock.error ?? sales.error ?? cash.error,
+    error: kpi.error ?? daily.error ?? stock.error ?? sales.error,
   };
 }
 

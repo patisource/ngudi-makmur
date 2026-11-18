@@ -1,4 +1,4 @@
-// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261106090100_irt.sql).
+// Tipe database — sementara DITULIS TANGAN sesuai migrasi supabase/migrations (s.d. 20261119090200_hpp_irt.sql).
 // Ganti dengan hasil `pnpm db:types:remote` setelah Supabase CLI tersambung (supabase login + link).
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -15,13 +15,8 @@ export type ProductionStatus = "draft" | "confirmed" | "pending_void" | "void";
 export type LineDirection = "input" | "output";
 export type BatchCostCategory = "tenaga_kerja" | "kemasan" | "listrik_bbm" | "lain";
 export type OrderStatus = "draft" | "confirmed" | "delivered" | "cancelled";
-export type OrderPaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
 export type ReturnStatus = "draft" | "verified";
 export type OpnameStatus = "draft" | "posted";
-export type CashDirection = "in" | "out";
-export type CashAccountKind = "tunai" | "bank";
-export type PaymentMethod = "tunai" | "transfer";
-export type PaymentStatus = "pending" | "verified" | "rejected";
 export type CorrectionStatus = "pending" | "approved" | "rejected";
 export type SalesReportRow = {
   kind: "penjualan" | "ongkir" | "retur";
@@ -60,7 +55,44 @@ export type IrtItemKind = "bahan" | "produk";
 export type IrtUnit = "kg" | "gram" | "liter" | "ml" | "butir" | "pcs";
 export type IrtMovementType = "bahan_masuk" | "retur_kelompok" | "produksi_bahan" | "produksi_hasil" | "penjualan" | "penjualan_batal" | "koreksi";
 export type IrtReportRow = { item_id: string; name: string; pack_size: number | null; produced_pcs: number; sold_pcs: number; omzet_rp: number; hpp_rp: number; stock_pcs: number };
-export type CashSourceType = "opening_balance" | "payment" | "other_income" | "expense" | "refund" | "cash_correction" | "transfer_out" | "transfer_in";
+export type BatchCostUnit = "liter" | "orang_hari" | "kg" | "pcs";
+export type HppSettings = {
+  id: number;
+  kg_per_karung: number;
+  harga_tongkol_kg: number;
+  rendemen_pipil_pct: number;
+  rendemen_tepung_pct: number;
+  harga_bensin_liter: number;
+  karung_per_liter_pipil: number;
+  liter_per_100kg_giling: number;
+  upah_harian: number;
+  pekerja_pipil: number;
+  pekerja_giling: number;
+  biaya_tetap_bulanan: number;
+  updated_at: string;
+  updated_by_name: string | null;
+};
+export type IrtHppSummaryRow = {
+  product_id: string;
+  name: string;
+  price_pcs: number | null;
+  target_markup_pct: number | null;
+  labor_cost_pcs: number;
+  packaging_cost_pcs: number;
+  recipe_yield: number | null;
+  recipe_gas_rp: number | null;
+  std_material_per_pcs: number | null;
+  std_hpp_per_pcs: number | null;
+  std_missing_price: boolean;
+  batches: number;
+  pcs: number;
+  material_rp: number;
+  gas_rp: number;
+  labor_rp: number;
+  packaging_rp: number;
+  other_rp: number;
+  total_rp: number;
+};
 export type ProofMime ="image/jpeg" | "image/png" | "image/webp" | "application/pdf";
 /** Hasil fungsi posting dokumen (confirm_receipt, void_receipt). */
 export type PostingResult = { id: string; doc_number: string | null; status: string; already: boolean };
@@ -114,7 +146,7 @@ export type Database = {
       >;
       packagings: Table<Master & { id: string; name: string }>;
       product_packagings: Table<
-        Master & { id: string; product_id: string; packaging_id: string; content_kg: number; default_price: number | null },
+        Master & { id: string; product_id: string; packaging_id: string; content_kg: number; default_price: number | null; cost_rp: number },
         [Fk<"product_packagings", "product_id", "products">, Fk<"product_packagings", "packaging_id", "packagings">]
       >;
       customers: Table<
@@ -161,6 +193,7 @@ export type Database = {
           supplier_name: string | null;
           product_id: string;
           weight_kg: number;
+          sack_count: number | null;
           moisture_pct: number | null;
           acquisition_cost: number;
           note: string | null;
@@ -191,6 +224,7 @@ export type Database = {
           loss_kg: number;
           material_cost: number | null;
           other_cost: number;
+          fixed_cost_rp: number;
           total_cost: number | null;
           hpp_per_kg: number | null;
           confirmed_at: Ts | null;
@@ -210,7 +244,7 @@ export type Database = {
         [Fk<"production_lines", "batch_id", "production_batches">, Fk<"production_lines", "product_id", "products">]
       >;
       batch_costs: Table<
-        { id: string; batch_id: string; category: BatchCostCategory; amount_rp: number; source_ref: string | null; note: string | null; sort_order: number; created_at: Ts },
+        { id: string; batch_id: string; category: BatchCostCategory; amount_rp: number; source_ref: string | null; note: string | null; sort_order: number; created_at: Ts; qty: number | null; unit_price: number | null; unit: BatchCostUnit | null },
         [Fk<"batch_costs", "batch_id", "production_batches">]
       >;
       orders: Table<
@@ -218,7 +252,6 @@ export type Database = {
           id: string;
           doc_number: string | null;
           status: OrderStatus;
-          payment_status: OrderPaymentStatus;
           business_date: string;
           customer_id: string;
           customer_name: string;
@@ -290,12 +323,8 @@ export type Database = {
         [Fk<"order_return_items", "return_id", "order_returns">, Fk<"order_return_items", "order_item_id", "order_items">, Fk<"order_return_items", "product_id", "products">]
       >;
       attachments: Table<
-        { id: string; receipt_id: string | null; payment_id: string | null; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
-        [Fk<"attachments", "receipt_id", "receipts">, Fk<"attachments", "payment_id", "payments">]
-      >;
-      cash_transfers: Table<
-        { id: string; doc_number: string; business_date: string; from_account_id: string; to_account_id: string; amount_rp: number; note: string; created_by: string; created_at: Ts },
-        [Fk<"cash_transfers", "from_account_id", "cash_accounts">, Fk<"cash_transfers", "to_account_id", "cash_accounts">]
+        { id: string; receipt_id: string; storage_path: string; mime_type: ProofMime; size_bytes: number; created_by: string | null; created_at: Ts },
+        [Fk<"attachments", "receipt_id", "receipts">]
       >;
       irt_settings: Table<{ id: number; name: string; customer_id: string | null; updated_at: Ts; updated_by: string | null }, [Fk<"irt_settings", "customer_id", "customers">]>;
       irt_items: Table<{
@@ -308,6 +337,10 @@ export type Database = {
         price_pack: number | null;
         min_stock: number;
         kelompok_product_id: string | null;
+        std_price: number | null;
+        packaging_cost_pcs: number;
+        labor_cost_pcs: number;
+        target_markup_pct: number | null;
       } & Master>;
       irt_stock_balances: Table<{ item_id: string; on_hand: number; value_rp: number; updated_at: Ts }, [{ foreignKeyName: "irt_stock_balances_item_id_fkey"; columns: ["item_id"]; isOneToOne: true; referencedRelation: "irt_items"; referencedColumns: ["id"] }]>;
       irt_movements: Table<
@@ -327,6 +360,13 @@ export type Database = {
         input_value_rp: number | null;
         output_pcs: number | null;
         hpp_per_pcs: number | null;
+        recipe_id: string | null;
+        recipe_count: number | null;
+        gas_rp: number;
+        labor_rp: number;
+        packaging_rp: number;
+        other_rp: number;
+        total_cost_rp: number | null;
         created_by: string | null;
         created_by_name: string;
         confirmed_at: Ts | null;
@@ -334,6 +374,11 @@ export type Database = {
         created_at: Ts;
         updated_at: Ts;
       }>;
+      irt_recipes: Table<{ id: string; product_id: string; yield_pcs: number; gas_rp: number; note: string | null; updated_at: Ts }, [Fk<"irt_recipes", "product_id", "irt_items">]>;
+      irt_recipe_lines: Table<{ id: string; recipe_id: string; item_id: string; qty: number; sort_order: number }, [Fk<"irt_recipe_lines", "recipe_id", "irt_recipes">, Fk<"irt_recipe_lines", "item_id", "irt_items">]>;
+      hpp_settings: Table<HppSettings>;
+      hpp_recalc_runs: Table<{ id: number; reason: string; run_by: string | null; run_at: Ts }>;
+      hpp_recalc_log: Table<{ id: number; run_id: number; entity: string; entity_id: string; doc_number: string | null; field: string; before_rp: number | null; after_rp: number | null }, [{ foreignKeyName: "hpp_recalc_log_run_id_fkey"; columns: ["run_id"]; isOneToOne: false; referencedRelation: "hpp_recalc_runs"; referencedColumns: ["id"] }]>;
       irt_batch_lines: Table<{ id: string; batch_id: string; item_id: string; role: "bahan" | "hasil"; qty: number; value_rp: number | null; sort_order: number }, [Fk<"irt_batch_lines", "batch_id", "irt_batches">, Fk<"irt_batch_lines", "item_id", "irt_items">]>;
       irt_sales: Table<{
         id: string;
@@ -358,99 +403,6 @@ export type Database = {
       irt_adjustments: Table<
         { id: string; doc_number: string; business_date: string; item_id: string; direction: StockDirection; qty: number; reason: string; value_rp: number; created_by: string | null; created_by_name: string; created_at: Ts },
         [Fk<"irt_adjustments", "item_id", "irt_items">]
-      >;
-      cash_accounts: Table<{
-        id: string;
-        code: string;
-        name: string;
-        kind: CashAccountKind;
-        balance_rp: number;
-        opening_set_at: Ts | null;
-        sort_order: number;
-        archived_at: Ts | null;
-        created_at: Ts;
-        updated_at: Ts;
-      }>;
-      cash_transactions: Table<
-        {
-          id: number;
-          account_id: string;
-          direction: CashDirection;
-          amount_rp: number;
-          balance_after_rp: number;
-          source_type: CashSourceType;
-          source_id: string;
-          doc_number: string | null;
-          business_date: string;
-          note: string | null;
-          created_by: string | null;
-          created_at: Ts;
-        },
-        [Fk<"cash_transactions", "account_id", "cash_accounts">]
-      >;
-      payments: Table<
-        {
-          id: string;
-          doc_number: string | null;
-          order_id: string;
-          business_date: string;
-          method: PaymentMethod;
-          account_id: string;
-          amount_rp: number;
-          status: PaymentStatus;
-          note: string | null;
-          created_by: string | null;
-          created_at: Ts;
-          verified_at: Ts | null;
-          verified_by: string | null;
-          rejected_at: Ts | null;
-          rejected_by: string | null;
-          reject_reason: string | null;
-          updated_at: Ts;
-        },
-        [Fk<"payments", "order_id", "orders">, Fk<"payments", "account_id", "cash_accounts">]
-      >;
-      refunds: Table<
-        {
-          id: string;
-          doc_number: string;
-          order_id: string;
-          return_id: string | null;
-          account_id: string;
-          amount_rp: number;
-          reason: string;
-          business_date: string;
-          created_by: string | null;
-          created_at: Ts;
-        },
-        [Fk<"refunds", "order_id", "orders">, Fk<"refunds", "account_id", "cash_accounts">, Fk<"refunds", "return_id", "order_returns">]
-      >;
-      expense_categories: Table<{ code: string; name: string; sort_order: number; archived_at: Ts | null; created_at: Ts }>;
-      income_categories: Table<{ code: string; name: string; sort_order: number; archived_at: Ts | null; created_at: Ts }>;
-      expenses: Table<
-        {
-          id: string;
-          doc_number: string;
-          business_date: string;
-          category: string;
-          account_id: string;
-          amount_rp: number;
-          description: string;
-          reference: string | null;
-          created_by: string | null;
-          created_at: Ts;
-        },
-        [
-          Fk<"expenses", "account_id", "cash_accounts">,
-          { foreignKeyName: "expenses_category_fkey"; columns: ["category"]; isOneToOne: false; referencedRelation: "expense_categories"; referencedColumns: ["code"] },
-        ]
-      >;
-      other_incomes: Table<
-        { id: string; doc_number: string; business_date: string; category: string; account_id: string; amount_rp: number; description: string; created_by: string | null; created_at: Ts },
-        [
-          Fk<"other_incomes", "account_id", "cash_accounts">,
-          { foreignKeyName: "other_incomes_category_fkey"; columns: ["category"]; isOneToOne: false; referencedRelation: "income_categories"; referencedColumns: ["code"] },
-        ]
       >;
       stock_opnames: Table<{
         id: string;
@@ -491,28 +443,7 @@ export type Database = {
         },
         [Fk<"stock_adjustments", "product_id", "products">]
       >;
-      print_logs: Table<{ id: number; doc_type: "order" | "payment"; doc_id: string; printed_by: string | null; printed_at: Ts }>;
-      cash_corrections: Table<
-        {
-          id: string;
-          doc_number: string;
-          account_id: string;
-          direction: CashDirection;
-          amount_rp: number;
-          reason: string;
-          business_date: string;
-          status: CorrectionStatus;
-          requested_by: string;
-          requested_by_name: string;
-          decided_at: Ts | null;
-          decided_by: string | null;
-          decided_by_name: string | null;
-          decision_note: string | null;
-          created_at: Ts;
-          updated_at: Ts;
-        },
-        [Fk<"cash_corrections", "account_id", "cash_accounts">]
-      >;
+      print_logs: Table<{ id: number; doc_type: "order"; doc_id: string; printed_by: string | null; printed_at: Ts }>;
     };
     Views: {
       v_stock_balance: {
@@ -538,15 +469,9 @@ export type Database = {
           doc_number: string | null;
           customer_id: string;
           status: OrderStatus;
-          payment_status: OrderPaymentStatus;
           total_rp: number;
-          paid_rp: number;
-          refunded_rp: number;
-          outstanding_rp: number;
           returned_rp: number;
           bill_rp: number;
-          credit_rp: number;
-          pending_rp: number;
         };
         Relationships: [];
       };
@@ -562,15 +487,15 @@ export type Database = {
           min_stock: number;
           kelompok_product_id: string | null;
           archived_at: Ts | null;
+          std_price: number | null;
+          packaging_cost_pcs: number;
+          labor_cost_pcs: number;
+          target_markup_pct: number | null;
           on_hand: number;
           value_rp: number;
           avg_cost: number | null;
           below_min: boolean;
         };
-        Relationships: [];
-      };
-      v_cash_balance: {
-        Row: { account_id: string; code: string; name: string; kind: CashAccountKind; balance_rp: number; opening_set_at: Ts | null; archived_at: Ts | null; sort_order: number };
         Relationships: [];
       };
     };
@@ -603,24 +528,11 @@ export type Database = {
       };
       delete_order_draft: { Args: { p_id: string }; Returns: undefined };
       confirm_order: { Args: { p_id: string }; Returns: Json };
-      cancel_order: { Args: { p_id: string; p_reason: string; p_refund_account?: string | null }; Returns: Json };
+      cancel_order: { Args: { p_id: string; p_reason: string }; Returns: Json };
       fulfill_order: { Args: { p_id: string; p_recipient: string | null; p_date?: string | null }; Returns: Json };
       create_return: { Args: { p_order: string; p_date: string; p_reason: string; p_items: Json }; Returns: string };
       delete_return_draft: { Args: { p_id: string }; Returns: undefined };
       verify_return: { Args: { p_id: string }; Returns: Json };
-      set_opening_balance: { Args: { p_account: string; p_amount: number; p_date: string | null }; Returns: Json };
-      record_payment: {
-        Args: { p_order: string; p_date: string | null; p_method: PaymentMethod; p_account: string; p_amount: number; p_note: string | null; p_verified: boolean };
-        Returns: Json;
-      };
-      verify_payment: { Args: { p_id: string }; Returns: Json };
-      reject_payment: { Args: { p_id: string; p_reason: string }; Returns: Json };
-      create_refund: { Args: { p_order: string; p_account: string; p_amount: number; p_reason: string; p_date: string | null; p_return?: string | null }; Returns: Json };
-      create_expense: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string; p_reference: string | null }; Returns: Json };
-      create_cash_transfer: { Args: { p_date: string | null; p_from: string; p_to: string; p_amount: number; p_note: string }; Returns: Json };
-      create_other_income: { Args: { p_date: string | null; p_category: string; p_account: string; p_amount: number; p_description: string }; Returns: Json };
-      request_cash_correction: { Args: { p_account: string; p_direction: CashDirection; p_amount: number; p_reason: string; p_date: string | null }; Returns: Json };
-      decide_cash_correction: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
       save_opname_draft: { Args: { p_id: string | null; p_date: string | null; p_note: string | null; p_lines: Json }; Returns: string };
       delete_opname_draft: { Args: { p_id: string }; Returns: undefined };
       post_opname: { Args: { p_id: string }; Returns: Json };
@@ -628,7 +540,8 @@ export type Database = {
       decide_stock_adjustment: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
       request_production_void: { Args: { p_id: string; p_reason: string }; Returns: Json };
       decide_production_void: { Args: { p_id: string; p_approve: boolean; p_note: string | null }; Returns: Json };
-      log_print: { Args: { p_doc_type: "order" | "payment"; p_doc_id: string }; Returns: number };
+      log_print: { Args: { p_doc_type: "order"; p_doc_id: string }; Returns: number };
+      save_hpp_settings: { Args: { p: Json }; Returns: Json };
       rpt_kpi: { Args: { p_from: string; p_to: string }; Returns: Json };
       irt_save_item: {
         Args: { p_id: string | null; p_kind: IrtItemKind; p_name: string; p_unit: IrtUnit; p_pack_size: number | null; p_price_pcs: number | null; p_price_pack: number | null; p_min_stock: number; p_kelompok_product: string | null };
@@ -638,7 +551,10 @@ export type Database = {
       irt_kelompok_products: { Args: Record<string, never>; Returns: { id: string; code: string; name: string }[] };
       irt_set_customer: { Args: { p_customer: string | null }; Returns: undefined };
       irt_receive: { Args: { p_date: string | null; p_supplier: string | null; p_note: string | null; p_lines: Json }; Returns: Json };
-      irt_save_batch_draft: { Args: { p_id: string | null; p_date: string | null; p_note: string | null; p_inputs: Json; p_outputs: Json }; Returns: string };
+      irt_save_batch_draft: { Args: { p_id: string | null; p_date: string | null; p_note: string | null; p_inputs: Json; p_outputs: Json; p_costs?: Json | null }; Returns: string };
+      irt_save_item_costs: { Args: { p_id: string; p_std_price: number | null; p_packaging_cost_pcs: number | null; p_labor_cost_pcs: number | null; p_target_markup_pct: number | null }; Returns: undefined };
+      irt_save_recipe: { Args: { p_product: string; p_yield: number; p_gas: number; p_note: string | null; p_lines: Json }; Returns: string };
+      irt_hpp_summary: { Args: { p_from: string; p_to: string }; Returns: IrtHppSummaryRow[] };
       irt_delete_batch_draft: { Args: { p_id: string }; Returns: undefined };
       irt_confirm_batch: { Args: { p_id: string }; Returns: Json };
       irt_create_sale: { Args: { p_date: string | null; p_buyer: string | null; p_note: string | null; p_lines: Json }; Returns: Json };
@@ -663,12 +579,7 @@ export type Database = {
       line_direction: LineDirection;
       batch_cost_category: BatchCostCategory;
       order_status: OrderStatus;
-      order_payment_status: OrderPaymentStatus;
       return_status: ReturnStatus;
-      cash_direction: CashDirection;
-      cash_account_kind: CashAccountKind;
-      payment_method: PaymentMethod;
-      payment_status: PaymentStatus;
       correction_status: CorrectionStatus;
       opname_status: OpnameStatus;
     };

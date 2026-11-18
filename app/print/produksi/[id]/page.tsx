@@ -47,7 +47,7 @@ export default async function BatchPrintPage({ params }: PageProps<"/print/produ
     lr("HPP per kg", b.hpp_per_kg != null ? formatRupiah(b.hpp_per_kg) : "Data belum cukup", COLS, true),
     ...(b.note ? [sep(COLS), ...wrap(`Catatan: ${b.note}`, COLS)] : []),
     sep(COLS),
-    center("Biaya batch tidak menambah/mengurangi kas."),
+    center("Biaya batch hanya untuk perhitungan HPP."),
     center(`Dicetak ${printedAt.format(new Date())}`),
   ];
 

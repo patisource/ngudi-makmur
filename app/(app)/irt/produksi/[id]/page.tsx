@@ -5,7 +5,7 @@ import { Crumb } from "@/components/shell/crumb";
 import { Badge, Card, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 import { IrtBatchEditor } from "@/features/irt/components/batch-editor";
-import { irtBatch, irtStock } from "@/features/irt/queries";
+import { irtBatch, irtRecipes, irtStock } from "@/features/irt/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 import { formatIrtQty, pcsWithPack } from "@/lib/irt";
@@ -28,7 +28,7 @@ export default async function IrtBatchPage({ params }: PageProps<"/irt/produksi/
   const hasilLines = lines.filter((l) => l.role === "hasil");
 
   if (b.status === "draft" && canManage) {
-    const { data } = await irtStock();
+    const [{ data }, recipes] = await Promise.all([irtStock(), irtRecipes()]);
     const bahan = (data ?? []).filter((r) => r.kind === "bahan");
     const produk = (data ?? []).filter((r) => r.kind === "produk");
     return (
@@ -42,9 +42,18 @@ export default async function IrtBatchPage({ params }: PageProps<"/irt/produksi/
             note: b.note ?? "",
             inputs: bahanLines.map((l) => ({ itemId: l.item_id, qty: String(l.qty).replace(".", ",") })),
             outputs: hasilLines.map((l) => ({ itemId: l.item_id, qty: String(Number(l.qty)) })),
+            costs: {
+              recipeId: b.recipe_id ?? "",
+              recipeCount: b.recipe_count != null ? String(b.recipe_count).replace(".", ",") : "",
+              gas: String(b.gas_rp),
+              labor: String(b.labor_rp),
+              packaging: String(b.packaging_rp),
+              other: b.other_rp ? String(b.other_rp) : "",
+            },
           }}
           bahan={bahan.map((r) => ({ item_id: r.item_id, name: r.name, unit: r.unit, on_hand: Number(r.on_hand), avg_cost: r.avg_cost }))}
-          produk={produk.map((r) => ({ item_id: r.item_id, name: r.name, pack_size: r.pack_size }))}
+          produk={produk.map((r) => ({ item_id: r.item_id, name: r.name, pack_size: r.pack_size, labor_cost_pcs: r.labor_cost_pcs, packaging_cost_pcs: r.packaging_cost_pcs }))}
+          recipes={recipes.map((r) => ({ id: r.id, product_id: r.product_id, yield_pcs: Number(r.yield_pcs), gas_rp: r.gas_rp, lines: r.irt_recipe_lines.map((l) => ({ item_id: l.item_id, qty: Number(l.qty) })) }))}
         />
       </>
     );
@@ -106,6 +115,23 @@ export default async function IrtBatchPage({ params }: PageProps<"/irt/produksi/
             <div className="flex justify-between gap-3">
               <dt className="text-text-muted">Nilai bahan</dt>
               <dd className="tabular-nums">{b.input_value_rp != null ? formatRupiah(b.input_value_rp) : "—"}</dd>
+            </div>
+            {(
+              [
+                ["Gas / energi", b.gas_rp],
+                ["Upah tenaga", b.labor_rp],
+                ["Kemasan & desain", b.packaging_rp],
+                ["Lain-lain", b.other_rp],
+              ] as const
+            ).map(([label, v]) => (
+              <div key={label} className="flex justify-between gap-3">
+                <dt className="text-text-muted">{label}</dt>
+                <dd className="tabular-nums">{formatRupiah(v)}</dd>
+              </div>
+            ))}
+            <div className="flex justify-between gap-3 font-semibold">
+              <dt>Total biaya</dt>
+              <dd className="tabular-nums">{b.total_cost_rp != null ? formatRupiah(b.total_cost_rp) : "—"}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-text-muted">Hasil</dt>

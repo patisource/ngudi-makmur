@@ -7,8 +7,8 @@ import { listChannels, listOrders, parseOrderFilter } from "@/features/orders/qu
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_TONE } from "@/lib/order";
-import type { OrderPaymentStatus, OrderStatus } from "@/lib/supabase/types";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/order";
+import type { OrderStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Penjualan · Sistem Pengelolaan Jagung Desa Baturejo" };
 
@@ -16,7 +16,7 @@ const dateFmt = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone
 const inputCls = "h-10 w-full rounded-md border border-border bg-surface px-3 text-sm";
 const NOTICE: Record<string, string> = { hapus: "Draft pesanan dihapus." };
 
-// Daftar pesanan (FR-SAL-07, T6.5): status barang & status bayar sebagai dua badge terpisah; filter saluran,
+// Daftar pesanan (FR-SAL-07, T6.5): status barang (sistem tanpa kas: tidak ada status bayar); filter saluran,
 // status, tanggal; cari nomor INV atau nama pelanggan.
 export default async function OrdersPage({ searchParams }: PageProps<"/penjualan">) {
   const user = await requireRole(["admin_kelompok", "ketua"]);
@@ -24,10 +24,10 @@ export default async function OrdersPage({ searchParams }: PageProps<"/penjualan
   const sp = await searchParams;
   const f = parseOrderFilter(sp);
   const [{ data, count, error }, channels] = await Promise.all([listOrders(f), listChannels()]);
-  const filtered = Boolean(f.q || f.status || f.pay || f.channel || f.from || f.to);
+  const filtered = Boolean(f.q || f.status || f.channel || f.from || f.to);
   const href = (page: number) => {
     const q = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q: f.q, status: f.status, bayar: f.pay, saluran: f.channel, dari: f.from, sampai: f.to })) if (v) q.set(k, v);
+    for (const [k, v] of Object.entries({ q: f.q, status: f.status, saluran: f.channel, dari: f.from, sampai: f.to })) if (v) q.set(k, v);
     q.set("page", String(page));
     return `/penjualan?${q}`;
   };
@@ -37,7 +37,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/penjualan
     <>
       <PageHeader
         title="Penjualan"
-        description="Pesanan pelanggan. Draft belum mengubah stok; konfirmasi menerbitkan nomor INV dan mereservasi stok; serah barang mengeluarkan stok. Status bayar terpisah dari status barang."
+        description="Pesanan pelanggan. Draft belum mengubah stok; konfirmasi menerbitkan nomor INV dan mereservasi stok; serah barang mengeluarkan stok."
         actions={
           canManage && (
             <Link href="/penjualan/baru" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-fg hover:opacity-90">
@@ -53,7 +53,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/penjualan
       )}
 
       <Card className="p-4">
-        <form method="get" className="grid grid-cols-2 items-end gap-2 md:grid-cols-3 xl:grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,1fr))_auto]">
+        <form method="get" className="grid grid-cols-2 items-end gap-2 md:grid-cols-3 xl:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,1fr))_auto]">
           <label className="col-span-2 flex flex-col gap-1 text-label md:col-span-3 xl:col-span-1">
             Cari
             <input type="search" name="q" defaultValue={f.q} placeholder="Nomor INV atau pelanggan" className={inputCls} />
@@ -65,17 +65,6 @@ export default async function OrdersPage({ searchParams }: PageProps<"/penjualan
               {(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).map((s) => (
                 <option key={s} value={s}>
                   {ORDER_STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-label">
-            Bayar
-            <select name="bayar" defaultValue={f.pay ?? ""} className={inputCls}>
-              <option value="">Semua</option>
-              {(Object.keys(PAYMENT_STATUS_LABEL) as OrderPaymentStatus[]).map((s) => (
-                <option key={s} value={s}>
-                  {PAYMENT_STATUS_LABEL[s]}
                 </option>
               ))}
             </select>
@@ -127,8 +116,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/penjualan
                 <Th>Nomor</Th>
                 <Th>Saluran</Th>
                 <Th num>Total</Th>
-                <Th>Barang</Th>
-                <Th>Bayar</Th>
+                <Th>Status</Th>
               </tr>
             </thead>
             <tbody>
@@ -146,7 +134,6 @@ export default async function OrdersPage({ searchParams }: PageProps<"/penjualan
                   <Td>
                     <Badge tone={ORDER_STATUS_TONE[o.status]}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                   </Td>
-                  <Td>{o.status === "draft" || o.status === "cancelled" ? <span className="text-text-subtle">—</span> : <Badge tone={PAYMENT_STATUS_TONE[o.payment_status]}>{PAYMENT_STATUS_LABEL[o.payment_status]}</Badge>}</Td>
                 </tr>
               ))}
             </tbody>

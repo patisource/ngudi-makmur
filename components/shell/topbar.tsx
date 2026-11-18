@@ -13,11 +13,8 @@ import { CommandPalette } from "./palette";
 // Label segmen URL yang bukan menu utama (remah kedua). Segmen id dokumen memakai <Crumb>, atau "Detail".
 const SEGMENT: Record<string, string> = {
   baru: "Baru",
-  buku: "Buku kas",
   koreksi: "Koreksi",
-  pemasukan: "Pemasukan lain",
-  pembayaran: "Pembayaran",
-  pengeluaran: "Pengeluaran",
+  hpp: "HPP",
   opname: "Stok opname",
   anggota: "Anggota",
   pelanggan: "Pelanggan",

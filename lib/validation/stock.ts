@@ -27,3 +27,9 @@ export const reasonSchema = z.object({ reason: text(500, "Alasan").refine((s) =>
 
 export type OpnameInput = z.input<typeof opnameSchema>;
 export type AdjustmentInput = z.input<typeof adjustmentSchema>;
+
+/** Keputusan ketua atas pengajuan (koreksi stok): tolak wajib beralasan ≥ 5 karakter. */
+export const decisionSchema = z
+  .object({ approve: z.boolean(), note: optText(500, "Catatan") })
+  .strict()
+  .refine((d) => d.approve || (d.note?.length ?? 0) >= 5, { path: ["note"], message: "Alasan penolakan minimal 5 karakter" });

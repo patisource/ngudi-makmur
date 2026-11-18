@@ -47,7 +47,11 @@ export async function saveProductionDraft(batchId: string | null, raw: Productio
     p_residue_kg: Number(d.residueKg),
     p_inputs: d.inputs.map(Number),
     p_outputs: d.outputs.map(Number),
-    p_costs: d.costs.map((c) => ({ category: c.category, amount_rp: c.amountRp, source_ref: c.sourceRef ?? null, note: c.note ?? null })),
+    p_costs: d.costs.map((c) =>
+      c.qty !== undefined && c.unitPrice != null && c.unit
+        ? { category: c.category, qty: Number(c.qty), unit: c.unit, unit_price: c.unitPrice, source_ref: c.sourceRef ?? null, note: c.note ?? null }
+        : { category: c.category, amount_rp: c.amountRp ?? 0, source_ref: c.sourceRef ?? null, note: c.note ?? null },
+    ),
   });
   if (error || !data) return dbError(error ?? {});
   revalidate(data);

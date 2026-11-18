@@ -45,20 +45,6 @@ test("operator mengajukan koreksi stok → ketua menyetujui lewat dialog", async
   await ketua.close();
 });
 
-test("admin: transfer antar akun lewat dialog → toast nomor TRF", async ({ page }, info) => {
-  test.skip(info.project.name !== "laptop", "alur transaksi cukup sekali (laptop)");
-  await login(page, ADMIN ?? "");
-  await page.goto("/kas");
-  await page.getByRole("button", { name: "Transfer antar akun" }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Ke akun *").selectOption({ index: 1 });
-  await dialog.getByLabel("Jumlah (Rp) *").fill("1000");
-  await dialog.getByLabel("Keterangan *").fill("Uji e2e setor tunai ke bank");
-  await dialog.getByRole("button", { name: "Simpan transfer" }).click();
-  await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("status").filter({ hasText: /Transfer TRF-.* dicatat/ })).toBeVisible();
-});
-
 test("ganti kata sandi sendiri (FR-AUTH-07) lalu kembalikan", async ({ page }, info) => {
   test.skip(info.project.name !== "laptop" || !TEKNIS, "butuh E2E_TEKNIS_EMAIL; cukup sekali (laptop)");
   const temp = `uji-${Date.now()}-sandi`;

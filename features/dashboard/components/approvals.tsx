@@ -7,7 +7,6 @@ import { formCls, Notice } from "@/components/shared/notice";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { toastResult } from "@/components/ui/toast";
-import { decideCorrection } from "@/features/cash/actions";
 import type { FormState } from "@/features/master/actions";
 import { verifyReturn } from "@/features/orders/actions";
 import type { Approval } from "@/features/shell/queries";
@@ -15,12 +14,11 @@ import { decideAdjustment, decideBatchVoid } from "@/features/stock/actions";
 
 // "Menunggu persetujuan ketua" (desain 07): setujui/tolak langsung dari dashboard. Keputusan tetap lewat dialog yang
 // menjelaskan dampaknya (StyleGuide §9); tolak wajib alasan; kunci idempotensi dibuat saat dialog dibuka.
-const KIND_LABEL: Record<Approval["kind"], string> = { stock: "Koreksi stok", cash: "Koreksi kas", return: "Retur fisik", void: "Pembatalan batch" };
+const KIND_LABEL: Record<Approval["kind"], string> = { stock: "Koreksi stok", return: "Retur fisik", void: "Pembatalan batch" };
 
 const IMPACT: Record<Approval["kind"], { yes: string; no: string }> = {
   stock: { yes: "Mutasi koreksi stok dicatat sekali dan tidak bisa dibatalkan.", no: "Stok tidak berubah." },
-  cash: { yes: "Saldo kas berubah sesuai koreksi; tercatat satu kali di buku kas.", no: "Saldo kas tidak berubah." },
-  return: { yes: "Barang masuk kembali ke stok dan nilai retur mengurangi tagihan pesanan.", no: "" },
+  return: { yes: "Barang masuk kembali ke stok dan nilai retur mengurangi nilai penjualan pesanan.", no: "" },
   void: { yes: "Bahan dikembalikan ke stok dan hasil dikeluarkan dari stok (mutasi balik).", no: "Batch tetap terkonfirmasi." },
 };
 
@@ -28,8 +26,6 @@ function decide(a: Approval, approve: boolean, note: string, key: string): Promi
   switch (a.kind) {
     case "stock":
       return decideAdjustment(a.id, { approve, note }, key);
-    case "cash":
-      return decideCorrection(a.id, { approve, note }, key);
     case "void":
       return decideBatchVoid(a.id, { approve, note }, key);
     case "return":

@@ -4,7 +4,7 @@ Panduan kerja untuk AI (Claude Code) dan kontributor di repositori **Sistem Mana
 
 ## Konteks Singkat
 
-Aplikasi web responsif internal untuk pengurus kelompok tani: jagung masuk → pemipilan/penepungan → stok → pesanan → pembayaran & kas → nota thermal & laporan. Satu kelompok tani, empat peran: `admin_kelompok` (master, jagung masuk, pesanan, pembayaran, kas, nota), `operator_produksi` (batch produksi, lihat stok; **tidak boleh** menyentuh pembayaran/kas), `ketua` (baca laporan, setujui koreksi stok/kas), `admin_teknis` (akun, izin, server, backup; bukan pencatat transaksi). Pelanggan tidak punya akun. Sejak M10 ada peran kelima `pengurus_irt` untuk modul **IRT Sekar Arum** (PRD §4.9): bahan masuk → produksi → stok → penjualan IRT, **tanpa kas**, produk jadi dalam **pcs** (pack = isi pcs tetap); pengurus IRT hanya melihat data IRT + stok kelompok untuk produk yang dihubungkan; `ketua` membaca data IRT. Data IRT terpisah dari stok/kas kelompok (tabel `irt_*`); jembatan satu-satunya adalah trigger tepung masuk saat pesanan pelanggan IRT diserahkan.
+Aplikasi web responsif internal untuk pengurus kelompok tani: jagung masuk → pemipilan/penepungan → stok → pesanan → nota thermal & laporan → **HPP**. **Sistem tanpa kas** sejak 19 Nov 2026 (PRD Q25): tidak ada pembayaran, kas, pengeluaran, refund, atau piutang; data kas lama ada di skema `arsip_kas`. Satu kelompok tani, empat peran: `admin_kelompok` (master, jagung masuk, pesanan, pembayaran, kas, nota), `operator_produksi` (batch produksi, lihat stok; **tidak boleh** menyentuh pembayaran/kas), `ketua` (baca laporan, setujui koreksi stok/kas), `admin_teknis` (akun, izin, server, backup; bukan pencatat transaksi). Pelanggan tidak punya akun. Sejak M10 ada peran kelima `pengurus_irt` untuk modul **IRT Sekar Arum** (PRD §4.9): bahan masuk → produksi → stok → penjualan IRT, **tanpa kas**, produk jadi dalam **pcs** (pack = isi pcs tetap); pengurus IRT hanya melihat data IRT + stok kelompok untuk produk yang dihubungkan; `ketua` membaca data IRT. Data IRT terpisah dari stok/kas kelompok (tabel `irt_*`); jembatan satu-satunya adalah trigger tepung masuk saat pesanan pelanggan IRT diserahkan.
 
 Produk **kelompok** v1 hanya tiga, semua inventori kelompok dalam **kg** (produk IRT dikelola terpisah di `irt_items`, pcs/pack): **Tongkol (`TK`) → pemipilan → Pipilan (`PP`) → penepungan → Tepung (`TP`)** (PRD §4.0). Kemasan (mis. pak 0,5 kg, karung 50 kg) hanya untuk penjualan dengan konversi kg eksplisit. Nama produk masih sementara (merek belum final), jadi jangan pernah meng-*hardcode* nama produk di kode; rujuk lewat `products.code` (`TK`, `PP`, `TP`), kategori (`mentah`/`olahan`), atau `id`.
 
@@ -92,8 +92,8 @@ tests/e2e/
 3. **Endpoint posting wajib idempoten** (`Idempotency-Key`), lihat Security.md §6.
 4. Uang = **integer rupiah** (`bigint` di SQL, `number` di TS). Berat/qty = kg `numeric(14,3)`; jangan menjumlah stok dengan float JS di logika bisnis. Konversi kemasan > 0.
 5. Total, harga snapshot, `qty_kg`, HPP, status, dan nomor dokumen **dihitung di server**. Nilai dari klien untuk field-field ini diabaikan.
-6. **Kas hanya dari**: pembayaran terverifikasi, pemasukan lain, pengeluaran, refund, koreksi kas disetujui — tepat satu baris per sumber (`UNIQUE (source_type, source_id)`). Biaya batch dan biaya perolehan **tidak pernah** membuat kas (PRD §4.7).
-7. Status bayar dan status barang terpisah; lunas ≠ diserahkan.
+6. **Sistem tanpa kas** (PRD §4.7, Q25): jangan menambah pencatatan uang masuk/keluar, pembayaran, atau piutang tanpa keputusan pengguna. Biaya batch & biaya perolehan hanya untuk HPP.
+7. **HPP** (PRD §4.4): nilai rupiah persediaan diturunkan mesin hitung ulang `_hpp_recalc`/`_irt_recalc` (dipanggil saat batch dikonfirmasi/dibatalkan & saat biaya tetap bulanan diubah). Hanya mesin itu yang boleh mengubah `value_rp` mutasi (flag `app.hpp_recalc`); kg tidak pernah diubah. Parameter di `hpp_settings`.
 8. Tanggal bisnis bertipe `date`, zona Asia/Jakarta.
 9. Master data diarsip (`archived_at`), tidak dihapus. Dokumen terkonfirmasi terkunci, tidak diedit atau dihapus.
 
@@ -138,12 +138,12 @@ Form (client) ──▶ Server Action / Route Handler
 4. Implementasi kecil dan bertahap; jalankan `pnpm lint && pnpm typecheck && pnpm test` sebelum menyatakan selesai.
 5. Untuk perubahan UI, jalankan aplikasi dan periksa halaman di 1280 px, 768 px, dan **ponsel 360 px** (form wajib terbaca & bisa diisi), mode terang & gelap, serta dengan *reduced motion*.
 6. Tandai `[x]` di Task.md pada commit yang sama. Pesan commit: `feat(penjualan): konfirmasi & reservasi stok (T6.3)`. Format Conventional Commits.
-7. Uji alur dengan seed DEMO (PRD §9.1) dan pastikan angka hasilnya cocok (HPP Rp6.000/kg, stok akhir PP 40 kg & TP 45 kg, kas masuk Rp50.000).
+7. Uji alur dengan seed DEMO (PRD §9.1) dan pastikan angka hasilnya cocok (HPP Rp6.000/kg dengan biaya tetap DEMO 0, stok akhir PP 40 kg & TP 45 kg, penjualan Rp50.000).
 8. Laporkan dengan jujur: apa yang selesai, apa yang belum diuji, dan keputusan yang perlu dikonfirmasi pengguna (tambahkan ke PRD §10 bila menyangkut domain).
 
 ## Hal yang Harus Ditanyakan, Bukan Diputuskan Sendiri
 
-- Perubahan aturan domain (metode HPP, rumus laporan, alur status, aturan pembatalan/retur).
+- Perubahan aturan domain (metode HPP, rumus laporan, alur status, aturan pembatalan/retur). Rumus HPP 19 Nov 2026 & sistem tanpa kas sudah diputuskan (Q25); mengembalikan kas harus ditanyakan.
 - Menambah peran atau mengubah matriks hak akses (empat peran SRS + `pengurus_irt` bersifat tetap).
 - Menambah produk, jenis batch, atau satuan inventori selain kg.
 - Cara penerimaan hasil panen anggota/biaya perolehan, konsinyasi, bagi hasil (belum diputuskan; PRD §10).

@@ -13,7 +13,7 @@ import { proofPathSchema, receiptSchema, voidReasonSchema } from "@/lib/validati
 
 export type ReceiptFormState = FormState & { id?: string };
 
-const KEYS = ["businessDate", "sourceType", "memberId", "supplierName", "productId", "weightKg", "moisturePct", "acquisitionCost", "note"];
+const KEYS = ["businessDate", "sourceType", "memberId", "supplierName", "productId", "weightKg", "sackCount", "moisturePct", "acquisitionCost", "note"];
 const pick = (fd: FormData) => Object.fromEntries(KEYS.map((k) => [k, fd.get(k) ?? undefined]));
 const uuid = z.uuid();
 
@@ -57,6 +57,7 @@ export async function saveReceiptDraft(receiptId: string | null, _prev: ReceiptF
     supplier_name: r.supplierName ?? null,
     product_id: r.productId,
     weight_kg: Number(r.weightKg),
+    sack_count: r.sackCount ? Number(r.sackCount) : null,
     moisture_pct: r.moisturePct ? Number(r.moisturePct) : null,
     acquisition_cost: r.acquisitionCost,
     note: r.note ?? null,

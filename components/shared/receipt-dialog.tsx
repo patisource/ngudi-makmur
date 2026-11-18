@@ -12,7 +12,7 @@ import { escposBytes, type ThermalLine } from "@/lib/thermal";
 import { ThermalPaper } from "./thermal";
 
 // Struk thermal (desain 05, StyleGuide §8.4): satu susunan baris → pratinjau, cetak via driver (jalur A), dan
-// ESC/POS lewat Web Serial (jalur B, 9600 baud). Mencetak hanya menambah print_logs; stok/kas tidak berubah.
+// ESC/POS lewat Web Serial (jalur B, 9600 baud). Mencetak hanya menambah print_logs; stok tidak berubah.
 type Paper = "80" | "58";
 const PAPER_KEY = "ngudi-makmur-paper";
 
@@ -166,7 +166,7 @@ export function ReceiptDialog({
         </div>
         <p className="rounded-lg bg-surface-muted px-4 py-3 text-xs leading-relaxed text-text-muted">
           Via driver: pilih printer thermal di dialog cetak, ukuran kertas otomatis {paper} mm. Cetak langsung: kirim ESC/POS ke printer USB/Serial/Bluetooth (9600 baud), kertas
-          terpotong otomatis. Nomor nota tetap sama dan kas tidak berubah.
+          terpotong otomatis. Nomor nota tetap sama dan stok tidak berubah.
         </p>
         {!canPrint && <p className="text-xs text-text-muted">Pratinjau saja; nota dicetak oleh admin kelompok.</p>}
         {msg && (

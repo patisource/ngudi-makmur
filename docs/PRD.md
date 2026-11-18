@@ -137,11 +137,19 @@ Alur: **Jagung masuk (TK/PP) → pemipilan (TK → PP) → penepungan (PP → TP
 
 ### 4.4 Penilaian Persediaan & HPP
 
+> **Rumus HPP baru (keputusan pengguna 19 Nov 2026, Q25).** Seluruh HPP lama sudah dihitung ulang dengan rumus ini (migrasi `20261119090100_hpp_kelompok.sql`, `20261119090200_hpp_irt.sql`; nilai sebelum → sesudah tersimpan di `hpp_recalc_log`).
+
 - Metode nilai bahan: **rata-rata bergerak (moving average)** per produk (lihat Q3).
-- Biaya per kg jagung masuk = `biaya perolehan / berat kg`.
-- **HPP batch** (SRS §10) = `(biaya bahan terpakai + tenaga kerja + kemasan + alokasi biaya lain) ÷ output layak jual (kg)`. Biaya bahan terpakai = Σ (kg input × rata-rata biaya produk input saat konfirmasi). Komponen selain bahan berasal dari `batch_costs`.
+- Biaya per kg jagung masuk = `biaya perolehan / berat kg`. Jagung masuk boleh diisi per **karung** (1 karung = `hpp_settings.kg_per_karung`, default 33 kg); berat dihitung database.
+- **HPP batch kelompok** = `(bahan terpakai + BBM + tenaga + kemasan & lain + alokasi biaya tetap bulanan) ÷ output layak jual (kg)`.
+  - **BBM**: pemipilan = `kg tongkol ÷ 33 ÷ 20 karung per liter × Rp10.000`; penepungan = `kg pipilan × 1,5 L/100 kg × Rp10.000` (Rp150/kg). Baris biaya boleh berupa *jumlah × harga satuan* (liter, orang-hari, kg borongan, pcs); nilainya dihitung server.
+  - **Tenaga**: pekerja × hari × upah harian (default Rp90.000; 3 orang pipil, 2 orang giling) atau borongan per kg.
+  - **Biaya tetap bulanan** (oli & perawatan, default Rp75.000/bulan) dibagi ke semua batch aktif di bulan yang sama sebanding kg hasil (pembulatan kumulatif; total per bulan tepat). Karena itu HPP batch di bulan berjalan **berubah** setiap ada batch baru/batal di bulan itu.
+  - Parameter (`hpp_settings`) diedit admin kelompok di menu **HPP & parameter**; mengubah biaya tetap bulanan menghitung ulang semua HPP.
+- **Mesin hitung ulang** `_hpp_recalc`: memutar ulang seluruh `stock_movements` berurutan dengan aturan nilai yang sama seperti posting (kg tidak pernah berubah, hanya rupiah), lalu memperbarui nilai mutasi, baris & kepala batch, retur, opname, koreksi stok, dan saldo nilai. Dipanggil otomatis saat batch dikonfirmasi/dibatalkan dan saat biaya tetap bulanan diubah. Di luar mesin ini buku mutasi tetap append-only.
+- **HPP per kemasan** (laporan) = `HPP/kg × isi kg + biaya kemasan & desain` (`product_packagings.cost_rp`; default karung pipilan 5 kg Rp1.500, kemasan tepung 1 kg Rp1.200). Laporan menampilkan laba, **margin** (laba ÷ harga) dan **markup** (laba ÷ HPP); "untung 50%" = markup 50% = margin 33,3%.
 - Bila output layak jual = 0, HPP **tidak dihitung** (tidak ada pembagian nol); sistem menampilkan "Data belum cukup untuk menghitung HPP".
-- Biaya batch **hanya alokasi HPP** dan tidak pernah membuat kas (lihat §4.7).
+- Biaya batch **hanya untuk HPP** (sistem tanpa kas, §4.7).
 - Nilai persediaan dan HPP disimpan dalam rupiah integer.
 
 ### 4.5 Penomoran Dokumen
@@ -173,9 +181,11 @@ Nomor nota = nomor pesanan (`INV-…`), unik, dan **tetap sama** saat dicetak ul
 - Setiap transaksi menyimpan **pelaku, waktu, nomor sumber**, dan (untuk koreksi/pembatalan) **alasan**. Setiap aksi tulis tercatat di **log audit** (pelaku, aksi, objek, nilai sebelum/sesudah, alasan, waktu).
 - Konfirmasi yang dikirim dua kali (klik ganda, retry jaringan) hanya menghasilkan **satu** perubahan stok/kas.
 
-### 4.7 Kas & Sumber Uang
+### 4.7 Kas & Sumber Uang — DIHAPUS (19 Nov 2026)
 
-Aturan ini mencegah kas tercatat ganda (SRS §5, §9).
+> **Sistem tanpa kas (keputusan pengguna 19 Nov 2026, Q25).** Seluruh pencatatan uang masuk/keluar dihapus dari aplikasi kelompok maupun IRT: akun & buku kas, pembayaran & verifikasi, bukti transfer, kuitansi, refund, pengeluaran, pemasukan lain, koreksi kas, transfer antar akun, status bayar & piutang. Aplikasi murni untuk pencatatan produksi, stok, penjualan (barang & nilai), dan HPP. Data kas lama disalin ke skema `arsip_kas` (tidak diekspos ke aplikasi) sebelum tabelnya dihapus (migrasi `20261119090000_hapus_kas.sql`). Tabel di bawah hanya riwayat desain.
+
+Aturan lama (tidak berlaku lagi):
 
 | Kejadian | Efek kas |
 |---|---|
@@ -197,6 +207,8 @@ Setiap pesanan wajib memiliki `channel`: `langsung`, `whatsapp`, `media_sosial`,
 ### 4.9 Modul IRT Sekar Arum (M10)
 
 Keputusan pengguna 5–6 Nov 2026: satu IRT (**IRT Sekar Arum**), pengurusnya punya akun sendiri (`pengurus_irt`), **tanpa kas**, produk jadi per **pcs** dan **pack**.
+
+**HPP IRT (19 Nov 2026, Q25):** HPP batch per pcs = `(bahan + gas + upah + kemasan & desain + lain-lain) ÷ pcs hasil`. Resep per produk (`irt_recipes`: bahan per 1 resep, hasil pcs per resep, gas per resep) mengisi bahan otomatis saat produksi ("jumlah resep"); upah & kemasan per pcs dan target markup diatur per produk; harga standar bahan untuk **HPP standar** & **harga saran** (`HPP × (1 + markup)`) di menu **HPP & resep**. Satu SKU mie: **Mie Jagung Kering Mentah Kemas (90g)** (kemasan Rp800, upah Rp1.625, markup 50%, harga Rp6.000; resep tepung jagung 100 g, terigu 100 g, tapioka 25 g, telur 1, garam 2 g → 2,77 pcs, gas Rp1.000/resep). Harga standar: tepung jagung Rp11.500/kg, terigu Rp12.000/kg, tapioka Rp16.000/kg, telur Rp1.500/butir, garam Rp8.000/kg. Juga produk **Tepung Jagung Kemas 1 kg** (kemasan Rp1.200, harga Rp20.000).
 
 | Aturan | Isi |
 |---|---|
@@ -527,6 +539,7 @@ Data uji untuk pengembangan, UAT awal, dan demonstrasi mitra. **Bukan capaian ny
 | Q21 | *Desain Figma (06):* banner "Biaya proses batch yang belum dibayar … bayar lewat Catat pengeluaran → Bayar biaya batch". Model saat ini tidak melacak hutang biaya batch (biaya batch hanya alokasi HPP, §4.7); pengeluaran boleh merujuk nomor PRD. Banner **belum dibuat**. | ✅ Diputuskan pengguna (4 Nov 2026): **tidak perlu**. Banner tidak dibuat; pembayaran biaya batch dicatat lewat Catat pengeluaran (boleh menyebut nomor PRD di keterangan). |
 | Q22 | ✅ Keputusan pengguna (3 Nov 2026): data uji coba dimuat ke proyek Supabase asli (`supabase/seed_uji.sql`, pelaku = akun "uji" yang tidak bisa login) dan **wajib** dibersihkan dengan `supabase/bersihkan_data_uji.sql` sebelum go-live. | Pengguna (4 Nov 2026): data uji **dibiarkan** untuk dicoba/UAT; pembersihan dijalankan **sendiri secara manual** oleh pengguna saat go-live (docs/GoLive.md §3). Tanggal go-live belum ditetapkan. |
 | Q24 | ✅ Keputusan pengguna (5–6 Nov 2026): modul IRT Sekar Arum (§4.9) — hanya satu IRT; pengurus IRT punya akun sendiri; tanpa kas (kas kelompok tetap); produk per pcs & pack (1 pack = isi pcs tetap); pengurus IRT boleh melihat stok tepung kelompok (baca saja); ketua membaca data IRT; koreksi stok IRT langsung berlaku; penghubung pelanggan IRT bisa dipasang ulang setelah data uji dibersihkan. | Daftar produk IRT, harga, isi pack, dan stok minimum resmi (diisi pengurus IRT di aplikasi). |
+| Q25 | ✅ Keputusan pengguna (19 Nov 2026): **rumus HPP baru** (§4.4, §4.9: BBM per batch, upah, kemasan & desain, biaya tetap bulanan dibagi per kg hasil bulan itu, resep IRT) dan **seluruh HPP lama dihitung ulang & ditimpa** (log sebelum → sesudah di `hpp_recalc_log`); **sistem tanpa kas** untuk kelompok & IRT (§4.7 dihapus, data lama di skema `arsip_kas`); jagung masuk per karung (33 kg); mie jagung 1 SKU. Parameter default = harga pasar Pati/Sukolilo yang diberikan pengguna, bisa diedit. | Rendemen nyata per batch, upah & jumlah pekerja nyata, harga bahan terbaru — diperbarui pengurus di aplikasi. |
 | Q23 | *Desain Figma (00):* panel login menampilkan komoditas utama "Tongkol, pipilan & tepung" dan jam operasional gudang "Senin–Sabtu, 07.00–16.00" (disimpan di `lib/org.ts`), plus foto lahan sementara dari Unsplash. | Apakah jam operasional benar, dan foto gudang/lahan asli mana yang dipakai? |
 
 ## 11. Rilis

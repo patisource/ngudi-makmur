@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// Alur utama (T9.4, bukti uji SRS §14) di lingkungan DEMO: pesanan → konfirmasi → bayar cicilan → serah → nota →
-// laporan. Butuh seed_demo.sql (stok TP tersedia) dan E2E_ADMIN_EMAIL / E2E_KETUA_EMAIL / E2E_PASSWORD.
+// Alur utama (T9.4, bukti uji SRS §14) di lingkungan DEMO: pesanan → konfirmasi → serah → nota → laporan & HPP.
+// Sistem tanpa kas (19 Nov 2026): tidak ada langkah pembayaran. Butuh seed_demo.sql (stok TP tersedia) dan E2E_ADMIN_EMAIL / E2E_KETUA_EMAIL / E2E_PASSWORD.
 // Tanpa variabel itu seluruh berkas dilewati. Jangan arahkan ke proyek data nyata.
 const ADMIN = process.env.E2E_ADMIN_EMAIL;
 const KETUA = process.env.E2E_KETUA_EMAIL;
@@ -17,7 +17,7 @@ async function login(page: Page, email: string) {
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
 }
 
-test("admin: pesanan 2 kg tepung → konfirmasi → bayar 2× → serah → nota", async ({ page }, info) => {
+test("admin: pesanan 2 kg tepung → konfirmasi → serah → nota", async ({ page }, info) => {
   test.skip(info.project.name !== "laptop", "alur transaksi cukup sekali (laptop); ponsel diuji di test berikut");
   await login(page, ADMIN ?? "");
   await page.goto("/penjualan/baru");
@@ -34,15 +34,9 @@ test("admin: pesanan 2 kg tepung → konfirmasi → bayar 2× → serah → nota
   await page.getByRole("dialog").getByRole("button", { name: "Konfirmasi & reservasi" }).click();
   await expect(page.getByText(/Dikonfirmasi sebagai INV-/)).toBeVisible();
 
-  // cicilan 1: tunai Rp5.000 langsung terverifikasi; cicilan 2: sisa tagihan
-  await page.getByRole("button", { name: "Catat pembayaran" }).click();
-  await page.getByRole("dialog").getByLabel("Jumlah", { exact: true }).fill("5000");
-  await page.getByRole("dialog").getByRole("button", { name: "Simpan pembayaran" }).click();
-  await expect(page.getByText(/Pembayaran Rp5\.000 diverifikasi/)).toBeVisible();
-  await page.getByRole("button", { name: "Catat pembayaran" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Simpan pembayaran" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0); // "Lunas" juga muncul di pratinjau dialog
-  await expect(page.getByText("Lunas").first()).toBeVisible();
+  // sistem tanpa kas: tidak ada tombol pembayaran; kartu kanan = nilai penjualan
+  await expect(page.getByRole("button", { name: "Catat pembayaran" })).toHaveCount(0);
+  await expect(page.getByText("Nilai penjualan")).toBeVisible();
 
   await page.getByRole("button", { name: "Serahkan barang" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Serahkan barang" }).click();
@@ -52,19 +46,27 @@ test("admin: pesanan 2 kg tepung → konfirmasi → bayar 2× → serah → nota
   expect(nota.status()).toBe(200);
   const body = await nota.json();
   expect(body.data.docNumber).toMatch(/^INV-/);
-  expect(body.data.outstandingRp).toBe(0);
+  expect(body.data.netRp).toBe(body.data.totalRp);
 });
 
-test("ketua: dashboard & laporan terbaca, tidak bisa mencatat pembayaran", async ({ page }) => {
+test("ketua: dashboard, laporan & HPP terbaca; parameter HPP hanya dibaca", async ({ page }) => {
   await login(page, KETUA ?? "");
   await expect(page.getByText("Omzet")).toBeVisible();
   await page.goto("/laporan/penjualan?periode=bulan-ini");
   await expect(page.getByRole("heading", { name: /Ringkasan/ })).toBeVisible();
   const csv = await page.request.get("/api/v1/reports/penjualan?format=csv&periode=bulan-ini");
   expect(csv.headers()["content-type"]).toContain("text/csv");
-  const res = await page.request.post("/api/v1/orders/3f1c2b8e-5d6a-4c1e-9f0a-1b2c3d4e5f60/payments", {
-    headers: { "Idempotency-Key": "3f1c2b8e-5d6a-4c1e-9f0a-1b2c3d4e5f60" },
-    data: { method: "tunai", accountId: "3f1c2b8e-5d6a-4c1e-9f0a-1b2c3d4e5f60", amountRp: 1 },
-  });
-  expect(res.status()).toBe(403);
+  await page.goto("/hpp");
+  await expect(page.getByRole("heading", { level: 1, name: "HPP & parameter" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Simpan parameter" })).toHaveCount(0);
+  await page.goto("/kas");
+  await expect(page.getByRole("heading", { name: "Halaman atau dokumen tidak ditemukan" })).toBeVisible();
+});
+
+test("admin: halaman HPP menampilkan parameter yang bisa diubah", async ({ page }) => {
+  await login(page, ADMIN ?? "");
+  await page.goto("/hpp");
+  await expect(page.getByLabel("Harga bensin (Rp/liter)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Simpan parameter" })).toBeVisible();
+  await expect(page.getByText("HPP per kemasan & laba")).toBeVisible();
 });

@@ -131,3 +131,21 @@ export async function irtReport(p: Period) {
     error: report.error ?? stock.error ?? receipts.error,
   };
 }
+
+/** Resep per produk + bahan (satuan & harga standar) untuk editor produksi & halaman HPP IRT. */
+export async function irtRecipes() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("irt_recipes")
+    .select("id, product_id, yield_pcs, gas_rp, note, irt_recipe_lines(item_id, qty, sort_order, irt_items(name, unit, std_price))")
+    .order("product_id");
+  return (data ?? []).map((r) => ({ ...r, irt_recipe_lines: [...(r.irt_recipe_lines ?? [])].sort((a, b) => a.sort_order - b.sort_order) }));
+}
+export type IrtRecipe = Awaited<ReturnType<typeof irtRecipes>>[number];
+
+/** HPP standar (resep × harga standar) vs aktual (batch periode) per produk. */
+export async function irtHppSummary(p: Period) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("irt_hpp_summary", { p_from: p.from, p_to: p.to });
+  return { rows: data ?? [], error };
+}

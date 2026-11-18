@@ -70,7 +70,7 @@ export async function getBatch(id: string) {
   const [batch, lines, costs] = await Promise.all([
     supabase.from("production_batches").select("*, batch_type_rules(name, max_loss_pct)").eq("id", id).maybeSingle(),
     supabase.from("production_lines").select("id, direction, qty_kg, value_rp, sort_order, products(code, name)").eq("batch_id", id).order("sort_order"),
-    supabase.from("batch_costs").select("id, category, amount_rp, source_ref, note, sort_order").eq("batch_id", id).order("sort_order"),
+    supabase.from("batch_costs").select("id, category, amount_rp, source_ref, note, sort_order, qty, unit_price, unit").eq("batch_id", id).order("sort_order"),
   ]);
   return { batch: batch.data, lines: lines.data ?? [], costs: costs.data ?? [], error: batch.error };
 }

@@ -23,9 +23,9 @@ export function ThermalPaper({ lines, narrow }: { lines: ThermalLine[]; narrow?:
 
 /**
  * Cetak nota/kuitansi yang tercatat (FR-RPT-03): catat print_logs dulu, lalu dialog cetak browser (driver thermal).
- * Bila printer gagal, cukup cetak ulang — pembayaran/kas tidak terpengaruh (FR-RPT-03b).
+ * Bila printer gagal, cukup cetak ulang — stok & status tidak terpengaruh (FR-RPT-03b).
  */
-export function LoggedPrintControls({ backHref, docType, docId, canPrint }: { backHref: string; docType: "order" | "payment"; docId: string; canPrint: boolean }) {
+export function LoggedPrintControls({ backHref, docType, docId, canPrint }: { backHref: string; docType: "order"; docId: string; canPrint: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);

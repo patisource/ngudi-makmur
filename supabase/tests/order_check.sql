@@ -4,6 +4,10 @@
 -- =====================================================================
 begin;
 
+-- HPP: biaya tetap bulanan 0 & nilai lama diselaraskan dulu, supaya angka uji tidak terpengaruh alokasi bulanan.
+update public.hpp_settings set biaya_tetap_bulanan = 0;
+select public._hpp_recalc('uji: biaya tetap 0');
+
 create temp table _hasil (no serial primary key, uji text not null, lulus boolean not null) on commit drop;
 create temp table _id (k text primary key, id uuid not null) on commit drop;
 create temp table _k (k text primary key, r jsonb not null) on commit drop;
@@ -63,8 +67,8 @@ insert into _hasil (uji, lulus) select 'harga snapshot dari katalog (pak Rp5.500
 insert into _hasil (uji, lulus) select 'total dihitung server: subtotal 41.000 − diskon 1.000 + ongkir 5.000 = Rp45.000',
   subtotal_rp = 41000 and discount_rp = 1000 and shipping_rp = 5000 and total_rp = 45000
   from public.orders where id = (select id from _id where k = 'o1');
-insert into _hasil (uji, lulus) select 'draft: tanpa nomor, tanpa reservasi, status bayar unpaid',
-  (select doc_number is null and status = 'draft' and payment_status = 'unpaid' and customer_name = 'Uji Pelanggan M6' from public.orders where id = (select id from _id where k = 'o1'))
+insert into _hasil (uji, lulus) select 'draft: tanpa nomor, tanpa reservasi',
+  (select doc_number is null and status = 'draft' and customer_name = 'Uji Pelanggan M6' from public.orders where id = (select id from _id where k = 'o1'))
   and not exists (select 1 from public.stock_reservations where order_id = (select id from _id where k = 'o1'));
 
 -- o2: 4 kg curah
@@ -234,8 +238,8 @@ insert into _hasil (uji, lulus) select 'serah: reservasi → sale_out 4 kg, fisi
   and (select status from public.stock_reservations where order_id = (select id from _id where k = 'o2')) = 'fulfilled';
 insert into _hasil (uji, lulus) select 'serah: nilai keluar = rata-rata bergerak (4 kg × Rp6.000 = Rp24.000)',
   (select value_rp from public.stock_movements where source_type = 'order' and source_id = (select id from _id where k = 'o2')) = 24000;
-insert into _hasil (uji, lulus) select 'UJI WAJIB: serah tidak bergantung bayar — delivered tetap unpaid',
-  (select status = 'delivered' and payment_status = 'unpaid' and recipient_name = 'Bu Sari' and delivered_on = (select hari_ini from _ctx)
+insert into _hasil (uji, lulus) select 'UJI WAJIB: serah barang tercatat (tanpa kas)',
+  (select status = 'delivered' and recipient_name = 'Bu Sari' and delivered_on = (select hari_ini from _ctx)
      from public.orders where id = (select id from _id where k = 'o2'));
 insert into _k select 'f2', public.fulfill_order((select id from _id where k = 'o2'), 'Bu Sari', null);
 insert into _hasil (uji, lulus) select 'serah dua kali → tetap satu mutasi keluar',
@@ -253,8 +257,8 @@ do $$ begin
 exception when others then insert into _hasil (uji, lulus) values ('pesanan batal tidak bisa diserahkan', true);
 end $$;
 insert into _hasil (uji, lulus) select 'v_order_balance: tagihan pesanan diserahkan = total, pesanan batal = 0',
-  (select outstanding_rp from public.v_order_balance where order_id = (select id from _id where k = 'o2')) = 40000
-  and (select outstanding_rp from public.v_order_balance where order_id = (select id from _id where k = 'o1')) = 0;
+  (select bill_rp from public.v_order_balance where order_id = (select id from _id where k = 'o2')) = 40000
+  and (select bill_rp from public.v_order_balance where order_id = (select id from _id where k = 'o1')) = 0;
 
 -- =============== ketua: lihat saja ===============
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000f2","role":"authenticated"}', true);
@@ -308,7 +312,7 @@ do $$ begin
   insert into _hasil (uji, lulus) values ('kunci DB: delivered tidak bisa kembali ke confirmed', false);
 exception when others then insert into _hasil (uji, lulus) values ('kunci DB: delivered tidak bisa kembali ke confirmed', true);
 end $$;
-insert into _hasil (uji, lulus) select 'pesanan, serah, batal tanpa pembayaran tidak membuat kas', not exists (select 1 from public.cash_transactions where source_id in (select id from _id));
+insert into _hasil (uji, lulus) select 'sistem tanpa kas: tabel kas & pembayaran tidak ada', to_regclass('public.cash_transactions') is null and to_regclass('public.payments') is null;
 insert into _hasil (uji, lulus) select 'audit: draft, konfirmasi, batal (dengan alasan), serah, hapus tercatat',
   exists (select 1 from public.audit_logs where action = 'order.draft_created' and entity_id = (select id from _id where k = 'o1')::text)
   and exists (select 1 from public.audit_logs where action = 'order.confirmed' and entity_id = (select id from _id where k = 'o1')::text)

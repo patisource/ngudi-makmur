@@ -4,6 +4,10 @@
 -- =====================================================================
 begin;
 
+-- HPP: biaya tetap bulanan 0 & nilai lama diselaraskan dulu, supaya angka uji tidak terpengaruh alokasi bulanan.
+update public.hpp_settings set biaya_tetap_bulanan = 0;
+select public._hpp_recalc('uji: biaya tetap 0');
+
 create temp table _hasil (no serial primary key, uji text not null, lulus boolean not null) on commit drop;
 grant all on _hasil to authenticated, anon;
 grant usage on sequence _hasil_no_seq to authenticated, anon;

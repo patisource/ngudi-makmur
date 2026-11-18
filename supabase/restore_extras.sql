@@ -26,7 +26,7 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 values ('proofs', 'proofs', false, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
--- 3. Policy storage.objects untuk bukti jagung masuk & bukti transfer
+-- 3. Policy storage.objects untuk bukti jagung masuk (bukti pembayaran dihapus bersama fitur kas, 19 Nov 2026)
 drop policy if exists proofs_receipts_insert on storage.objects;
 drop policy if exists proofs_receipts_select on storage.objects;
 drop policy if exists proofs_receipts_delete on storage.objects;
@@ -42,17 +42,10 @@ create policy proofs_receipts_select on storage.objects for select to authentica
 create policy proofs_receipts_delete on storage.objects for delete to authenticated
   using (bucket_id = 'proofs' and name like 'receipts/%' and public.has_role('admin_kelompok')
          and not exists (select 1 from public.attachments a where a.storage_path = storage.objects.name));
-create policy proofs_payments_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'proofs' and name ~ '^payments/[0-9]{4}/[0-9]{2}/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$' and public.has_role('admin_kelompok'));
-create policy proofs_payments_select on storage.objects for select to authenticated
-  using (bucket_id = 'proofs' and name like 'payments/%' and (public.has_role('admin_kelompok') or public.has_role('ketua')));
-create policy proofs_payments_delete on storage.objects for delete to authenticated
-  using (bucket_id = 'proofs' and name like 'payments/%' and public.has_role('admin_kelompok')
-         and not exists (select 1 from public.attachments a where a.storage_path = storage.objects.name));
 
 commit;
 
--- Pemeriksaan: harus 1 trigger, 1 bucket, 6 policy.
+-- Pemeriksaan: harus 1 trigger, 1 bucket, 3 policy.
 select (select count(*) from pg_trigger where tgname = 'on_auth_user_created' and tgrelid = 'auth.users'::regclass) as trigger_profil,
        (select count(*) from storage.buckets where id = 'proofs') as bucket_proofs,
        (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'proofs_%') as policy_storage;

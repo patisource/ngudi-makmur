@@ -5,8 +5,6 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Crumb } from "@/components/shell/crumb";
 import { Badge, Card } from "@/components/ui/card";
-import { PaymentsSection } from "@/features/cash/components/payments-section";
-import { listAccounts, orderPayments } from "@/features/cash/queries";
 import { OrderActions } from "@/features/orders/components/order-actions";
 import { OrderForm } from "@/features/orders/components/order-form";
 import { ReturnsSection } from "@/features/orders/components/returns-section";
@@ -14,9 +12,8 @@ import { getOrder, orderFormOptions, orderSideInfo } from "@/features/orders/que
 import { orderReceipt } from "@/features/orders/receipt";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
-import { METHOD_LABEL, PAYMENT_LABEL } from "@/lib/cash";
 import { formatRupiah } from "@/lib/money";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_TONE } from "@/lib/order";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/order";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
 export const metadata: Metadata = { title: "Pesanan · Sistem Pengelolaan Jagung Desa Baturejo" };
@@ -38,7 +35,7 @@ function Row({ label, children, strong, tone }: { label: string; children: React
 type Event = { at: string; title: string; meta: string };
 
 // Detail pesanan (desain 02, StyleGuide §5.2): draft → editor + konfirmasi/hapus; terkonfirmasi/diserahkan → item,
-// pembayaran, retur; kolom kanan tagihan tersisa, pelanggan, riwayat. Ketua hanya melihat.
+// retur; kolom kanan nilai penjualan (tanpa kas), pelanggan, riwayat. Ketua hanya melihat.
 export default async function OrderPage({ params, searchParams }: PageProps<"/penjualan/[id]">) {
   const user = await requireRole(["admin_kelompok", "ketua"]);
   const canManage = canDo(user.roles, "penjualan.kelola");
@@ -49,15 +46,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
   if (!o) notFound();
 
   const isDraft = o.status === "draft";
-  const [{ payments, refunds }, accounts, side, options] = await Promise.all([
-    isDraft ? Promise.resolve({ payments: [], refunds: [] }) : orderPayments(o.id),
-    isDraft ? Promise.resolve([]) : listAccounts(),
+  const [side, options] = await Promise.all([
     orderSideInfo(o.id, o.customer_id),
     isDraft && canManage ? orderFormOptions() : Promise.resolve(null),
   ]);
   const nota = isDraft ? null : await orderReceipt(o.id, side.prints.length, { cashier: user.fullName });
-  const activeAccounts = accounts.filter((a) => a.archived_at === null).map((a) => ({ id: a.account_id, name: a.name, kind: a.kind, balanceRp: a.balance_rp }));
-  const netPaid = (balance?.paid_rp ?? 0) - (balance?.refunded_rp ?? 0);
 
   // Retur: sisa per baris = kg diserahkan − retur terverifikasi (draft dicek ulang database saat verifikasi).
   const returnedByItem = new Map<string, number>();
@@ -79,23 +72,18 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
     byProduct.set(it.product_id, cur);
   }
   const kgText = [...byProduct.values()].map((p) => `${p.name} ${formatKg(p.grams)}`).join(", ");
-  const impact = isDraft ? `Reservasi ${kgText || "—"} · tagihan ${formatRupiah(o.total_rp)}` : kgText;
+  const impact = isDraft ? `Reservasi ${kgText || "—"} · nilai ${formatRupiah(o.total_rp)}` : kgText;
 
   // Riwayat dari dokumen itu sendiri (tanpa log audit: admin tidak membaca audit_logs).
   const events: Event[] = [{ at: o.created_at, title: "Dibuat sebagai draft", meta: "" }];
   if (o.confirmed_at) events.push({ at: o.confirmed_at, title: `Dikonfirmasi · ${kgText} direservasi`, meta: o.doc_number ?? "" });
-  for (const p of payments)
-    events.push({ at: p.verified_at ?? p.created_at, title: `Pembayaran ${METHOD_LABEL[p.method].toLowerCase()} ${formatRupiah(p.amount_rp)} · ${PAYMENT_LABEL[p.status].toLowerCase()}`, meta: p.doc_number ?? "" });
   side.prints.forEach((at, i) => events.push({ at, title: i === 0 ? "Nota thermal dicetak" : `Nota dicetak ulang ke-${i}`, meta: i === 0 ? "cetakan pertama" : "" }));
   if (o.delivered_at) events.push({ at: o.delivered_at, title: `Barang diserahkan${o.recipient_name ? ` kepada ${o.recipient_name}` : ""}`, meta: "" });
   for (const r of returns) events.push({ at: r.verified_at ?? r.business_date, title: `Retur ${formatKg(dbKgToGrams(r.total_kg))} · ${r.status === "verified" ? "diverifikasi" : "menunggu verifikasi"}`, meta: r.doc_number ?? r.created_by_name });
-  for (const r of refunds) events.push({ at: r.created_at, title: `Refund ${formatRupiah(r.amount_rp)}`, meta: r.doc_number });
   if (o.cancelled_at) events.push({ at: o.cancelled_at, title: "Dibatalkan", meta: o.cancel_reason ?? "" });
   events.sort((a, b) => a.at.localeCompare(b.at));
 
-  const bill = balance?.bill_rp ?? o.total_rp;
-  const paidRatio = bill > 0 ? Math.max(0, Math.min(1, netPaid / bill)) : 0;
-  const limit = side.customer?.credit_limit_rp ?? null;
+  const net = balance?.bill_rp ?? (o.status === "cancelled" ? 0 : o.total_rp);
 
   return (
     <>
@@ -109,7 +97,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <h1 className="text-[28px] font-semibold leading-tight tracking-tight">{o.doc_number ?? "Draft pesanan"}</h1>
               <Badge tone={ORDER_STATUS_TONE[o.status]}>{ORDER_STATUS_LABEL[o.status]}</Badge>
-              {!isDraft && o.status !== "cancelled" && <Badge tone={PAYMENT_STATUS_TONE[o.payment_status]}>{PAYMENT_STATUS_LABEL[o.payment_status]}</Badge>}
             </div>
             <p className="text-sm text-text-muted">
               {shortDate(o.business_date)} · sumber pasar {o.sales_channels?.name ?? o.channel} · {o.customer_name}
@@ -121,8 +108,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
             docNumber={o.doc_number}
             businessDate={o.business_date}
             impact={impact}
-            netPaidRp={netPaid}
-            accounts={activeAccounts}
             canManage={canManage}
             receipt={nota ? { lines80: nota.lines, lines58: nota.lines58, printed: side.prints.length, canPrint: canManage } : undefined}
           />
@@ -194,41 +179,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               {o.note && <p className="border-t border-border px-5 py-3 text-sm text-text-muted">{o.note}</p>}
             </section>
 
-            {balance && (
-              <PaymentsSection
-                orderId={o.id}
-                docNumber={o.doc_number}
-                customerName={o.customer_name}
-                open={o.status === "confirmed" || o.status === "delivered"}
-                delivered={o.status === "delivered"}
-                balance={{
-                  billRp: balance.bill_rp,
-                  paidRp: balance.paid_rp,
-                  refundedRp: balance.refunded_rp,
-                  outstandingRp: balance.outstanding_rp,
-                  creditRp: balance.credit_rp,
-                  pendingRp: balance.pending_rp,
-                }}
-                payments={payments.map((p) => ({
-                  id: p.id,
-                  docNumber: p.doc_number,
-                  businessDate: p.business_date,
-                  createdAt: p.created_at,
-                  method: p.method,
-                  amountRp: p.amount_rp,
-                  status: p.status,
-                  note: p.note,
-                  rejectReason: p.reject_reason,
-                  accountName: p.cash_accounts?.name ?? "—",
-                  proofs: p.proofs,
-                }))}
-                refunds={refunds.map((r) => ({ id: r.id, docNumber: r.doc_number, businessDate: r.business_date, amountRp: r.amount_rp, reason: r.reason, accountName: r.cash_accounts?.name ?? "—" }))}
-                accounts={activeAccounts}
-                returns={returns.filter((r) => r.status === "verified").map((r) => ({ id: r.id, label: `${r.doc_number} · ${formatKg(dbKgToGrams(r.total_kg))} · ${formatRupiah(r.sales_value_rp)}` }))}
-                canManage={canDo(user.roles, "kas.kelola")}
-              />
-            )}
-
             {o.status === "delivered" && o.delivered_on && (
               <ReturnsSection
                 orderId={o.id}
@@ -256,30 +206,16 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
 
           <div className="flex flex-col gap-5 lg:sticky lg:top-6">
             <Card className="gap-3">
-              <span className="text-label text-text-muted">Tagihan tersisa</span>
+              <span className="text-label text-text-muted">Nilai penjualan</span>
               <span className="flex items-baseline gap-1.5 font-semibold tracking-tight tabular-nums">
                 <span className="text-base text-text-muted">Rp</span>
-                <span className="text-[32px] leading-tight">{new Intl.NumberFormat("id-ID").format(balance?.outstanding_rp ?? 0)}</span>
+                <span className="text-[32px] leading-tight">{new Intl.NumberFormat("id-ID").format(net)}</span>
               </span>
-              <div className="h-1.5 overflow-hidden rounded-full bg-surface-muted" role="meter" aria-label="Porsi tagihan yang sudah dibayar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(paidRatio * 100)}>
-                <div className="bar-fill h-full rounded-full bg-accent" style={{ ["--p" as string]: Math.round(paidRatio * 100) }} />
-              </div>
               <div className="flex flex-col gap-2 pt-1">
-                <Row label="Total">{formatRupiah(o.total_rp)}</Row>
+                <Row label="Total pesanan">{formatRupiah(o.total_rp)}</Row>
                 {(balance?.returned_rp ?? 0) > 0 && <Row label="Retur sah">−{formatRupiah(balance?.returned_rp ?? 0)}</Row>}
-                <Row label="Dibayar">{formatRupiah(balance?.paid_rp ?? 0)}</Row>
-                <Row label="Refund">{formatRupiah(balance?.refunded_rp ?? 0)}</Row>
-                {(balance?.pending_rp ?? 0) > 0 && (
-                  <Row label="Menunggu verifikasi" tone="warn">
-                    {formatRupiah(balance?.pending_rp ?? 0)}
-                  </Row>
-                )}
-                {(balance?.credit_rp ?? 0) > 0 && (
-                  <Row label="Kelebihan bayar (perlu refund)" tone="warn">
-                    {formatRupiah(balance?.credit_rp ?? 0)}
-                  </Row>
-                )}
               </div>
+              <p className="text-xs text-text-subtle">Sistem tanpa kas: pembayaran tidak dicatat di aplikasi.</p>
               {o.status === "confirmed" && <p className="text-xs text-text-subtle">Stok sudah direservasi; keluar saat barang diserahkan.</p>}
             </Card>
 
@@ -287,12 +223,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
               <span className="text-label text-text-muted">Pelanggan</span>
               <span className="text-lg font-semibold">{o.customer_name}</span>
               {(side.customer?.address || side.customer?.phone) && <p className="text-sm text-text-muted">{[side.customer?.address, side.customer?.phone].filter(Boolean).join(" · ")}</p>}
-              <div className="flex flex-col gap-2 pt-1">
-                <Row label="Batas piutang">{limit ? formatRupiah(limit) : "Tidak dibatasi"}</Row>
-                <Row label="Piutang berjalan" tone={side.customerOutstandingRp > 0 ? "warn" : undefined}>
-                  {formatRupiah(side.customerOutstandingRp)}
-                </Row>
-              </div>
             </Card>
 
             <Card className="gap-3">

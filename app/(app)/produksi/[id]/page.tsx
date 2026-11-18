@@ -9,12 +9,13 @@ import { DecisionPanel } from "@/components/shared/decision-panel";
 import { BatchActions } from "@/features/production/components/batch-actions";
 import { decideBatchVoid } from "@/features/stock/actions";
 import { BatchVoidRequest } from "@/features/stock/components/stock-forms";
+import { hppSettings } from "@/features/hpp/queries";
 import { BatchEditor } from "@/features/production/components/batch-editor";
 import { BATCH_STATUS_LABEL, BATCH_STATUS_TONE, batchTypeOptions, getBatch } from "@/features/production/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
 import { formatRupiah } from "@/lib/money";
-import { COST_CATEGORY_LABEL, summarizeBatch } from "@/lib/production";
+import { COST_CATEGORY_LABEL, COST_UNIT_LABEL, summarizeBatch } from "@/lib/production";
 import { dbKgToGrams, formatKg, gramsToKgString } from "@/lib/qty";
 
 export const metadata: Metadata = { title: "Batch produksi · Sistem Pengelolaan Jagung Desa Baturejo" };
@@ -41,7 +42,7 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const sp = await searchParams;
-  const [{ batch: b, lines, costs }, options] = await Promise.all([getBatch(id), batchTypeOptions()]);
+  const [{ batch: b, lines, costs }, options, hppParams] = await Promise.all([getBatch(id), batchTypeOptions(), hppSettings()]);
   if (!b) notFound();
 
   const isDraft = b.status === "draft";
@@ -69,6 +70,7 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
         <BatchEditor
           batchId={b.id}
           options={options}
+          params={hppParams}
           header={{ title: `Batch ${b.batch_type_rules?.name.toLowerCase() ?? ""} baru`, subtitle: `Operator: ${b.operator_name} · kode batch terbit saat dikonfirmasi` }}
           actions={<BatchActions id={b.id} impact={impact} canConfirm={canConfirm} canDelete={canManage} />}
           defaults={{
@@ -78,7 +80,15 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
             residueKg: kgInput(b.residue_kg),
             inputs: inputs.map((l) => kgInput(l.qty_kg)),
             outputs: outputs.map((l) => kgInput(l.qty_kg)),
-            costs: costs.map((c) => ({ category: c.category, amount: String(c.amount_rp), sourceRef: c.source_ref ?? "", note: c.note ?? "" })),
+            costs: costs.map((c) => ({
+              category: c.category,
+              amount: c.qty != null ? "" : String(c.amount_rp),
+              qty: c.qty != null ? kgInput(c.qty) : "",
+              unit: c.unit ?? "",
+              unitPrice: c.unit_price != null ? String(c.unit_price) : "",
+              sourceRef: c.source_ref ?? "",
+              note: c.note ?? "",
+            })),
           }}
         />
       </>
@@ -171,7 +181,7 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
                 <thead>
                   <tr>
                     <Th>Biaya batch</Th>
-                    <Th>Sumber</Th>
+                    <Th>Rincian</Th>
                     <Th num>Nilai</Th>
                   </tr>
                 </thead>
@@ -179,7 +189,10 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
                   {costs.map((c) => (
                     <tr key={c.id}>
                       <Td>{COST_CATEGORY_LABEL[c.category]}</Td>
-                      <Td className="text-text-muted">{c.source_ref ?? "—"}</Td>
+                      <Td className="text-text-muted">
+                        {c.qty != null && c.unit_price != null ? `${String(c.qty).replace(".", ",")} ${COST_UNIT_LABEL[c.unit ?? "kg"]} × ${formatRupiah(c.unit_price)}` : (c.source_ref ?? "—")}
+                        {c.note && <span className="block text-xs text-text-subtle">{c.note}</span>}
+                      </Td>
                       <Td num>{formatRupiah(c.amount_rp)}</Td>
                     </tr>
                   ))}
@@ -200,18 +213,19 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/pr
               <Row label="· susut">{formatKg(lossG - residueG)}</Row>
               <div className="my-1 border-t border-border" />
               <Row label="Bahan terpakai">{b.material_cost != null ? formatRupiah(b.material_cost) : "Dihitung saat konfirmasi"}</Row>
-              <Row label="Biaya batch">{formatRupiah(b.other_cost)}</Row>
+              <Row label="Biaya batch (BBM, tenaga, lain)">{formatRupiah(b.other_cost)}</Row>
+              <Row label="Biaya tetap bulanan (alokasi)">{isDraft ? "Dibagi saat konfirmasi" : formatRupiah(b.fixed_cost_rp)}</Row>
               <Row label="Total biaya" strong>
                 {b.total_cost != null ? formatRupiah(b.total_cost) : "—"}
               </Row>
               <div className="mt-1 rounded-md bg-surface-muted px-3 py-2.5">
-                <span className="block text-xs text-text-muted">HPP per kg {isDraft ? "(belum dikunci)" : "(terkunci)"}</span>
+                <span className="block text-xs text-text-muted">HPP per kg {isDraft ? "(perkiraan)" : "(rumus HPP 19 Nov 2026)"}</span>
                 <span className="text-xl font-semibold tabular-nums">{b.hpp_per_kg != null ? formatRupiah(b.hpp_per_kg) : "—"}</span>
                 {b.hpp_per_kg == null && <span className="block text-xs text-text-muted">Data belum cukup untuk menghitung HPP</span>}
               </div>
             </div>
             <p className="text-xs text-text-subtle">
-              Biaya batch hanya alokasi HPP, tidak menambah atau mengurangi kas.
+              Biaya batch & biaya tetap hanya untuk HPP (sistem tanpa kas). HPP bisa berubah bila ada batch baru/batal di bulan yang sama.
               {b.confirmed_at && ` Dikonfirmasi ${timeFmt.format(new Date(b.confirmed_at))}.`}
             </p>
           </Card>

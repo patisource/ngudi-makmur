@@ -24,10 +24,19 @@ test("pengurus IRT: mendarat di Dashboard IRT tanpa kas, hanya menu IRT", async 
   await expect(page.getByRole("heading", { level: 1, name: "IRT Sekar Arum" })).toBeVisible();
   await expect(page.getByText("Omzet penjualan")).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Menu utama" });
-  await expect(nav.getByRole("link", { name: "Pembayaran & kas" })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "HPP & parameter" })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "HPP & resep" })).toHaveCount(1);
   await expect(nav.getByRole("link", { name: "Penjualan IRT" })).toHaveCount(1);
-  await page.goto("/kas");
+  await page.goto("/hpp");
   await expect(page).toHaveURL(/\/403/);
+});
+
+test("pengurus IRT: halaman HPP & resep menampilkan HPP standar mie jagung", async ({ page }) => {
+  await login(page, IRT ?? "");
+  await page.goto("/irt/hpp");
+  await expect(page.getByRole("heading", { level: 1, name: "HPP & resep IRT" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: /Mie Jagung Kering Mentah Kemas \(90g\)/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Resep" })).toBeVisible();
 });
 
 test("pengurus IRT: jual 1 pack kue → IJL, stok berkurang 10 pcs", async ({ page }, info) => {

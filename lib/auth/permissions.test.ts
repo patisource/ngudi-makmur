@@ -10,7 +10,8 @@ const MATRIX: Record<string, Record<AppRole, boolean>> = {
   "/produksi": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
   "/stok": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
   "/penjualan": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: false },
-  "/kas": { admin_kelompok: true, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/hpp": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
+  "/irt/hpp": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: false, pengurus_irt: true },
   "/laporan": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
   "/master": { admin_kelompok: true, operator_produksi: true, ketua: true, admin_teknis: false, pengurus_irt: false },
   "/audit": { admin_kelompok: false, operator_produksi: false, ketua: true, admin_teknis: true, pengurus_irt: false },
@@ -35,8 +36,8 @@ describe("matriks hak akses halaman (PRD §3.1)", () => {
 });
 
 describe("uji wajib SRS §11 — sisi aplikasi", () => {
-  it("operator_produksi tidak bisa membuka pembayaran/kas maupun penjualan", () => {
-    for (const p of ["/kas", "/kas/pembayaran", "/penjualan", "/penjualan/INV-1"]) expect(canOpen(["operator_produksi"], p)).toBe(false);
+  it("operator_produksi tidak bisa membuka penjualan", () => {
+    for (const p of ["/penjualan", "/penjualan/INV-1"]) expect(canOpen(["operator_produksi"], p)).toBe(false);
   });
   it("admin_teknis tidak mendapat menu transaksi usaha", () => {
     const hrefs = navFor(["admin_teknis"]).map((n) => n.href);
@@ -50,8 +51,8 @@ describe("modul IRT (M10)", () => {
     expect(hrefs.every((h) => h.startsWith("/irt"))).toBe(true);
     expect(homeFor(["pengurus_irt"])).toBe("/irt");
   });
-  it("pengurus IRT tidak bisa membuka kas, penjualan, anggota, laporan kelompok", () => {
-    for (const p of ["/dashboard", "/kas", "/penjualan", "/master/anggota", "/laporan/penjualan", "/stok", "/audit"]) expect(canOpen(["pengurus_irt"], p)).toBe(false);
+  it("pengurus IRT tidak bisa membuka HPP kelompok, penjualan, anggota, laporan kelompok", () => {
+    for (const p of ["/dashboard", "/hpp", "/penjualan", "/master/anggota", "/laporan/penjualan", "/stok", "/audit"]) expect(canOpen(["pengurus_irt"], p)).toBe(false);
   });
   it("hanya pengurus IRT yang mencatat data IRT; hubungkan pelanggan oleh admin kelompok/teknis", () => {
     expect(canDo(["pengurus_irt"], "irt.kelola")).toBe(true);
@@ -76,8 +77,8 @@ describe("aksi penjualan (PRD §3.1: pesanan K = admin_kelompok, ketua L)", () =
 });
 
 describe("peran rangkap = gabungan hak", () => {
-  it("ketua merangkap admin kelompok bisa membuka kas dan akun", () => {
-    expect(canOpen(["ketua", "admin_kelompok"], "/kas")).toBe(true);
+  it("ketua merangkap admin kelompok bisa membuka penjualan dan akun", () => {
+    expect(canOpen(["ketua", "admin_kelompok"], "/penjualan")).toBe(true);
     expect(canOpen(["ketua", "admin_kelompok"], "/pengaturan/akun")).toBe(true);
   });
   it("tanpa peran tidak bisa membuka apa pun", () => {
@@ -111,17 +112,13 @@ describe("aksi retur (PRD Q7: catat admin_kelompok, verifikasi ketua)", () => {
   });
 });
 
-describe("UJI WAJIB SRS §11: pembayaran & kas", () => {
-  it("hanya admin_kelompok mencatat pembayaran/pengeluaran/refund; operator & admin teknis tidak pernah", () => {
-    expect(canDo(["admin_kelompok"], "kas.kelola")).toBe(true);
-    for (const r of ["operator_produksi", "ketua", "admin_teknis", "pengurus_irt"] as AppRole[]) expect(canDo([r], "kas.kelola")).toBe(false);
+describe("sistem tanpa kas (19 Nov 2026) & parameter HPP", () => {
+  it("tidak ada lagi menu atau halaman kas", () => {
+    for (const p of ["/kas", "/kas/pembayaran", "/kas/buku"]) expect(navItemFor(p)).toBeUndefined();
   });
-  it("koreksi kas diputuskan ketua saja", () => {
-    expect(canDo(["ketua"], "kas.putuskan")).toBe(true);
-    for (const r of ["admin_kelompok", "operator_produksi", "admin_teknis"] as AppRole[]) expect(canDo([r], "kas.putuskan")).toBe(false);
-  });
-  it("operator produksi tidak bisa membuka halaman kas mana pun", () => {
-    for (const p of ["/kas/buku", "/kas/pembayaran", "/kas/pengeluaran", "/kas/pemasukan", "/kas/koreksi"]) expect(canOpen(["operator_produksi"], p)).toBe(false);
+  it("parameter HPP kelompok hanya diubah admin kelompok", () => {
+    expect(canDo(["admin_kelompok"], "hpp.kelola")).toBe(true);
+    for (const r of ["operator_produksi", "ketua", "admin_teknis", "pengurus_irt"] as AppRole[]) expect(canDo([r], "hpp.kelola")).toBe(false);
   });
 });
 

@@ -3,14 +3,14 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/table";
 import { IrtBatchEditor } from "@/features/irt/components/batch-editor";
-import { irtStock } from "@/features/irt/queries";
+import { irtRecipes, irtStock } from "@/features/irt/queries";
 import { requireAction } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Catat produksi IRT · Sistem Pengelolaan Jagung Desa Baturejo" };
 
 export default async function NewIrtBatchPage() {
   await requireAction("irt.kelola");
-  const { data, error } = await irtStock();
+  const [{ data, error }, recipes] = await Promise.all([irtStock(), irtRecipes()]);
   const bahan = (data ?? []).filter((r) => r.kind === "bahan");
   const produk = (data ?? []).filter((r) => r.kind === "produk");
 
@@ -30,7 +30,8 @@ export default async function NewIrtBatchPage() {
       ) : (
         <IrtBatchEditor
           bahan={bahan.map((b) => ({ item_id: b.item_id, name: b.name, unit: b.unit, on_hand: Number(b.on_hand), avg_cost: b.avg_cost }))}
-          produk={produk.map((p) => ({ item_id: p.item_id, name: p.name, pack_size: p.pack_size }))}
+          produk={produk.map((p) => ({ item_id: p.item_id, name: p.name, pack_size: p.pack_size, labor_cost_pcs: p.labor_cost_pcs, packaging_cost_pcs: p.packaging_cost_pcs }))}
+          recipes={recipes.map((r) => ({ id: r.id, product_id: r.product_id, yield_pcs: Number(r.yield_pcs), gas_rp: r.gas_rp, lines: r.irt_recipe_lines.map((l) => ({ item_id: l.item_id, qty: Number(l.qty) })) }))}
         />
       )}
     </>

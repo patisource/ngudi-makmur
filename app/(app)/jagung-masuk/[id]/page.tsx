@@ -6,6 +6,7 @@ import { Badge, Card, PageHeader } from "@/components/ui/card";
 import { ProofManager } from "@/features/receipts/components/proof-manager";
 import { ReceiptActions } from "@/features/receipts/components/receipt-actions";
 import { ReceiptForm } from "@/features/receipts/components/receipt-form";
+import { hppSettings } from "@/features/hpp/queries";
 import { getReceipt, RECEIPT_STATUS_LABEL, receiptOptions } from "@/features/receipts/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
@@ -38,7 +39,7 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const sp = await searchParams;
-  const [{ receipt: r, proofs }, options] = await Promise.all([getReceipt(id), canManage ? receiptOptions() : null]);
+  const [{ receipt: r, proofs }, options, hppParams] = await Promise.all([getReceipt(id), canManage ? receiptOptions() : null, canManage ? hppSettings() : null]);
   if (!r) notFound();
 
   const grams = dbKgToGrams(r.weight_kg);
@@ -90,14 +91,14 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
                 <span className="block text-xs font-normal text-text-muted">{r.source_type === "anggota" ? "Anggota" : "Pemasok luar"}</span>
               </Row>
               <Row label="Jenis jagung">{productName}</Row>
-              <Row label="Berat">{formatKg(grams)}</Row>
+              <Row label="Berat">{formatKg(grams)}{r.sack_count != null ? ` · ${String(r.sack_count).replace(".", ",")} karung` : ""}</Row>
               <Row label="Biaya perolehan">{formatRupiah(r.acquisition_cost)}</Row>
               <Row label="Biaya per kg">{perKg !== null ? formatRupiah(perKg) : "—"}</Row>
               <Row label="Kadar air">{r.moisture_pct != null ? `${String(r.moisture_pct).replace(".", ",")}%` : "—"}</Row>
             </dl>
             {r.note && <p className="text-sm text-text-muted">{r.note}</p>}
             <p className="text-xs text-text-subtle">
-              Biaya perolehan hanya untuk nilai persediaan dan HPP, tidak menambah kas. Bila jagung dibayar tunai, catat sebagai pengeluaran.
+              Biaya perolehan menjadi nilai bahan untuk HPP (sistem tanpa kas: pembayaran ke petani tidak dicatat di aplikasi).
               {r.confirmed_at && ` Dikonfirmasi ${timeFmt.format(new Date(r.confirmed_at))}.`}
             </p>
           </Card>
@@ -130,6 +131,7 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
                 receiptId={r.id}
                 members={options.members}
                 products={options.products}
+                sack={hppParams ? { kgPerSack: hppParams.kg_per_karung, tongkolPricePerKg: hppParams.harga_tongkol_kg } : null}
                 defaults={{
                   businessDate: r.business_date,
                   sourceType: r.source_type,
@@ -137,6 +139,7 @@ export default async function ReceiptPage({ params, searchParams }: PageProps<"/
                   supplierName: r.supplier_name,
                   productId: r.product_id,
                   weightKg: gramsToKgString(grams).replace(".", ","),
+                  sackCount: r.sack_count != null ? String(r.sack_count).replace(".", ",") : "",
                   moisturePct: r.moisture_pct != null ? String(r.moisture_pct).replace(".", ",") : "",
                   acquisitionCost: String(r.acquisition_cost),
                   note: r.note ?? "",

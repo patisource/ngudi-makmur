@@ -1,7 +1,7 @@
 // Schema Zod modul IRT (M10, PRD §4.10, Security.md §5.2). Dipakai server action; database memvalidasi ulang.
 import { z } from "zod";
 import { parseWhole } from "@/lib/irt";
-import { businessDate, kg, optRupiah, optText, rupiah, text } from "@/lib/validation/common";
+import { blankToUndefined, businessDate, kg, optRupiah, optText, rupiah, text } from "@/lib/validation/common";
 
 /** Jumlah pcs/pack: bilangan bulat 1–100.000. */
 const whole = (label: string) =>
@@ -12,6 +12,17 @@ const whole = (label: string) =>
 /** Jumlah bahan (boleh desimal, maks. 3 angka di belakang koma) → string numeric. */
 const qty = (label: string) => kg({ label, max: 1_000_000 });
 const reason = text(500, "Alasan").refine((s) => s.length >= 5, "Alasan minimal 5 karakter");
+/** Desimal ≥ 0 dengan maks. `places` angka di belakang koma → number (mis. hasil per resep 2,77; markup 50). */
+const decimal = (label: string, places: number, max: number) =>
+  z.preprocess(
+    (v) => (blankToUndefined(v) === undefined ? undefined : String(v).trim().replace(",", ".")),
+    z
+      .string()
+      .regex(new RegExp(`^\\d{1,6}(\\.\\d{1,${places}})?$`),`${label}: angka, maksimal ${places} desimal`)
+      .transform(Number)
+      .refine((n) => n <= max, `${label} maksimal ${max}`)
+      .optional(),
+  );
 
 export const irtItemSchema = z
   .object({
@@ -49,6 +60,38 @@ export const irtBatchSchema = z
     note: optText(500, "Catatan"),
     inputs: z.array(z.object({ itemId: z.uuid("Pilih bahan"), qty: qty("Jumlah bahan") }).strict()).min(1, "Isi minimal satu bahan").max(30),
     outputs: z.array(z.object({ itemId: z.uuid("Pilih produk"), qty: whole("Hasil (pcs)") }).strict()).min(1, "Isi minimal satu hasil").max(30),
+    // biaya non-bahan (HPP 19 Nov 2026): kosong = dihitung database dari resep & tarif per pcs produk
+    costs: z
+      .object({
+        recipeId: z.preprocess((v) => (v === "" || v == null ? null : v), z.uuid("Resep tidak valid").nullable()),
+        recipeCount: decimal("Jumlah resep", 2, 10_000),
+        gasRp: optRupiah,
+        laborRp: optRupiah,
+        packagingRp: optRupiah,
+        otherRp: optRupiah,
+      })
+      .strict()
+      .refine((c) => !c.recipeId || (c.recipeCount != null && c.recipeCount > 0), { path: ["recipeCount"], message: "Isi jumlah resep" })
+      .optional(),
+  })
+  .strict();
+
+export const irtItemCostsSchema = z
+  .object({
+    stdPrice: optRupiah,
+    packagingCostPcs: optRupiah,
+    laborCostPcs: optRupiah,
+    targetMarkupPct: decimal("Target markup", 2, 1000),
+  })
+  .strict();
+
+export const irtRecipeSchema = z
+  .object({
+    productId: z.uuid("Pilih produk"),
+    yieldPcs: decimal("Hasil per resep", 2, 100_000).refine((n) => n != null && n > 0, "Hasil per resep harus lebih dari 0"),
+    gasRp: rupiah("Gas per resep"),
+    note: optText(300, "Catatan"),
+    lines: z.array(z.object({ itemId: z.uuid("Pilih bahan"), qty: qty("Jumlah bahan") }).strict()).min(1, "Isi minimal satu bahan").max(30, "Maksimal 30 bahan"),
   })
   .strict();
 
@@ -81,3 +124,5 @@ export type IrtReceiveInput = z.input<typeof irtReceiveSchema>;
 export type IrtBatchInput = z.input<typeof irtBatchSchema>;
 export type IrtSaleInput = z.input<typeof irtSaleSchema>;
 export type IrtAdjustInput = z.input<typeof irtAdjustSchema>;
+export type IrtItemCostsInput = z.input<typeof irtItemCostsSchema>;
+export type IrtRecipeInput = z.input<typeof irtRecipeSchema>;

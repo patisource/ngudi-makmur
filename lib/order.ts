@@ -2,7 +2,7 @@
 // save_order_draft di database dengan rumus yang sama: gross = round(qty × harga), kg = round(qty × isi kg, 3).
 // Berat dalam gram bulat & uang dalam BigInt saat dikalikan, agar tidak ada galat float (CLAUDE.md aturan 4).
 import { packagingToGrams, parseKgToGrams } from "@/lib/qty";
-import type { OrderPaymentStatus, OrderStatus } from "@/lib/supabase/types";
+import type { OrderStatus } from "@/lib/supabase/types";
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   draft: "Draft",
@@ -15,19 +15,6 @@ export const ORDER_STATUS_TONE: Record<OrderStatus, "neutral" | "ok" | "warn" | 
   confirmed: "info",
   delivered: "ok",
   cancelled: "err",
-};
-export const PAYMENT_STATUS_LABEL: Record<OrderPaymentStatus, string> = {
-  unpaid: "Belum bayar",
-  partial: "Sebagian",
-  paid: "Lunas",
-  refunded: "Dikembalikan",
-};
-// StyleGuide §2.3: partial = warning, paid = accent; unpaid baru merah bila jatuh tempo (belum ada di v1) → netral.
-export const PAYMENT_STATUS_TONE: Record<OrderPaymentStatus, "neutral" | "ok" | "warn" | "err" | "info"> = {
-  unpaid: "neutral",
-  partial: "warn",
-  paid: "ok",
-  refunded: "neutral",
 };
 
 /** Berat baris dalam gram: kemasan → qty × isi kg; kg curah (contentKg null) → qty itu sendiri. */

@@ -4,6 +4,10 @@
 -- =====================================================================
 begin;
 
+-- HPP: biaya tetap bulanan 0 & nilai lama diselaraskan dulu, supaya angka uji tidak terpengaruh alokasi bulanan.
+update public.hpp_settings set biaya_tetap_bulanan = 0;
+select public._hpp_recalc('uji: biaya tetap 0');
+
 create temp table _hasil (no serial primary key, uji text not null, lulus boolean not null) on commit drop;
 create temp table _id (k text primary key, id uuid not null) on commit drop;
 create temp table _k (k text primary key, r jsonb not null) on commit drop;
@@ -191,8 +195,8 @@ do $$ begin
   insert into _hasil (uji, lulus) values ('kunci DB: rincian retur terverifikasi tidak bisa diubah', false);
 exception when others then insert into _hasil (uji, lulus) values ('kunci DB: rincian retur terverifikasi tidak bisa diubah', true);
 end $$;
-insert into _hasil (uji, lulus) select 'pesanan tetap delivered; retur tidak mengubah status barang atau bayar',
-  (select status = 'delivered' and payment_status = 'unpaid' from public.orders where id = (select id from _id where k = 'o1'));
+insert into _hasil (uji, lulus) select 'pesanan tetap delivered; retur tidak mengubah status barang',
+  (select status = 'delivered' from public.orders where id = (select id from _id where k = 'o1'));
 insert into _hasil (uji, lulus) select 'audit: retur dicatat (dengan alasan), diverifikasi, dihapus',
   exists (select 1 from public.audit_logs where action = 'return.draft_created' and entity_id = (select id from _id where k = 'r1')::text and reason = 'Kemasan sobek saat diantar')
   and exists (select 1 from public.audit_logs where action = 'return.verified' and entity_id = (select id from _id where k = 'r1')::text)

@@ -11,14 +11,18 @@ import { createClient } from "@/lib/supabase/server";
 import {
   irtAdjustSchema,
   irtBatchSchema,
+  irtItemCostsSchema,
   irtItemSchema,
   irtReasonSchema,
   irtReceiveSchema,
+  irtRecipeSchema,
   irtSaleSchema,
   type IrtAdjustInput,
   type IrtBatchInput,
+  type IrtItemCostsInput,
   type IrtItemInput,
   type IrtReceiveInput,
+  type IrtRecipeInput,
   type IrtSaleInput,
 } from "@/lib/validation/irt";
 
@@ -109,6 +113,16 @@ export async function saveIrtBatch(batchId: string | null, raw: IrtBatchInput): 
     p_note: d.note ?? null,
     p_inputs: d.inputs.map((l) => ({ item_id: l.itemId, qty: l.qty })),
     p_outputs: d.outputs.map((l) => ({ item_id: l.itemId, qty: l.qty })),
+    p_costs: d.costs
+      ? {
+          recipe_id: d.costs.recipeId,
+          recipe_count: d.costs.recipeCount ?? null,
+          gas_rp: d.costs.gasRp,
+          labor_rp: d.costs.laborRp,
+          packaging_rp: d.costs.packagingRp,
+          other_rp: d.costs.otherRp,
+        }
+      : null,
   });
   if (error || !data) return { error: mapDbError(error ?? {}).message };
   refresh();
@@ -192,4 +206,44 @@ export async function linkIrtCustomer(customerId: string | null): Promise<FormSt
     ok: true,
     message: customerId ? "Pelanggan IRT dihubungkan. Tepung pesanannya masuk ke bahan IRT saat diserahkan." : "Hubungan pelanggan IRT dilepas.",
   };
+}
+
+// ---------------------------------------------------------------- HPP: biaya per item & resep (19 Nov 2026)
+/** Bahan: harga standar per satuan. Produk: kemasan & desain per pcs, upah per pcs, target markup %. */
+export async function saveIrtItemCosts(itemId: string, raw: IrtItemCostsInput): Promise<FormState> {
+  await requireAction("irt.kelola");
+  if (!uuid.safeParse(itemId).success) return bad();
+  const parsed = irtItemCostsSchema.safeParse(raw);
+  if (!parsed.success) return zodErrors(parsed.error);
+  const d = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("irt_save_item_costs", {
+    p_id: itemId,
+    p_std_price: d.stdPrice,
+    p_packaging_cost_pcs: d.packagingCostPcs,
+    p_labor_cost_pcs: d.laborCostPcs,
+    p_target_markup_pct: d.targetMarkupPct ?? null,
+  });
+  if (error) return { error: mapDbError(error).message };
+  refresh();
+  return { ok: true, message: "Biaya HPP disimpan." };
+}
+
+/** Satu resep per produk (simpan = ganti): bahan per resep, hasil pcs per resep, gas per resep. */
+export async function saveIrtRecipe(raw: IrtRecipeInput): Promise<FormState> {
+  await requireAction("irt.kelola");
+  const parsed = irtRecipeSchema.safeParse(raw);
+  if (!parsed.success) return zodErrors(parsed.error);
+  const d = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("irt_save_recipe", {
+    p_product: d.productId,
+    p_yield: d.yieldPcs ?? 0,
+    p_gas: d.gasRp,
+    p_note: d.note ?? null,
+    p_lines: d.lines.map((l) => ({ item_id: l.itemId, qty: l.qty })),
+  });
+  if (error) return { error: mapDbError(error).message };
+  refresh();
+  return { ok: true, message: "Resep disimpan." };
 }

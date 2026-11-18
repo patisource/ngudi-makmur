@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, PageHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/table";
 import { ReceiptForm } from "@/features/receipts/components/receipt-form";
+import { hppSettings } from "@/features/hpp/queries";
 import { receiptOptions } from "@/features/receipts/queries";
 import { requireAction } from "@/lib/auth/session";
 
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: "Catat jagung masuk · Sistem Pengelo
 
 export default async function NewReceiptPage() {
   await requireAction("penerimaan.kelola");
-  const { members, products } = await receiptOptions();
+  const [{ members, products }, params] = await Promise.all([receiptOptions(), hppSettings()]);
 
   return (
     <>
@@ -25,7 +26,7 @@ export default async function NewReceiptPage() {
       />
       {products.length ? (
         <Card className="max-w-3xl">
-          <ReceiptForm receiptId={null} members={members} products={products} />
+          <ReceiptForm receiptId={null} members={members} products={products} sack={params ? { kgPerSack: params.kg_per_karung, tongkolPricePerKg: params.harga_tongkol_kg } : null} />
         </Card>
       ) : (
         <EmptyState title="Belum ada produk mentah aktif">Produk tongkol dan pipilan dimuat lewat migrasi database; pastikan tidak diarsip.</EmptyState>

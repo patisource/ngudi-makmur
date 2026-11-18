@@ -8,7 +8,7 @@ import { AdjustmentForm } from "@/features/stock/components/stock-forms";
 import { countableProducts, listAdjustments } from "@/features/stock/queries";
 import { canDo } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/session";
-import { CORRECTION_LABEL, CORRECTION_TONE } from "@/lib/cash";
+import { CORRECTION_LABEL, CORRECTION_TONE } from "@/lib/stock";
 import { formatRupiah } from "@/lib/money";
 import { dbKgToGrams, formatKg } from "@/lib/qty";
 

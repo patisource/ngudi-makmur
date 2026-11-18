@@ -11,7 +11,6 @@ import { toastResult } from "@/components/ui/toast";
 import { Field, Input } from "@/components/ui/field";
 import type { FormState } from "@/features/master/actions";
 import { cancelOrder, confirmOrder, deleteOrderDraft, fulfillOrder } from "@/features/orders/actions";
-import { formatRupiah } from "@/lib/money";
 import type { OrderStatus } from "@/lib/supabase/types";
 import type { ThermalLine } from "@/lib/thermal";
 import { todayWib } from "@/lib/today";
@@ -30,8 +29,6 @@ export function OrderActions({
   docNumber,
   businessDate,
   impact,
-  netPaidRp = 0,
-  accounts = [],
   canManage,
   receipt,
 }: {
@@ -40,16 +37,12 @@ export function OrderActions({
   docNumber: string | null;
   businessDate: string;
   impact: string;
-  /** pembayaran bersih terverifikasi; > 0 → batal wajib memilih akun refund */
-  netPaidRp?: number;
-  accounts?: Array<{ id: string; name: string; balanceRp: number }>;
   canManage: boolean;
   receipt?: ReceiptProps;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState<Open>(null);
   const [reason, setReason] = useState("");
-  const [refundAccount, setRefundAccount] = useState(accounts[0]?.id ?? "");
   const [recipient, setRecipient] = useState("");
   const [deliveredOn, setDeliveredOn] = useState(todayWib);
   const [state, setState] = useState<FormState>({});
@@ -152,7 +145,7 @@ export function OrderActions({
           </div>
           <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
             <span className="block text-xs text-accent">Setelah disimpan</span>
-            {impact} keluar dari stok (reservasi menjadi stok keluar). Status bayar tidak berubah; barang yang sudah diserahkan hanya bisa kembali lewat retur.
+            {impact} keluar dari stok (reservasi menjadi stok keluar). Barang yang sudah diserahkan hanya bisa kembali lewat retur.
           </p>
           <Notice state={state} />
         </Dialog>
@@ -163,28 +156,11 @@ export function OrderActions({
           title={`Batalkan ${docNumber ?? "pesanan"}`}
           onClose={close}
           shakeKey={shake}
-          footer={footer("Batalkan pesanan", () => run(() => cancelOrder(id, reason, netPaidRp > 0 ? refundAccount : null, open.key)), { danger: true, disabled: reason.trim().length < 5 })}
+          footer={footer("Batalkan pesanan", () => run(() => cancelOrder(id, reason, open.key)), { danger: true, disabled: reason.trim().length < 5 })}
         >
           <p className="text-sm text-text-muted">
-            Reservasi stok dilepas dan nomor tidak dipakai ulang; pembayaran yang belum diverifikasi ikut ditolak.
-            {netPaidRp > 0 && (
-              <>
-                {" "}
-                Pesanan sudah dibayar <strong className="font-semibold text-text">{formatRupiah(netPaidRp)}</strong>: uang dikembalikan penuh sebagai refund (kas keluar) dalam langkah yang sama.
-              </>
-            )}
+            Reservasi stok dilepas dan nomor tidak dipakai ulang.
           </p>
-          {netPaidRp > 0 && (
-            <Field label="Refund dari akun *" htmlFor="refund-account">
-              <select id="refund-account" value={refundAccount} onChange={(e) => setRefundAccount(e.target.value)} className={formCls.select}>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} · saldo {formatRupiah(a.balanceRp)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
           <Field label="Alasan pembatalan *" htmlFor="cancel-reason">
             <textarea id="cancel-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} placeholder="mis. Pelanggan membatalkan lewat WhatsApp" className={formCls.textarea} />
           </Field>

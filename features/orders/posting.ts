@@ -10,11 +10,11 @@ export async function postConfirmOrder(orderId: string, key: string) {
   return runPosting("orders.confirm", key, { orderId }, () => supabase.rpc("confirm_order", { p_id: orderId }));
 }
 
-/** Batal; bila pesanan sudah dibayar, refund penuh dicatat dari akun kas yang dipilih dalam transaksi yang sama. */
-export async function postCancelOrder(orderId: string, reason: string, refundAccountId: string | null, key: string) {
+/** Batal pesanan terkonfirmasi: melepas reservasi stok. */
+export async function postCancelOrder(orderId: string, reason: string, key: string) {
   const supabase = await createClient();
-  return runPosting("orders.cancel", key, { orderId, reason, refundAccountId }, () =>
-    supabase.rpc("cancel_order", { p_id: orderId, p_reason: reason, p_refund_account: refundAccountId }),
+  return runPosting("orders.cancel", key, { orderId, reason }, () =>
+    supabase.rpc("cancel_order", { p_id: orderId, p_reason: reason }),
   );
 }
 

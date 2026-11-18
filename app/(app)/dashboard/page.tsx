@@ -23,7 +23,6 @@ export const metadata: Metadata = { title: "Dashboard · Sistem Pengelolaan Jagu
 const timeFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 const dayFmt = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" });
 const pctText = (v: number | null | undefined) => (v == null ? "—" : `${String(v).replace(".", ",")}%`);
-const juta = (rp: number) => `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(rp / 1_000_000)} jt`;
 const kgOne = (g: number) => `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(g / 1000)} kg`;
 const kgShort = (g: number) => `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(g / 1000)} kg`;
 const ICON: Record<AuditIcon, LucideIcon> = { cart: ShoppingCart, wallet: Wallet, inbox: Inbox, factory: Factory, box: Box, user: User, cash: Banknote, history: History };
@@ -54,7 +53,7 @@ function Pill({ tone, children }: { tone: "ok" | "warn" | "neutral"; children: R
 }
 
 // Dashboard (FR-DASH, StyleGuide §8.2, desain 01 & 07): angka dari fungsi SQL yang sama dengan laporan (PRD §5.9);
-// pembanding = periode nyata sebelumnya (FR-DASH-07). Kartu mengikuti peran; operator tanpa penjualan/kas.
+// pembanding = periode nyata sebelumnya (FR-DASH-07). Kartu mengikuti peran; operator tanpa penjualan. Sistem tanpa kas.
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const user = await requireUser();
   if (!canOpen(user.roles, "/dashboard")) redirect(homeFor(user.roles));
@@ -62,7 +61,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const isAdmin = user.roles.includes("admin_kelompok");
   const isKetua = user.roles.includes("ketua");
   const period = parsePeriod(await searchParams);
-  const [{ kpi, prev, daily, sold, cash, stock, error }, activity, approvals, pending] = await Promise.all([
+  const [{ kpi, hpp, prev, daily, sold, stock, error }, activity, approvals, pending] = await Promise.all([
     dashboardData(period, { finance }),
     isKetua ? recentActivity() : Promise.resolve([]),
     isKetua ? ketuaApprovals() : Promise.resolve([]),
@@ -74,8 +73,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const flourPerDay = kpi.days > 0 ? Math.round(flourG / kpi.days) : 0;
   const lowStock = stock.filter((s) => s.below_min);
   const omzetDelta = prev.kpi.omzet_rp > 0 ? ((kpi.omzet_rp - prev.kpi.omzet_rp) / prev.kpi.omzet_rp) * 100 : null;
-  const tunai = cash.filter((c) => c.kind === "tunai").reduce((s, c) => s + c.balance_rp, 0);
-  const bank = cash.filter((c) => c.kind === "bank").reduce((s, c) => s + c.balance_rp, 0);
   const buckets = bucketDays(daily, (rows) => ({ a: rows.reduce((s, r) => s + r.receipts, 0), b: rows.reduce((s, r) => s + r.processed, 0) }));
   const adminTodo = pending.filter((p) => !p.approval && p.count > 0);
 
@@ -110,7 +107,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
                   <h2 className="font-semibold">Menunggu persetujuan ketua</h2>
-                  <p className="text-xs text-text-muted">Koreksi stok, koreksi kas, retur fisik, dan pembatalan batch berlaku setelah Anda setujui.</p>
+                  <p className="text-xs text-text-muted">Koreksi stok, retur fisik, dan pembatalan batch berlaku setelah Anda setujui.</p>
                 </div>
                 <Pill tone="warn">{approvals.length}</Pill>
               </div>
@@ -130,7 +127,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             </div>
           )}
 
-          <div className={`grid gap-3 sm:grid-cols-2 ${finance ? "xl:grid-cols-[1.3fr_1fr_1fr] 2xl:grid-cols-[1.45fr_1fr_1fr_1fr_1fr]" : "xl:grid-cols-3"}`}>
+          <div className={`grid gap-3 sm:grid-cols-2 ${finance ? "xl:grid-cols-[1.3fr_1fr_1fr] 2xl:grid-cols-[1.45fr_1fr_1fr_1fr_1fr]" : "xl:grid-cols-4"}`}>
             {finance && (
               <Card className="gap-2 sm:col-span-2 xl:col-span-1 xl:row-span-2 2xl:row-span-1">
                 <div className="flex items-start justify-between gap-2">
@@ -175,25 +172,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
               sub={`${kpi.batches} batch · rata-rata ${kgOne(flourPerDay)}/hari`}
               foot={`Target ≥ ${FLOUR_TARGET_KG_PER_DAY} kg/hari · susut ${pctText(kpi.loss_pct)}`}
             />
-            {finance && (
-              <Kpi
-                label="Saldo kas"
-                value={<CountUp value={kpi.cash_balance_rp} format="rp" />}
-                sub={`Tunai ${juta(tunai)} · Bank ${juta(bank)}`}
-                foot="Bayar terverifikasi + pemasukan lain − pengeluaran − refund"
-              />
-            )}
-            {finance && (
-              <Kpi
-                label="Piutang"
-                value={<CountUp value={kpi.receivable_rp} format="rp" />}
-                sub={`${kpi.receivable_orders} nota belum lunas${kpi.credit_rp > 0 ? ` · kelebihan bayar ${formatRupiah(kpi.credit_rp)}` : ""}`}
-                foot="Tagihan sah − bayar bersih terverifikasi"
-              />
-            )}
-            {!finance && (
-              <Kpi label="Stok di bawah minimum" value={String(lowStock.length)} sub={`dari ${stock.length} produk aktif`} foot="Tersedia = fisik − reservasi" />
-            )}
+            <Kpi
+              label="HPP tepung"
+              value={hpp.tepung != null ? <CountUp value={hpp.tepung} format="rp" /> : "—"}
+              sub={`per kg · pipilan ${hpp.pipilan != null ? `${formatRupiah(hpp.pipilan)}/kg` : "—"}`}
+              foot="Bahan + BBM + tenaga + biaya tetap bulanan"
+            />
+            <Kpi label="Stok di bawah minimum" value={String(lowStock.length)} sub={`dari ${stock.length} produk aktif`} foot="Tersedia = fisik − reservasi" />
           </div>
 
           <div className="grid items-stretch gap-5 lg:grid-cols-[1fr_360px]">

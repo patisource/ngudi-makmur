@@ -7,8 +7,7 @@ import { requireAction } from "@/lib/auth/session";
 import { mapDbError } from "@/lib/errors";
 import { runPosting, type PostingOutcome } from "@/lib/posting";
 import { createClient } from "@/lib/supabase/server";
-import { decisionSchema } from "@/lib/validation/cash";
-import { adjustmentSchema, opnameSchema, reasonSchema, type AdjustmentInput, type OpnameInput } from "@/lib/validation/stock";
+import { adjustmentSchema, decisionSchema, opnameSchema, reasonSchema, type AdjustmentInput, type OpnameInput } from "@/lib/validation/stock";
 
 export type OpnameState = FormState & { id?: string };
 const uuid = z.uuid();

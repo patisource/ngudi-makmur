@@ -38,12 +38,11 @@ Proyek asli saat ini berisi data uji ±5 minggu (PRD Q22). **Wajib dibersihkan s
 
 - [ ] (Opsional) Ambil backup terakhir berisi data uji: `./scripts/backup.ps1 -OutDir D:\Backup-SIM`.
 - [ ] Jalankan `supabase/bersihkan_data_uji.sql` sebagai `postgres` (SQL Editor Supabase). Hasil akhir menampilkan ringkasan;
-      semua transaksi = 0, akun nyata/produk/kemasan/kategori/akun kas tetap.
+      semua transaksi & log hitung ulang HPP = 0; akun nyata, produk, kemasan, parameter HPP, bahan/produk/resep IRT tetap. Skema arsip `arsip_kas` (data kas lama) tidak disentuh.
 - [ ] Storage → bucket `proofs` → hapus semua berkas (bukti foto data uji).
 - [ ] Di aplikasi: **Anggota & produk → Pelanggan** — buat pelanggan nyata *IRT Sekar Arum* lalu pilih di kartu
       "Pelanggan yang merupakan IRT Sekar Arum" (penghubung lama ikut terlepas saat pelanggan uji dihapus).
-- [ ] Di aplikasi: **Pembayaran & kas** → isi **saldo awal** Kas tunai & Rekening bank per tanggal mulai (Q14: siapa yang
-      memverifikasi angkanya). Stok awal nyata dicatat lewat **Jagung masuk** atau **Stok opname**.
+- [ ] Di aplikasi: **HPP & parameter** → periksa harga tongkol, bensin, upah, jumlah pekerja, biaya tetap bulanan, dan biaya kemasan; **HPP & resep** (pengurus IRT) → harga standar bahan & resep. Stok awal nyata dicatat lewat **Jagung masuk** (boleh per karung) atau **Stok opname**.
 - [ ] Jalankan semua uji DB terhadap proyek asli (`RUNNER=… sh scripts/db-test-all.sh`): setelah dibersihkan **semua 12 suite
       harus lulus** (selama data uji ada, 3 suite memang gagal karena menganggap stok kosong).
 

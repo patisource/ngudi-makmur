@@ -5,6 +5,10 @@
 -- =====================================================================
 begin;
 
+-- HPP: biaya tetap bulanan 0 & nilai lama diselaraskan dulu, supaya angka uji tidak terpengaruh alokasi bulanan.
+update public.hpp_settings set biaya_tetap_bulanan = 0;
+select public._hpp_recalc('uji: biaya tetap 0');
+
 create temp table _hasil (no serial primary key, uji text not null, lulus boolean not null) on commit drop;
 create temp table _id (k text primary key, id uuid not null) on commit drop;
 create temp table _k (k text primary key, r jsonb not null) on commit drop;
@@ -238,7 +242,7 @@ insert into _hasil (uji, lulus) select 'audit: draft dibuat, dikonfirmasi, di-vo
      and action in ('receipt.draft_created', 'receipt.confirmed', 'receipt.voided', 'receipt.draft_deleted', 'attachment.added')) = 5
   and (select reason from public.audit_logs where action = 'receipt.voided' and entity_id = (select id from _id where k = 'r1')::text) = 'Salah timbang, dicatat ulang';
 insert into _hasil (uji, lulus) select 'tidak ada kas dari biaya perolehan (FR-RCV-04)',
-  not exists (select 1 from public.cash_transactions where source_id in (select id from _id));
+  to_regclass('public.cash_transactions') is null;
 insert into _hasil (uji, lulus) select 'nilai saldo = Σ nilai mutasi (semua produk)',
   bool_and(b.value_rp = coalesce((select sum(case when m.direction = 'in' then m.value_rp else -m.value_rp end) from public.stock_movements m where m.product_id = b.product_id), 0))
   from public.stock_balances b;
