@@ -36,7 +36,7 @@ test("pengurus IRT: halaman HPP & resep menampilkan HPP standar mie jagung", asy
   await page.goto("/irt/hpp");
   await expect(page.getByRole("heading", { level: 1, name: "HPP & resep IRT" })).toBeVisible();
   await expect(page.getByRole("cell", { name: /Mie Jagung Kering Mentah Kemas \(90g\)/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Resep" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Resep", exact: true })).toBeVisible();
 });
 
 test("pengurus IRT: jual 1 pack kue → IJL, stok berkurang 10 pcs", async ({ page }, info) => {
@@ -61,13 +61,13 @@ test("pengurus IRT: jual 1 pack kue → IJL, stok berkurang 10 pcs", async ({ pa
 });
 
 test("admin kelompok tidak bisa membuka modul IRT; ketua membaca tanpa tombol catat", async ({ browser }) => {
-  const admin = await browser.newPage();
+  const admin = await browser.newPage({ reducedMotion: "reduce" });
   await login(admin, ADMIN ?? "");
   await admin.goto("/irt");
   await expect(admin).toHaveURL(/\/403/);
   await admin.close();
 
-  const ketua = await browser.newPage();
+  const ketua = await browser.newPage({ reducedMotion: "reduce" });
   await login(ketua, KETUA ?? "");
   await ketua.goto("/irt/penjualan");
   await expect(ketua.getByRole("heading", { level: 1, name: "Penjualan IRT" })).toBeVisible();

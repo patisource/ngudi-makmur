@@ -22,7 +22,7 @@ const reason = `Uji e2e koreksi ${Date.now()}`;
 
 test("operator mengajukan koreksi stok → ketua menyetujui lewat dialog", async ({ browser }, info) => {
   test.skip(info.project.name !== "laptop", "alur transaksi cukup sekali (laptop)");
-  const op = await browser.newPage();
+  const op = await browser.newPage({ reducedMotion: "reduce" }); // halaman baru tidak mewarisi contextOptions: tanpa ini splash menelan klik "Masuk"
   await login(op, OPERATOR ?? "");
   await op.goto("/stok/koreksi");
   await op.getByText("Tambah stok", { exact: true }).click();
@@ -32,7 +32,7 @@ test("operator mengajukan koreksi stok → ketua menyetujui lewat dialog", async
   await expect(op.getByRole("status").filter({ hasText: /Koreksi ADJ-.* diajukan/ }).first()).toBeVisible();
   await op.close();
 
-  const ketua = await browser.newPage();
+  const ketua = await browser.newPage({ reducedMotion: "reduce" }); // halaman baru tidak mewarisi contextOptions: tanpa ini splash menelan klik "Masuk"
   await login(ketua, KETUA ?? "");
   await ketua.goto("/stok/koreksi");
   const card = ketua.getByText(reason).locator("xpath=ancestor::*[.//button][1]");
