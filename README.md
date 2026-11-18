@@ -44,9 +44,14 @@ Halaman awal menampilkan variabel lingkungan mana yang sudah terisi.
 3. **Environment Variables**: isi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, dan
    `SUPABASE_SECRET_KEY` (bisa lewat **Import .env**, lalu hapus `SUPABASE_DB_PASSWORD` & `SUPABASE_PROJECT_REF`).
    `NEXT_PUBLIC_SITE_URL` tidak perlu diisi: aplikasi memakai domain produksi Vercel secara otomatis.
-   Domain saat ini: https://ngudi-makmur-six.vercel.app
+   Domain Vercel: https://ngudi-makmur-six.vercel.app · **domain resmi: https://panenkita-baturejo.web.id** (dibeli 18 Nov 2026).
 4. **Deploy**. Setiap push ke `main` akan otomatis ter-deploy.
-5. Di Supabase → **Authentication → URL Configuration**: isi *Site URL* dengan alamat Vercel.
+5. **Domain sendiri** (Vercel → Project → Settings → Domains → Add `panenkita-baturejo.web.id`, lalu juga `www.panenkita-baturejo.web.id`
+   dengan *Redirect to* domain utama). Di panel DNS penyedia domain buat record yang ditampilkan Vercel, biasanya:
+   `A  @  76.76.21.21` dan `CNAME  www  cname.vercel-dns.com`. Sertifikat HTTPS dibuat otomatis oleh Vercel setelah DNS aktif.
+   Jadikan domain ini *Primary*, lalu **Redeploy** agar aplikasi memakai domain baru sebagai alamatnya.
+6. Di Supabase → **Authentication → URL Configuration**: *Site URL* = `https://panenkita-baturejo.web.id`;
+   *Redirect URLs* tambahkan `https://panenkita-baturejo.web.id/**` (alamat Vercel lama boleh tetap ada selama masa peralihan).
 
 ## Perintah
 

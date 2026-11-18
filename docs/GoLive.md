@@ -21,7 +21,15 @@ yang tidak bisa dikerjakan dari kode. Centang setiap baris dan catat tanggal & p
 
 - [ ] Authentication → Providers → Email → **Minimum password length = 8** (aplikasi sudah menolak < 8; ini lapis kedua).
 - [ ] Authentication → **Allow new users to sign up = off** (akun hanya dibuat admin teknis).
-- [ ] Authentication → URL Configuration → **Site URL** & Redirect URLs = domain produksi Vercel.
+- [ ] Authentication → URL Configuration → **Site URL** = `https://panenkita-baturejo.web.id`, Redirect URLs + `https://panenkita-baturejo.web.id/**`.
+
+## 2b. Domain `panenkita-baturejo.web.id` (dibeli 18 Nov 2026)
+
+- [ ] Panel penyedia domain: DNS aktif (zona dibuat) dengan record dari Vercel — biasanya `A @ 76.76.21.21` dan `CNAME www cname.vercel-dns.com`.
+- [ ] Vercel → Settings → Domains: tambah domain + `www` (redirect ke domain utama), jadikan *Primary*, tunggu status *Valid Configuration* & HTTPS aktif.
+- [ ] Vercel → Deployments → **Redeploy** produksi (alamat aplikasi otomatis ikut domain utama).
+- [ ] Cek: buka https://panenkita-baturejo.web.id, login, ganti kata sandi (memastikan sesi & cookie benar di domain baru).
+- [ ] Beri tahu pengurus alamat baru; alamat `ngudi-makmur-six.vercel.app` tetap bisa dibuka selama peralihan.
 - [ ] Database → kata sandi DB kuat & hanya ada di `.env.local` laptop server; tidak pernah dikirim lewat chat/grup.
 
 ## 3. Pembersihan data uji coba (hari H, dijalankan sendiri oleh pengguna/admin teknis)
