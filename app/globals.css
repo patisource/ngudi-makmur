@@ -3,9 +3,9 @@
 /* Token desain (StyleGuide §2–§4), sama dengan prototipe. Pakai lewat utilitas Tailwind
    (bg-surface, text-text-muted, rounded-md, ease-expo, …), bukan warna Tailwind mentah. */
 :root {
-  --bg: #f4f4f5;
+  --bg: #f3f2ec; /* kanvas hangat (19 Nov 2026): tidak pucat/kelabu */
   --surface: #ffffff;
-  --surface-muted: #f7f7f8;
+  --surface-muted: #f7f6f1;
   --border: #e8e8ea;
   --border-strong: #d4d4d8;
   --text: #111113;
@@ -21,6 +21,15 @@
   --warning-soft: #fdf3e1;
   --info: #3e7bfa;
   --info-soft: #eaf1ff;
+  /* Palet merek dari logo (tongkol jagung): kuning biji, hijau daun tua, terakota. Untuk isian grafik, strip & kartu
+     utama — bukan teks kecil (kontras). Teks di atas leaf-deep selalu putih. */
+  --corn: #f0a500;
+  --corn-soft: #fff3d1;
+  --leaf: #1f8a46;
+  --leaf-deep: #145c33;
+  --leaf-soft: #e3f4e8;
+  --clay: #c9542e;
+  --clay-soft: #fbe8e0;
   --scrim: rgb(17 17 19 / 0.36);
   --shadow-pop: 0 8px 24px -8px rgb(17 17 19 / 0.14), 0 2px 4px rgb(17 17 19 / 0.05);
 }
@@ -45,6 +54,13 @@
     --warning-soft: #3a2c12;
     --info: #6b9bff;
     --info-soft: #16233f;
+    --corn: #f5b82e;
+    --corn-soft: #3a2e0e;
+    --leaf: #3dbe60;
+    --leaf-deep: #12452a;
+    --leaf-soft: #15301f;
+    --clay: #ec7a55;
+    --clay-soft: #3a1f16;
     --scrim: rgb(0 0 0 / 0.6);
     --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.6);
     color-scheme: dark;
@@ -71,6 +87,13 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-scrim: var(--scrim);
+  --color-corn: var(--corn);
+  --color-corn-soft: var(--corn-soft);
+  --color-leaf: var(--leaf);
+  --color-leaf-deep: var(--leaf-deep);
+  --color-leaf-soft: var(--leaf-soft);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
   --shadow-pop: var(--shadow-pop);
   --text-label: 13px;
   --text-label--line-height: 18px;

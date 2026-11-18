@@ -89,7 +89,7 @@ export function ColumnChart({ data, target, title }: { data: DayPoint[]; target?
           <g key={d.day}>
             <title>{`${label(d.day)}: ${kg(d.a)}`}</title>
             <rect x={g.x(i) - g.slot / 2} y={PAD.top} width={g.slot} height={g.base - PAD.top} fill="transparent" />
-            <Column cx={g.x(i)} top={g.y(d.a)} base={g.base} w={g.bar} fill="var(--accent)" />
+            <Column cx={g.x(i)} top={g.y(d.a)} base={g.base} w={g.bar} fill="var(--leaf)" />
           </g>
         ))}
         <XLabels data={data} g={g} />
@@ -196,8 +196,8 @@ export function GroupedBarChart({ data, aLabel, bLabel, title }: { data: BucketP
             <g key={d.key}>
               <title>{`${d.label} — ${aLabel}: ${kg(d.a)}; ${bLabel}: ${kg(d.b)}`}</title>
               <rect x={cx - slot / 2} y={PAD.top} width={slot} height={base - PAD.top} fill="transparent" />
-              <Column cx={cx - gap / 2 - bar / 2} top={y(d.a)} base={base} w={bar} fill="color-mix(in srgb, var(--text) 15%, transparent)" />
-              <Column cx={cx + gap / 2 + bar / 2} top={y(d.b)} base={base} w={bar} fill="var(--accent)" />
+              <Column cx={cx - gap / 2 - bar / 2} top={y(d.a)} base={base} w={bar} fill="var(--corn)" />
+              <Column cx={cx + gap / 2 + bar / 2} top={y(d.b)} base={base} w={bar} fill="var(--leaf)" />
               {i % labelEvery === 0 && (
                 <text x={cx} y={GH - 4} textAnchor="middle" fontSize="10" fill="var(--text-subtle)">
                   {d.label}
@@ -234,12 +234,13 @@ export function GroupedBarChart({ data, aLabel, bLabel, title }: { data: BucketP
 }
 
 /** Legenda kecil (kanan atas kartu grafik): kotak warna + label. */
-export function ChartLegend({ items }: { items: Array<{ label: string; tone: "muted" | "accent" }> }) {
+const LEGEND_TONE = { muted: "bg-text/15", accent: "bg-accent", corn: "bg-corn", leaf: "bg-leaf", clay: "bg-clay" } as const;
+export function ChartLegend({ items }: { items: Array<{ label: string; tone: keyof typeof LEGEND_TONE }> }) {
   return (
     <div className="flex flex-wrap gap-4 text-xs text-text-muted">
       {items.map((i) => (
         <span key={i.label} className="inline-flex items-center gap-1.5">
-          <span aria-hidden className={i.tone === "accent" ? "size-2.5 rounded-sm bg-accent" : "size-2.5 rounded-sm bg-text/15"} />
+          <span aria-hidden className={`size-2.5 rounded-sm ${LEGEND_TONE[i.tone]}`} />
           {i.label}
         </span>
       ))}
@@ -248,7 +249,20 @@ export function ChartLegend({ items }: { items: Array<{ label: string; tone: "mu
 }
 
 /** Batang mini harian (kartu omzet): tanpa sumbu, batang terakhir beraksen; nilai per batang lewat <title>. */
-export function MiniBars({ values, labels, title, format }: { values: number[]; labels: string[]; title: string; format: (v: number) => string }) {
+export function MiniBars({
+  values,
+  labels,
+  title,
+  format,
+  onDark = false,
+}: {
+  values: number[];
+  labels: string[];
+  title: string;
+  format: (v: number) => string;
+  /** di atas kartu hijau tua: batang putih transparan, batang terakhir kuning jagung */
+  onDark?: boolean;
+}) {
   const n = Math.max(values.length, 1);
   const mw = 260;
   const mh = 44;
@@ -262,7 +276,7 @@ export function MiniBars({ values, labels, title, format }: { values: number[]; 
         return (
           <g key={i}>
             <title>{`${labels[i]}: ${format(v)}`}</title>
-            <rect x={slot * i + (slot - w) / 2} y={mh - h} width={w} height={h} rx={Math.min(2, w / 2)} fill={i === n - 1 ? "var(--accent)" : "color-mix(in srgb, var(--text) 18%, transparent)"} className="chart-col" />
+            <rect x={slot * i + (slot - w) / 2} y={mh - h} width={w} height={h} rx={Math.min(2, w / 2)} fill={i === n - 1 ? (onDark ? "var(--corn)" : "var(--accent)") : onDark ? "rgb(255 255 255 / 0.38)" : "color-mix(in srgb, var(--text) 18%, transparent)"} className="chart-col" />
           </g>
         );
       })}

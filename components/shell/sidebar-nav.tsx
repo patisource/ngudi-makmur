@@ -38,12 +38,9 @@ export function SidebarNav({ items, badges = {}, children }: { items: NavItem[];
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-start gap-2.5 px-2 py-2">
+        <div className="flex items-center gap-2.5 px-2 py-2">
           <Logo size={40} className="rounded-lg" />
-          <div className="min-w-0 leading-tight">
-            <div className="text-sm font-semibold text-balance">{ORG.appName}</div>
-            <div className="mt-0.5 text-xs text-text-muted">{ORG.fullName}</div>
-          </div>
+          <div className="min-w-0 text-sm font-semibold leading-tight text-balance">{ORG.appName}</div>
         </div>
         <nav aria-label="Menu utama" className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
           {groups.map((g) => (

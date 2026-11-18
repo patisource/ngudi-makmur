@@ -24,7 +24,7 @@ Didefinisikan sebagai CSS variable di `app/globals.css`, dipetakan ke Tailwind l
 
 | Token | Nilai | Pemakaian |
 |---|---|---|
-| `--bg` | `#F4F4F5` | Kanvas aplikasi |
+| `--bg` | `#F3F2EC` | Kanvas aplikasi (hangat, 19 Nov 2026) |
 | `--surface` | `#FFFFFF` | Kartu, tabel, panel |
 | `--surface-muted` | `#F7F7F8` | Header tabel, input nonaktif, area sekunder |
 | `--border` | `#E8E8EA` | Garis kartu & pemisah |
@@ -42,6 +42,9 @@ Didefinisikan sebagai CSS variable di `app/globals.css`, dipetakan ke Tailwind l
 | `--warning-soft` | `#FDF3E1` | Latar badge kuning |
 | `--info` | `#3E7BFA` | Informasi netral, tautan (hemat pemakaian) |
 | `--focus` | `#2FA84F` | Ring fokus 2px + offset 2px |
+| `--corn` / `--corn-soft` | `#F0A500` / `#FFF3D1` | Palet merek dari logo (19 Nov 2026): kuning biji jagung — isian grafik "jagung masuk", strip KPI jagung, batang terakhir di kartu omzet. Bukan untuk teks kecil |
+| `--leaf` / `--leaf-deep` / `--leaf-soft` | `#1F8A46` / `#145C33` / `#E3F4E8` | Hijau daun — seri "diolah"/produksi, strip KPI produksi; `leaf-deep` = latar kartu utama omzet (teks putih) |
+| `--clay` / `--clay-soft` | `#C9542E` / `#FBE8E0` | Terakota — HPP & stok kritis (< 50% minimum) |
 
 ### 2.2 Mode gelap
 
