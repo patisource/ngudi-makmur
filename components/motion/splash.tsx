@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/shell/logo";
 import { ORG } from "@/lib/org";
 
 // Welcome splash (StyleGuide §6.6, desain 04): ± 3 detik, sekali per sesi browser, dilewati dengan klik/tombol apa pun,
@@ -9,12 +10,6 @@ import { ORG } from "@/lib/org";
 export const SPLASH_KEY = "ngudi-makmur-splash";
 export const SPLASH_BOOT = `try{if(!sessionStorage.getItem("${SPLASH_KEY}")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.dataset.splash="1"}}catch(e){}`;
 const STEPS = ["Jagung masuk", "Pemipilan & penepungan", "Stok & penjualan", "Pembayaran & kas", "Nota & laporan"];
-const PATHS = [
-  "M7 20h10",
-  "M10 20c5.5-2.5.8-6.4 3-10",
-  "M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z",
-  "M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z",
-];
 
 export function Splash() {
   const [phase, setPhase] = useState<"in" | "out" | "done">("in");
@@ -72,11 +67,7 @@ export function Splash() {
       <span className="sp-skip">Klik untuk lewati</span>
       <div className="sp-center">
         <div className="sp-mark">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            {PATHS.map((d, i) => (
-              <path key={d} d={d} pathLength={1} style={{ animationDelay: `${0.2 + i * 0.12}s` }} />
-            ))}
-          </svg>
+          <Logo size={88} className="rounded-2xl" />
         </div>
         <div className="sp-word">
           {ORG.shortName.split("").map((c, i) => (

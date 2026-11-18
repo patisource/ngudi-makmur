@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Fragment, Suspense } from "react";
 import { ReplaySplash, Splash, SPLASH_BOOT } from "@/components/motion/splash";
-import { Icon } from "@/components/shell/icon";
+import { Logo } from "@/components/shell/logo";
 import { ORG } from "@/lib/org";
 import { LoginForm } from "./login-form";
 
@@ -32,9 +32,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,608px)]">
         <div className="flex min-h-dvh flex-col px-6 py-10 sm:px-12 lg:px-24">
           <div className="flex items-center gap-2.5">
-            <span className="grid size-9 place-items-center rounded-md bg-primary text-primary-fg">
-              <Icon name="sprout" size={20} />
-            </span>
+            <Logo size={40} className="rounded-lg" />
             <span className="text-sm font-medium">{ORG.appName}</span>
           </div>
 

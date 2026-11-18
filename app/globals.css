@@ -278,14 +278,10 @@ html[data-splash] .splash {
   align-items: center;
   gap: 18px;
 }
+/* Logo di splash: ubin logo (components/shell/logo.tsx) masuk dengan skala + rotasi kecil (StyleGuide §6.4: −6°). */
 .sp-mark {
   display: grid;
   place-items: center;
-  width: 68px;
-  height: 68px;
-  border-radius: 18px;
-  background: var(--primary);
-  color: var(--primary-fg);
   animation: sp-mark 0.9s var(--expo) both;
 }
 @keyframes sp-mark {
@@ -293,16 +289,7 @@ html[data-splash] .splash {
     transform: scale(0.7) rotate(-6deg);
   }
 }
-.sp-mark path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: sp-draw 1.1s var(--in-out) both;
-}
-@keyframes sp-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
+
 .sp-word {
   display: flex;
   overflow: hidden;

@@ -7,6 +7,7 @@ import type { NavItem } from "@/lib/auth/permissions";
 import { cn } from "@/lib/cn";
 import { ORG } from "@/lib/org";
 import { Icon } from "./icon";
+import { Logo } from "./logo";
 
 // Daftar menu (sudah disaring per peran di server) dengan penanda halaman aktif dan laci di ponsel.
 export function SidebarNav({ items, badges = {}, children }: { items: NavItem[]; badges?: Record<string, number>; children: React.ReactNode }) {
@@ -38,9 +39,7 @@ export function SidebarNav({ items, badges = {}, children }: { items: NavItem[];
         )}
       >
         <div className="flex items-start gap-2.5 px-2 py-2">
-          <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary text-primary-fg">
-            <Icon name="sprout" size={20} />
-          </span>
+          <Logo size={40} className="rounded-lg" />
           <div className="min-w-0 leading-tight">
             <div className="text-sm font-semibold text-balance">{ORG.appName}</div>
             <div className="mt-0.5 text-xs text-text-muted">{ORG.fullName}</div>
