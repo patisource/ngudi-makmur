@@ -1,14 +1,27 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { login, type LoginState } from "./actions";
 
 // Formulir login (desain 00): email, kata sandi dengan tombol tampilkan, "Lupa kata sandi?", tombol hitam lebar penuh.
 // Galat tunggal di atas tombol yang tidak membocorkan apakah email terdaftar (StyleGuide §8.1).
-export function LoginForm({ next, notice }: { next?: string; notice?: string }) {
+const NOTICE: Record<string, string> = {
+  nonaktif: "Akun ini dinonaktifkan. Hubungi admin teknis.",
+};
+
+// ?next= dan ?alasan= dibaca langsung dari URL di browser (bukan lewat Suspense di server): formulir statis tidak pernah
+// diganti setelah tampil, sehingga isian yang sudah diketik tidak hilang (CI 19 Nov 2026). Server selalu "".
+const noop = () => () => {};
+const readSearch = () => window.location.search;
+
+export function LoginForm() {
+  const search = useSyncExternalStore(noop, readSearch, () => "");
+  const params = new URLSearchParams(search);
+  const next = params.get("next") ?? undefined;
+  const notice = NOTICE[params.get("alasan") ?? ""];
   const [state, action, pending] = useActionState<LoginState, FormData>(login, {});
   const [show, setShow] = useState(false);
   const [forgot, setForgot] = useState(false);

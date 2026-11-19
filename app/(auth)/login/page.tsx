@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fragment, Suspense } from "react";
+import { Fragment } from "react";
 import { MurmurationSky } from "@/components/motion/murmuration";
 import { ReplaySplash, Splash, SPLASH_BOOT } from "@/components/motion/splash";
 import { Logo } from "@/components/shell/logo";
@@ -9,25 +9,13 @@ import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Masuk · Sistem Pengelolaan Jagung Desa Baturejo" };
 
-const NOTICE: Record<string, string> = {
-  nonaktif: "Akun ini dinonaktifkan. Hubungi admin teknis.",
-};
-
-// Membaca ?next= dan ?alasan= (data permintaan) → di balik <Suspense>; formulir kosong tampil seketika sebagai fallback.
-async function LoginFormFromUrl({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
-  const sp = await searchParams;
-  const next = typeof sp.next === "string" ? sp.next : undefined;
-  const notice = typeof sp.alasan === "string" ? NOTICE[sp.alasan] : undefined;
-  return <LoginForm next={next} notice={notice} />;
-}
-
 const TITLE = "Selamat datang";
 
 // Login (permintaan pengguna 19 Nov 2026): kartu di tengah tanpa foto, di atas langit senja dengan kawanan burung yang
 // terbang acak dan siluet ladang jagung (MurmurationSky, kanvas tetap di belakang); logo, judul per kata, kartu, dan
 // isian masuk berurutan sekali. Semua gerak mati saat
 // prefers-reduced-motion (globals.css). Didahului welcome splash sekali per sesi (§6.6).
-export default function LoginPage({ searchParams }: PageProps<"/login">) {
+export default function LoginPage() {
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: SPLASH_BOOT }} />
@@ -61,9 +49,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
               <p className="text-sm text-text-muted">Masuk dengan akun yang dibuat oleh admin kelompok.</p>
             </div>
             <div className="login-stagger">
-              <Suspense fallback={<LoginForm />}>
-                <LoginFormFromUrl searchParams={searchParams} />
-              </Suspense>
+              <LoginForm />
             </div>
             <p className="mt-5 border-t border-border pt-4 text-center text-xs text-text-subtle">Belum punya akun? Hubungi admin teknis kelompok.</p>
           </div>
