@@ -606,20 +606,18 @@ html[data-splash] .splash {
   animation-play-state: paused;
 }
 
-/* ---------- Login (19 Nov 2026): pita lajur ladang + masuk berurutan sekali. Gerak mati saat reduced motion. ---------- */
-.login-band {
-  border-bottom-left-radius: 50% 40px;
-  border-bottom-right-radius: 50% 40px;
-  background-image:
-    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 26px),
-    radial-gradient(120% 90% at 50% 0%, rgb(240 165 0 / 0.16), transparent 60%);
-  background-size: 300px 300px, 100% 100%;
-  animation: band-drift 38s linear infinite;
+/* ---------- Login (19 Nov 2026): langit + kawanan burung (kanvas) + masuk berurutan sekali. Gerak mati saat reduced motion. ---------- */
+/* langit senja di balik kanvas (sebelum skrip jalan); mode gelap = langit malam — lihat components/motion/murmuration.tsx */
+.login-sky {
+  background: linear-gradient(#1d2b44, #e89a6a);
 }
-@keyframes band-drift {
-  to {
-    background-position: 300px 0, 0 0;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .login-sky {
+    background: linear-gradient(#05070d, #1a2236);
   }
+}
+:root[data-theme="dark"] .login-sky {
+  background: linear-gradient(#05070d, #1a2236);
 }
 .login-logo {
   animation: logo-pop 0.8s var(--expo) 0.1s both;
@@ -658,9 +656,4 @@ html[data-splash] .splash {
 }
 .login-fade-late {
   animation: enter 0.7s var(--expo) 0.75s both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .login-band {
-    animation: none;
-  }
 }

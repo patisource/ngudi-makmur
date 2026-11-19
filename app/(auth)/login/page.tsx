@@ -1,6 +1,7 @@
 import { Clock, Wheat } from "lucide-react";
 import type { Metadata } from "next";
 import { Fragment, Suspense } from "react";
+import { MurmurationSky } from "@/components/motion/murmuration";
 import { ReplaySplash, Splash, SPLASH_BOOT } from "@/components/motion/splash";
 import { Logo } from "@/components/shell/logo";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
@@ -23,27 +24,27 @@ async function LoginFormFromUrl({ searchParams }: { searchParams: PageProps<"/lo
 
 const TITLE = "Selamat datang";
 
-// Login (permintaan pengguna 19 Nov 2026): kartu di tengah tanpa foto. Pita hijau daun di atas bermotif lajur ladang
-// yang bergeser pelan; logo, judul per kata, kartu, dan isian masuk berurutan sekali. Semua gerak mati saat
+// Login (permintaan pengguna 19 Nov 2026): kartu di tengah tanpa foto, di atas langit senja dengan kawanan burung yang
+// terbang acak dan siluet ladang jagung (MurmurationSky, kanvas tetap di belakang); logo, judul per kata, kartu, dan
+// isian masuk berurutan sekali. Semua gerak mati saat
 // prefers-reduced-motion (globals.css). Didahului welcome splash sekali per sesi (§6.6).
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: SPLASH_BOOT }} />
       <Splash />
-      <div className="relative flex min-h-dvh flex-col items-center overflow-hidden px-4 pb-8 pt-20 sm:pt-16">
-        {/* pita latar: hijau daun tua + lajur ladang diagonal (dekoratif) */}
-        <div aria-hidden className="login-band absolute inset-x-0 top-0 h-[46vh] min-h-[320px] bg-leaf-deep" />
+      <MurmurationSky className="fixed inset-0" />
+      <div className="relative flex min-h-dvh flex-col items-center px-4 pb-6 pt-20 sm:pt-16">
         <ThemeToggle className="absolute right-4 top-4 z-10 shadow-pop sm:right-6 sm:top-6" />
 
         <div className="relative flex w-full max-w-[420px] flex-1 flex-col items-center gap-6">
           <div className="flex flex-col items-center gap-3 text-center text-white">
-            <div className="login-logo rounded-2xl bg-white/10 p-1.5 ring-1 ring-white/20">
+            <div className="login-logo rounded-2xl bg-white/10 p-1.5 ring-1 ring-white/20 backdrop-blur-sm">
               <Logo size={64} className="rounded-xl" />
             </div>
             <div className="login-fade flex flex-col gap-1">
               <span className="text-lg font-semibold leading-snug tracking-tight text-balance">{ORG.appName}</span>
-              <span className="text-sm text-white/75">{ORG.address.split(", ").slice(0, 3).join(" · ")}</span>
+              <span className="text-sm text-white/80">{ORG.address.split(", ").slice(0, 3).join(" · ")}</span>
             </div>
           </div>
 
@@ -79,9 +80,9 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
             </span>
           </div>
 
-          <div className="mt-auto flex flex-col items-center gap-2 pt-6 text-center">
+          <div className="mt-auto flex flex-col items-center gap-1.5 rounded-xl bg-surface/85 px-4 py-2.5 text-center backdrop-blur-sm">
             <ReplaySplash />
-            <p className="text-xs text-text-subtle">
+            <p className="text-xs text-text-muted">
               {ORG.appVersion} · {ORG.builtBy} · © 2026 {ORG.fullName}
             </p>
           </div>
