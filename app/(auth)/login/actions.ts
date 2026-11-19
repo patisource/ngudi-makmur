@@ -42,7 +42,15 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     return { error: message, email };
   }
 
-  const { data: profile, error: profileError } = await supabase.from("profiles").select("is_active").eq("id", data.user.id).maybeSingle();
+  const readProfile = () => supabase.from("profiles").select("is_active").eq("id", data.user.id).maybeSingle();
+  let { data: profile, error: profileError } = await readProfile();
+  if (profileError) {
+    // Gangguan sesaat (mis. sesi baru belum terbaca PostgREST): coba sekali lagi sebelum menyerah. Kode galat dicatat di
+    // log server saja (tanpa pesan SQL ke pengguna).
+    console.error("login: profil gagal dibaca", profileError.code, profileError.message);
+    await new Promise((r) => setTimeout(r, 400));
+    ({ data: profile, error: profileError } = await readProfile());
+  }
   if (profileError) {
     // Gangguan sementara saat membaca profil: jangan disebut "dinonaktifkan" (menyesatkan); minta coba lagi.
     await supabase.auth.signOut();
