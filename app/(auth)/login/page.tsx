@@ -1,4 +1,3 @@
-import { Clock, Wheat } from "lucide-react";
 import type { Metadata } from "next";
 import { Fragment, Suspense } from "react";
 import { MurmurationSky } from "@/components/motion/murmuration";
@@ -69,21 +68,10 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
             <p className="mt-5 border-t border-border pt-4 text-center text-xs text-text-subtle">Belum punya akun? Hubungi admin teknis kelompok.</p>
           </div>
 
-          <div className="login-fade-late flex flex-wrap justify-center gap-2 text-xs text-text-muted">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
-              <Wheat size={14} strokeWidth={1.75} className="text-warning" />
-              {ORG.commodities}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
-              <Clock size={14} strokeWidth={1.75} className="text-leaf" />
-              Gudang {ORG.warehouseHours}
-            </span>
-          </div>
-
-          <div className="mt-auto flex flex-col items-center gap-1.5 rounded-xl bg-surface/85 px-4 py-2.5 text-center backdrop-blur-sm">
+          <div className="login-fade-late mt-auto flex max-w-[420px] flex-col items-center gap-1.5 text-balance rounded-xl bg-surface/85 px-4 py-2.5 text-center backdrop-blur-sm">
             <ReplaySplash />
             <p className="text-xs text-text-muted">
-              {ORG.appVersion} · {ORG.builtBy} · © 2026 {ORG.fullName}
+              {ORG.appVersion} · {ORG.credit}
             </p>
           </div>
         </div>

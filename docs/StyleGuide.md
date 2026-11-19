@@ -232,7 +232,7 @@ React Bits yang masih boleh dipakai sebagai konsep (ditulis ulang, token di atas
 ### 6.6 Welcome Splash
 
 - Durasi ± 3 s, **sekali per sesi browser** (`sessionStorage`); dapat dilewati dengan klik/sentuh atau tombol apa pun; **tidak tampil** saat `prefers-reduced-motion`. Tautan "Putar ulang intro" di halaman login memutarnya lagi.
-- Urutan: logo tunas membesar (skala 0.7→1, −6°→0°, 0,9 s `expo`) sambil guratannya tergambar (`stroke-dashoffset`, 1,1 s `in-out`, jeda 120 ms per guratan) → huruf "Ngudi Makmur" naik satu per satu (0,9 s `expo`, jeda **26 ms** per huruf, mulai 0,42 s) → subjudul ("Kelompok Tani · Desa Baturejo, Sukolilo, Pati") memudar masuk (0,95 s).
+- Urutan: logo tunas membesar (skala 0.7→1, −6°→0°, 0,9 s `expo`) sambil guratannya tergambar (`stroke-dashoffset`, 1,1 s `in-out`, jeda 120 ms per guratan) → huruf "Ngudi Makmur" naik satu per satu (0,9 s `expo`, jeda **26 ms** per huruf, mulai 0,42 s) → subjudul ("Desa Baturejo, Sukolilo, Pati"; teks "Kelompok Tani" dihapus 19 Nov 2026) memudar masuk (0,95 s).
 - Kaki: garis progres 2 px terisi (`scaleX`, 1,55 s `in-out`) sementara label bergulir lima langkah alur usaha: Jagung masuk → Pemipilan & penepungan → Stok & penjualan → Pembayaran & kas → Nota & laporan.
 - Keluar (± 2,25 s atau saat dilewati): isi terangkat 22 px dan memudar (0,4–0,5 s), lalu seluruh splash **terangkat seperti tirai** (`clip-path: inset(0 0 100% 0)`, 0,68 s `in-out`). Halaman login **dipasang tepat saat tirai mulai terangkat** sehingga koreografi masuknya sendiri (§6.3) ikut berjalan.
 - Hanya teks netral & warna token; bukan hero pemasaran (§7).
